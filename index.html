@@ -202,6 +202,10 @@ body.is-learner .learner-only-block { display: block !important; }
 .inbox-messages { flex: 1; overflow-y: auto; padding: 16px 20px; max-height: 380px; }
 .inbox-message { margin-bottom: 14px; padding: 12px 16px; border-radius: var(--radius); font-size: 13px; }
 .inbox-message.sent { background: #e0f5fa; border-left: 3px solid var(--nhs-light-blue); }
+.inbox-message.received { background: #fff8e1; border-left: 3px solid var(--nhs-orange); }
+.inbox-message .msg-body { max-height: 300px; overflow-y: auto; font-size: 13px; line-height: 1.5; }
+.inbox-thread-item.unread .thread-subject { font-weight: 700; color: var(--nhs-dark-blue); }
+.inbox-thread-item.unread { border-left: 3px solid var(--nhs-orange); }
 .inbox-message.received { background: var(--nhs-bg); border-left: 3px solid var(--nhs-green); }
 .inbox-message .msg-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
 .inbox-message .msg-from { font-weight: 600; color: var(--nhs-dark-blue); font-size: 12px; }
@@ -547,8 +551,8 @@ body.is-learner .learner-only-block { display: block !important; }
       <div id="learnerLoginForm">
         <label>NHS Email</label>
         <input type="email" id="learnerEmail" placeholder="name@nhs.net or name@nbt.nhs.uk">
-        <label>PIN</label>
-        <input type="password" id="learnerPin" placeholder="6-digit PIN" maxlength="6">
+        <label>Password</label>
+        <input type="password" id="learnerPin" placeholder="Enter password">
         <div style="margin-top:14px;text-align:center;">
           <button class="btn btn-green" onclick="doLearnerLogin()" style="width:100%;">Login</button>
         </div>
@@ -692,6 +696,33 @@ body.is-learner .learner-only-block { display: block !important; }
       <button class="btn btn-white" style="border:1px solid var(--nhs-pale-grey);color:var(--nhs-grey);" onclick="copyFeedbackEmails()">Copy Emails</button>
       <button class="btn btn-white" style="border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="sendFeedbackMailto()">Use Email Client</button>
       <button class="btn btn-green" onclick="sendFeedbackEmails()">Send Directly</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="teacherRequestModal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header"><h3>Request Teacher</h3><button class="modal-close" onclick="closeModal('teacherRequestModal')">&times;</button></div>
+    <div class="modal-body">
+      <div id="trSessionInfo" style="background:var(--nhs-bg);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <div style="margin-bottom:10px;">
+        <label style="font-weight:600;font-size:13px;">Select Teachers to Invite</label>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="trSelectGroup('all')">All</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="trSelectGroup('none')">None</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="trSelectGroup('Consultant')">Consultants</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="trSelectGroup('Registrar')">Registrars</button>
+        </div>
+        <input type="text" id="trSearch" placeholder="Search contacts..." oninput="filterTrContacts()" style="width:100%;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;margin-top:8px;">
+      </div>
+      <div id="trContactsList" style="max-height:280px;overflow-y:auto;border:1px solid var(--nhs-pale-grey);border-radius:var(--radius);padding:8px;"></div>
+      <div style="margin-top:12px;font-size:12px;color:var(--nhs-grey);">
+        <span id="trSelectedCount">0</span> recipients selected
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('teacherRequestModal')">Cancel</button>
+      <button class="btn btn-green" onclick="sendTeacherRequestEmails()">Send Invitation</button>
     </div>
   </div>
 </div>
@@ -1033,11 +1064,14 @@ function getFilteredEvents() {
   const monthFilter = document.getElementById('monthSelect').value;
   let filtered = [...events];
 
-  if (currentView === 'list') {
-    if (currentFilter === 'all' || currentFilter === 'upcoming') filtered = filtered.filter(e => isFutureEvent(e));
+  // Filter to future events for most views
+  if (currentView === 'list' || currentView === 'all') {
+    if (currentFilter === 'all' || currentFilter === 'upcoming' || currentFilter === 'tbd') {
+      filtered = filtered.filter(e => isFutureEvent(e));
+    }
     if (!isAdmin) filtered = filtered.filter(e => e.published && e.status !== 'cancelled');
   } else if (currentView === 'drafts') {
-    filtered = filtered.filter(e => !e.published);
+    filtered = filtered.filter(e => !e.published && isFutureEvent(e));
   }
   if (currentFilter !== 'all') filtered = filtered.filter(e => e.status === currentFilter);
   if (search) {
@@ -1350,6 +1384,9 @@ function showDetail(id) {
       footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-orange);color:var(--nhs-orange);font-size:12px;" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'reminder')">Send Reminder</button>`;
     }
     footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-pale-grey);" onclick="closeModal('detailModal');openAttendanceModal(${ev.id})">Attendance</button>`;
+    if (!ev.teacher || ev.status === 'tbd') {
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-green);color:var(--nhs-green);font-size:12px;" onclick="closeModal('detailModal');requestTeacherForSession(${ev.id})">Request Teacher</button>`;
+    }
     const evDateAdmin = eventToDate(ev);
     const isPastAdmin = evDateAdmin && evDateAdmin < new Date();
     if (isPastAdmin || ev.status === 'completed') {
@@ -1955,12 +1992,17 @@ function showLearnerRegister() {
 async function doLearnerLogin() {
   const email = document.getElementById('learnerEmail').value.trim().toLowerCase();
   const pin = document.getElementById('learnerPin').value.trim();
-  if (!email || !pin) { showToast('Enter email and PIN'); return; }
+  if (!email || !pin) { showToast('Enter email and password'); return; }
   try {
     const data = await sbGet('learners', `email=eq.${encodeURIComponent(email)}&select=*`);
     if (data.length === 0) { showToast('Account not found. Please register.'); return; }
     const learner = data[0];
-    if (learner.pin_code !== pin) { showToast('Incorrect PIN'); return; }
+    // Pre-created account with no PIN — prompt to set up
+    if (!learner.pin_code) {
+      showSetupPinForm(learner, pin);
+      return;
+    }
+    if (learner.pin_code !== pin) { showToast('Incorrect password'); return; }
     currentLearner = learner;
     localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
@@ -1969,6 +2011,84 @@ async function doLearnerLogin() {
     // Check URL params for auto-actions
     handleLearnerURLParams();
   } catch(e) { console.error('Learner login error:', e); showToast('Login failed'); }
+}
+
+function showSetupPinForm(learner, attemptedPin) {
+  const body = document.getElementById('learnerLoginForm');
+  body.innerHTML = `
+    <div style="text-align:center;padding:10px 0;">
+      <div style="font-size:36px;margin-bottom:8px;">👋</div>
+      <h3 style="color:var(--nhs-dark-blue);margin-bottom:4px;">Welcome, ${esc(learner.name)}!</h3>
+      <p style="color:var(--nhs-grey);font-size:13px;margin-bottom:16px;">Your account has been pre-created. Set a 6-digit PIN to get started.</p>
+    </div>
+    <label>Choose a password</label>
+    <input type="password" id="setupPin1" placeholder="Enter password" style="margin-bottom:8px;">
+    <label>Confirm password</label>
+    <input type="password" id="setupPin2" placeholder="Confirm password">
+    <label style="margin-top:12px;">Grade</label>
+    <select id="setupGrade"><option value="F1">F1</option><option value="F2">F2</option><option value="SHO">SHO</option><option value="Registrar">Registrar</option><option value="Other">Other</option></select>
+    <label>Placement / Firm</label>
+    <select id="setupPlacement"><option value="">-- Select --</option><option value="UGI">UGI</option><option value="LGI / Colorectal">LGI / Colorectal</option><option value="Transplant">Transplant</option><option value="Vascular">Vascular</option><option value="Other">Other</option></select>
+    <label>Rotation Block</label>
+    <select id="setupRotation" onchange="onSetupRotationChange()"><option value="">-- Select --</option><option value="aug_dec">Aug – Dec</option><option value="dec_apr">Dec – Apr</option><option value="apr_aug">Apr – Aug</option></select>
+    <input type="hidden" id="setupStart" value="">
+    <input type="hidden" id="setupEnd" value="">
+    <div style="margin-top:16px;text-align:center;">
+      <button class="btn btn-green" onclick="completeAccountSetup(${learner.id})">Set Up Account</button>
+    </div>
+  `;
+}
+
+function onSetupRotationChange() {
+  const block = document.getElementById('setupRotation').value;
+  if (!block) return;
+  const now = new Date();
+  const yr = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  const blocks = {
+    aug_dec: { start: yr + '-08-01', end: yr + '-12-31' },
+    dec_apr: { start: yr + '-12-01', end: (yr+1) + '-04-30' },
+    apr_aug: { start: (yr+1) + '-04-01', end: (yr+1) + '-08-31' }
+  };
+  const d = blocks[block];
+  if (d) { document.getElementById('setupStart').value = d.start; document.getElementById('setupEnd').value = d.end; }
+}
+
+async function completeAccountSetup(learnerId) {
+  const pin1 = document.getElementById('setupPin1').value.trim();
+  const pin2 = document.getElementById('setupPin2').value.trim();
+  const grade = document.getElementById('setupGrade').value;
+  const placement = document.getElementById('setupPlacement').value;
+  const rotation = document.getElementById('setupRotation').value;
+  const pStart = document.getElementById('setupStart').value;
+  const pEnd = document.getElementById('setupEnd').value;
+
+  if (!pin1 || pin1.length < 4) { showToast('Password must be at least 4 characters'); return; }
+  if (pin1 !== pin2) { showToast('PINs do not match'); return; }
+  if (!placement) { showToast('Please select a placement'); return; }
+
+  try {
+    const updates = { pin_code: pin1, verified: true, grade, placement, rotation_block: rotation || null };
+    if (pStart) updates.placement_start = pStart;
+    if (pEnd) updates.placement_end = pEnd;
+    await sbUpdate('learners', learnerId, updates);
+
+    const data = await sbGet('learners', `id=eq.${learnerId}&select=*`);
+    currentLearner = data[0];
+    localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    setLearnerUI(true);
+
+    // Show success with PIN reminder
+    document.getElementById('learnerLoginForm').innerHTML = `
+      <div style="text-align:center;padding:20px;">
+        <div style="font-size:36px;margin-bottom:8px;">✅</div>
+        <h3 style="color:var(--nhs-green);">Account Set Up!</h3>
+        <p style="color:var(--nhs-grey);font-size:13px;margin-top:8px;">Your password has been set. Use it with your email to log in next time.</p>
+        <button class="btn btn-green" style="margin-top:16px;" onclick="closeModal('learnerLoginModal');location.reload();">Continue</button>
+      </div>`;
+  } catch(e) {
+    console.error('Account setup error:', e);
+    showToast('Setup failed. Please try again.');
+  }
 }
 
 function onRotationBlockChange() {
@@ -2294,13 +2414,30 @@ async function openFeedbackRequestModal(sessionId) {
     fbReqAttendees = att.map(a => a.learner_id);
   } catch(e) { fbReqAttendees = []; }
 
-  // Also load learners to match attendees to emails
+  // Also load learners to match attendees to emails and to show as recipients
   let learners = [];
-  try { learners = await sbGet('learners', 'select=id,email'); } catch(e) {}
+  try { learners = await sbGet('learners', 'select=id,name,email'); } catch(e) {}
   const attendeeEmails = new Set(learners.filter(l => fbReqAttendees.includes(l.id)).map(l => l.email?.toLowerCase()));
+
+  // Build combined list: contacts + registered learners not already in contacts
+  const contactEmails = new Set(contacts.map(c => c.email?.toLowerCase()).filter(Boolean));
+  const extraLearners = learners.filter(l => l.email && !contactEmails.has(l.email.toLowerCase()));
 
   // Render contacts list with checkboxes
   let html = '';
+  if (extraLearners.length > 0) {
+    html += '<div style="font-size:11px;font-weight:600;color:var(--nhs-grey);padding:4px 8px;text-transform:uppercase;letter-spacing:0.5px;">Registered Learners</div>';
+    extraLearners.forEach(l => {
+      const isAttendee = fbReqAttendees.includes(l.id);
+      html += `<label class="fb-req-contact" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;" data-role="Learner" data-name="${esc(l.name?.toLowerCase() || '')}" data-email="${esc(l.email?.toLowerCase() || '')}" data-attended="${isAttendee}">
+        <input type="checkbox" class="fb-req-check" value="${esc(l.email)}" style="width:16px;height:16px;">
+        <span style="flex:1;">${esc(l.name || l.email)}</span>
+        <span style="font-size:11px;color:var(--nhs-grey);">Learner</span>
+        ${isAttendee ? '<span style="font-size:10px;background:var(--nhs-green);color:white;padding:2px 6px;border-radius:10px;">attended</span>' : ''}
+      </label>`;
+    });
+    html += '<div style="font-size:11px;font-weight:600;color:var(--nhs-grey);padding:4px 8px;margin-top:8px;text-transform:uppercase;letter-spacing:0.5px;">Contacts</div>';
+  }
   contacts.forEach(c => {
     const isAttendee = attendeeEmails.has(c.email?.toLowerCase());
     html += `<label class="fb-req-contact" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;" data-role="${esc(c.role || '')}" data-name="${esc(c.name?.toLowerCase() || '')}" data-email="${esc(c.email?.toLowerCase() || '')}" data-attended="${isAttendee}">
@@ -2310,7 +2447,7 @@ async function openFeedbackRequestModal(sessionId) {
       ${isAttendee ? '<span style="font-size:10px;background:var(--nhs-green);color:white;padding:2px 6px;border-radius:10px;">attended</span>' : ''}
     </label>`;
   });
-  document.getElementById('fbReqContactsList').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--nhs-grey);">No contacts found. Add contacts in the Contacts tab.</div>';
+  document.getElementById('fbReqContactsList').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--nhs-grey);">No contacts or learners found. Add contacts in the Contacts tab.</div>';
   document.getElementById('fbReqSearch').value = '';
   updateFbReqCount();
   openModal('feedbackRequestModal');
@@ -2438,6 +2575,134 @@ function sendFeedbackMailto(emailsArg, subjectArg, topicArg, dateArg, evArg, lin
   const bcc = emails.join(',');
   window.open(`mailto:?bcc=${bcc}&subject=${encodeURIComponent(subject)}&body=${body}`, '_self');
   showToast('Opening email client...');
+}
+
+// ===================== REQUEST TEACHER =====================
+let trSessionId = null;
+
+async function requestTeacherForSession(sessionId) {
+  trSessionId = sessionId;
+  const ev = events.find(e => e.id === sessionId);
+  if (!ev) { showToast('Session not found'); return; }
+
+  document.getElementById('trSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'TBD')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}${ev.time ? ' | ' + esc(ev.time) : ''}${ev.room ? ' | ' + esc(ev.room) : ''}`;
+
+  // Load contacts
+  let contacts = window._contactsData || [];
+  if (!contacts.length) {
+    try { contacts = await sbGet('contacts', 'order=name.asc&select=*'); } catch(e) { contacts = []; }
+  }
+
+  let html = '';
+  contacts.forEach(c => {
+    if (!c.email) return; // Skip contacts without email
+    html += `<label class="tr-contact" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;" data-role="${esc(c.role || '')}" data-name="${esc(c.name?.toLowerCase() || '')}" data-email="${esc(c.email?.toLowerCase() || '')}">
+      <input type="checkbox" class="tr-check" value="${esc(c.email)}" data-contact-name="${esc(c.name || '')}" style="width:16px;height:16px;">
+      <span style="flex:1;">${esc(c.name)}</span>
+      <span style="font-size:11px;color:var(--nhs-grey);">${esc(c.role || '')}${c.specialty ? ' · ' + esc(c.specialty) : ''}</span>
+    </label>`;
+  });
+  document.getElementById('trContactsList').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--nhs-grey);">No contacts with email found. Add contacts in the Contacts tab.</div>';
+  document.getElementById('trSearch').value = '';
+  updateTrCount();
+  openModal('teacherRequestModal');
+}
+
+function trSelectGroup(group) {
+  document.querySelectorAll('.tr-check').forEach(cb => {
+    const label = cb.closest('.tr-contact');
+    if (group === 'all') { cb.checked = label.style.display !== 'none'; }
+    else if (group === 'none') { cb.checked = false; }
+    else { cb.checked = label.dataset.role === group && label.style.display !== 'none'; }
+  });
+  updateTrCount();
+}
+
+function filterTrContacts() {
+  const q = document.getElementById('trSearch').value.toLowerCase();
+  document.querySelectorAll('.tr-contact').forEach(label => {
+    const name = label.dataset.name || '';
+    const email = label.dataset.email || '';
+    const role = label.dataset.role?.toLowerCase() || '';
+    label.style.display = (!q || name.includes(q) || email.includes(q) || role.includes(q)) ? 'flex' : 'none';
+  });
+}
+
+function updateTrCount() {
+  const count = document.querySelectorAll('.tr-check:checked').length;
+  document.getElementById('trSelectedCount').textContent = count;
+}
+document.addEventListener('change', (e) => { if (e.target.classList.contains('tr-check')) updateTrCount(); });
+
+async function sendTeacherRequestEmails() {
+  const checked = Array.from(document.querySelectorAll('.tr-check:checked'));
+  if (!checked.length) { showToast('No recipients selected'); return; }
+  const ev = events.find(e => e.id === trSessionId);
+  if (!ev) { showToast('Session not found'); return; }
+
+  const recipients = checked.map(cb => ({ email: cb.value, name: cb.dataset.contactName || '' }));
+  const topic = ev.topic || 'TBD';
+  const dateStr = `${ev.day} ${ev.date} ${ev.month} ${ev.year}`;
+  const siteUrl = location.origin + location.pathname;
+
+  const btn = document.querySelector('#teacherRequestModal .btn-green');
+  const originalText = btn.textContent;
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  let sentCount = 0;
+  for (const r of recipients) {
+    const actionToken = btoa(ev.id + ':' + r.email);
+    const confirmLink = `${siteUrl}?action=confirm&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
+    const declineLink = `${siteUrl}?action=decline&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
+    const rescheduleLink = `${siteUrl}?action=reschedule&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
+
+    const subject = `Teaching Invitation: ${topic} - ${dateStr}`;
+    const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;">
+        <h2 style="color:white;margin:0;">Southmead Surgical Teaching</h2>
+      </div>
+      <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+        <p>Dear ${r.name || 'Colleague'},</p>
+        <p>We are looking for a teacher for the following session and would like to invite you:</p>
+        <table style="margin:16px 0;font-size:14px;border-collapse:collapse;">
+          <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Topic:</td><td>${topic}</td></tr>
+          <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Date:</td><td>${dateStr}</td></tr>
+          <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Time:</td><td>${ev.time || 'TBC'}</td></tr>
+          <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Room:</td><td>${ev.room || 'TBC'}</td></tr>
+        </table>
+        <p style="margin-bottom:8px;"><strong>Would you be available to teach this session?</strong></p>
+        <div style="margin:20px 0;text-align:center;">
+          <a href="${confirmLink}" style="display:inline-block;padding:12px 24px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">I Can Teach</a>
+          <a href="${declineLink}" style="display:inline-block;padding:12px 24px;background:#da291c;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">Unable to Attend</a>
+          <a href="${rescheduleLink}" style="display:inline-block;padding:12px 24px;background:#ed8b00;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">Suggest Another Date</a>
+        </div>
+        <p>If you have any questions, please reply to this email or contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a>.</p>
+        <p>Best regards,<br>Southmead Surgical Teaching Team</p>
+      </div>
+    </div>`;
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({ to: [r.email], subject, html })
+      });
+      const result = await res.json();
+      if (result.success) sentCount++;
+    } catch(e) { console.warn('Send failed for', r.email, e); }
+  }
+
+  btn.textContent = originalText;
+  btn.disabled = false;
+
+  if (sentCount > 0) {
+    showToast(`Teacher invitation sent to ${sentCount} contact(s)!`);
+    logAction('Sent teacher request', `${topic} (${dateStr}) → ${sentCount} contacts`);
+    closeModal('teacherRequestModal');
+  } else {
+    showToast('Failed to send invitations. Check email configuration.');
+  }
 }
 
 // ===================== FEEDBACK ADMIN VIEW =====================
@@ -3059,21 +3324,40 @@ async function handleActionParams() {
   }
 
   const teacherEmail = getTeacherEmailFromToken(token);
-  const ev = events.find(e => String(e.id) === String(sessionId));
 
-  if (!ev) {
+  // Fetch session directly from Supabase (don't rely on local events array,
+  // which may not include unpublished sessions for non-admin users)
+  let evData;
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/schedule?id=eq.${sessionId}&select=*`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    });
+    const rows = await response.json();
+    if (rows && rows.length > 0) {
+      const row = rows[0];
+      evData = {
+        id: row.id, day: row.day || '', date: row.date || '', month: row.month || '',
+        year: row.year || 2026, time: row.time || '', room: row.room || '',
+        topic: row.topic || '', teacher: row.teacher || '', teacherEmail: row.teacher_email || '',
+        status: row.status || 'tbd', published: row.published !== false,
+        notes: row.notes || '', backupTeacher: row.backup_teacher || '',
+      };
+    }
+  } catch(e) { console.error('Failed to fetch session:', e); }
+
+  if (!evData) {
     showActionLanding('Session Not Found', 'This session could not be found. It may have been removed or rescheduled.', 'error');
     return true;
   }
 
   if (action === 'confirm') {
-    await handleConfirmAction(ev, teacherEmail);
+    await handleConfirmAction(evData, teacherEmail);
     return true;
   } else if (action === 'decline') {
-    await handleDeclineAction(ev, teacherEmail);
+    await handleDeclineAction(evData, teacherEmail);
     return true;
   } else if (action === 'reschedule') {
-    handleRescheduleAction(ev, teacherEmail);
+    handleRescheduleAction(evData, teacherEmail);
     return true;
   }
 
@@ -3267,63 +3551,193 @@ function getEmailLog() {
   return JSON.parse(localStorage.getItem('sst_email_log') || '[]');
 }
 
-function loadInbox() {
+async function loadInbox() {
   const container = document.getElementById('inboxView');
-  const emailLog = getEmailLog();
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading inbox...</div>';
 
-  // Group emails by session
-  const sessionGroups = {};
-  emailLog.forEach(entry => {
-    const key = entry.sessionId || 'unknown';
-    if (!sessionGroups[key]) {
-      sessionGroups[key] = {
-        sessionId: entry.sessionId,
-        topic: entry.topic,
-        teacher: entry.teacher,
-        dateStr: entry.dateStr,
-        emails: []
-      };
+  // Try fetching real Gmail threads
+  let gmailThreads = [];
+  let gmailAvailable = false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/read-inbox`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ action: 'list', query: 'in:inbox OR in:sent subject:(Teaching OR Surgical OR Reminder OR Confirmation)', maxResults: 30 })
+    });
+    const data = await res.json();
+    if (data.success && data.threads) {
+      gmailThreads = data.threads;
+      gmailAvailable = true;
     }
-    sessionGroups[key].emails.push(entry);
-  });
+  } catch(e) { console.warn('Gmail inbox not available:', e); }
 
-  const groups = Object.values(sessionGroups).sort((a, b) => {
-    const lastA = a.emails[a.emails.length - 1]?.sentAt || '';
-    const lastB = b.emails[b.emails.length - 1]?.sentAt || '';
-    return lastB.localeCompare(lastA);
-  });
+  // Fallback to localStorage sent log if Gmail not available
+  if (!gmailAvailable) {
+    const emailLog = getEmailLog();
+    const sessionGroups = {};
+    emailLog.forEach(entry => {
+      const key = entry.sessionId || 'unknown';
+      if (!sessionGroups[key]) {
+        sessionGroups[key] = { sessionId: entry.sessionId, topic: entry.topic, teacher: entry.teacher, dateStr: entry.dateStr, emails: [] };
+      }
+      sessionGroups[key].emails.push(entry);
+    });
+    const groups = Object.values(sessionGroups).sort((a, b) => {
+      const lastA = a.emails[a.emails.length - 1]?.sentAt || '';
+      const lastB = b.emails[b.emails.length - 1]?.sentAt || '';
+      return lastB.localeCompare(lastA);
+    });
 
-  let sidebarHtml = '<div class="inbox-sidebar-header">Email Threads (' + groups.length + ')</div>';
-  if (groups.length === 0) {
-    sidebarHtml += '<div style="padding:20px;text-align:center;color:var(--nhs-grey);font-size:13px;">No emails sent yet.<br>Send a confirmation or reminder to see threads here.</div>';
+    let sidebarHtml = '<div class="inbox-sidebar-header">Sent Emails (' + groups.length + ')</div>';
+    if (groups.length === 0) {
+      sidebarHtml += '<div style="padding:20px;text-align:center;color:var(--nhs-grey);font-size:13px;">No emails sent yet.</div>';
+    } else {
+      groups.forEach((g, i) => {
+        const lastEmail = g.emails[g.emails.length - 1];
+        const timeStr = lastEmail ? new Date(lastEmail.sentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+        sidebarHtml += `<div class="inbox-thread-item${i === 0 ? ' active' : ''}" onclick="selectInboxThread(${i})" data-thread="${i}">
+          <div class="thread-subject">${esc(g.topic)}</div>
+          <div class="thread-meta">${esc(g.teacher)} &middot; ${g.emails.length} email${g.emails.length !== 1 ? 's' : ''} &middot; ${timeStr}</div>
+        </div>`;
+      });
+    }
+    container.innerHTML = `
+      <div class="inbox-notice"><strong>Note:</strong> Gmail inbox reading not yet connected. Showing locally tracked sent emails only. To enable full inbox, re-run the Gmail setup page to grant read access.</div>
+      <div class="inbox-container"><div class="inbox-sidebar">${sidebarHtml}</div><div class="inbox-main" id="inboxMain">${groups.length > 0 ? '' : '<div class="inbox-empty">No emails sent yet</div>'}</div></div>`;
+    window._inboxGroups = groups;
+    window._inboxMode = 'local';
+    if (groups.length > 0) selectInboxThread(0);
+    return;
+  }
+
+  // Gmail threads available — render them
+  let sidebarHtml = '<div class="inbox-sidebar-header">Gmail Inbox (' + gmailThreads.length + ' threads)</div>';
+  if (gmailThreads.length === 0) {
+    sidebarHtml += '<div style="padding:20px;text-align:center;color:var(--nhs-grey);font-size:13px;">No teaching-related emails found.</div>';
   } else {
-    groups.forEach((g, i) => {
-      const lastEmail = g.emails[g.emails.length - 1];
-      const timeStr = lastEmail ? new Date(lastEmail.sentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-      sidebarHtml += `<div class="inbox-thread-item${i === 0 ? ' active' : ''}" onclick="selectInboxThread(${i})" data-thread="${i}">
-        <div class="thread-subject">${esc(g.topic)}</div>
-        <div class="thread-meta">${esc(g.teacher)} &middot; ${esc(g.dateStr || '')} &middot; ${g.emails.length} email${g.emails.length !== 1 ? 's' : ''} &middot; ${timeStr}</div>
+    gmailThreads.forEach((t, i) => {
+      const firstMsg = t.messages?.[0] || {};
+      const subject = firstMsg.subject || '(No subject)';
+      const from = (firstMsg.from || '').replace(/<.*>/, '').trim();
+      const dateStr = firstMsg.date ? new Date(firstMsg.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+      const unread = t.messages?.some(m => m.labelIds?.includes('UNREAD'));
+      sidebarHtml += `<div class="inbox-thread-item${i === 0 ? ' active' : ''}${unread ? ' unread' : ''}" onclick="selectGmailThread('${t.id}', ${i})" data-thread="${i}">
+        <div class="thread-subject">${esc(subject)}</div>
+        <div class="thread-meta">${esc(from)} &middot; ${t.messagesCount} msg${t.messagesCount !== 1 ? 's' : ''} &middot; ${dateStr}</div>
       </div>`;
     });
   }
 
   container.innerHTML = `
-    <div class="inbox-notice">
-      <strong>Note:</strong> Gmail inbox reading requires additional setup. Replies sent from here will come from teachsurgerysmh@gmail.com. Incoming replies will be visible once Gmail read access is configured.
-    </div>
     <div class="inbox-container">
       <div class="inbox-sidebar">${sidebarHtml}</div>
-      <div class="inbox-main" id="inboxMain">
-        ${groups.length > 0 ? '' : '<div class="inbox-empty">Select a thread to view emails</div>'}
-      </div>
+      <div class="inbox-main" id="inboxMain"><div class="inbox-empty">Select a thread to view the conversation</div></div>
     </div>`;
 
-  // Store groups for thread selection
-  window._inboxGroups = groups;
+  window._gmailThreads = gmailThreads;
+  window._inboxMode = 'gmail';
 
-  // Auto-select first thread
-  if (groups.length > 0) {
-    selectInboxThread(0);
+  if (gmailThreads.length > 0) selectGmailThread(gmailThreads[0].id, 0);
+}
+
+async function selectGmailThread(threadId, index) {
+  // Update sidebar active state
+  document.querySelectorAll('.inbox-thread-item').forEach((el, i) => el.classList.toggle('active', i === index));
+
+  const mainEl = document.getElementById('inboxMain');
+  mainEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading thread...</div>';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/read-inbox`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ action: 'thread', threadId })
+    });
+    const data = await res.json();
+
+    if (!data.success || !data.messages) {
+      mainEl.innerHTML = '<div class="inbox-empty">Failed to load thread</div>';
+      return;
+    }
+
+    const messages = data.messages;
+    const subject = messages[0]?.subject || '(No subject)';
+    let lastFrom = '';
+
+    let messagesHtml = '';
+    messages.forEach(m => {
+      const from = (m.from || '').replace(/<.*>/, '').trim();
+      const fromEmail = (m.from || '').match(/<(.+?)>/)?.[1] || m.from || '';
+      const isSent = fromEmail.toLowerCase().includes('teachsurgerysmh');
+      const dateStr = m.date ? new Date(m.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + new Date(m.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+      lastFrom = isSent ? '' : fromEmail;
+
+      messagesHtml += `
+        <div class="inbox-message ${isSent ? 'sent' : 'received'}">
+          <div class="msg-header">
+            <span class="msg-from">${isSent ? 'Sent' : 'From: ' + esc(from)}</span>
+            <span class="msg-time">${dateStr}</span>
+          </div>
+          <div class="msg-body">${m.body || esc(m.snippet)}</div>
+        </div>`;
+    });
+
+    const replyTo = lastFrom || messages[messages.length - 1]?.from?.match(/<(.+?)>/)?.[1] || '';
+
+    mainEl.innerHTML = `
+      <div class="inbox-main-header">
+        <h4>${esc(subject)}</h4>
+        <div class="inbox-meta">${messages.length} message${messages.length !== 1 ? 's' : ''} in thread</div>
+      </div>
+      <div class="inbox-messages">${messagesHtml}</div>
+      <div class="inbox-reply-box">
+        <textarea id="inboxReplyText" placeholder="Type a reply..."></textarea>
+        <div class="inbox-reply-actions">
+          <span style="font-size:11px;color:var(--nhs-grey);line-height:32px;">Sends from teachsurgerysmh@gmail.com</span>
+          <button class="btn btn-green" onclick="sendGmailReply('${esc(replyTo)}', '${esc(subject)}')">Send Reply</button>
+        </div>
+      </div>`;
+  } catch(e) {
+    console.error('Load thread error:', e);
+    mainEl.innerHTML = '<div class="inbox-empty">Failed to load thread. Check your connection.</div>';
+  }
+}
+
+async function sendGmailReply(toEmail, subject) {
+  const replyText = document.getElementById('inboxReplyText')?.value?.trim();
+  if (!replyText) { showToast('Please type a message'); return; }
+  if (!toEmail) { showToast('No recipient found'); return; }
+
+  const reSubject = subject.startsWith('Re:') ? subject : 'Re: ' + subject;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:16px 20px;border-radius:8px 8px 0 0;">
+      <h3 style="color:white;margin:0;font-size:16px;">Southmead Surgical Teaching</h3>
+    </div>
+    <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+      <p>${replyText.replace(/\n/g, '<br>')}</p>
+      <p style="color:#768692;font-size:13px;margin-top:16px;">Best regards,<br>Southmead Surgical Teaching Team</p>
+    </div>
+  </div>`;
+
+  showToast('Sending reply...');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ to: [toEmail], subject: reSubject, html })
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast('Reply sent!');
+      document.getElementById('inboxReplyText').value = '';
+      logAction('Sent reply email', `${reSubject} → ${toEmail}`);
+      setTimeout(() => loadInbox(), 1000);
+    } else {
+      showToast('Send failed: ' + (result.error || 'Unknown error'));
+    }
+  } catch(e) {
+    console.error('Reply send error:', e);
+    showToast('Failed to send reply.');
   }
 }
 

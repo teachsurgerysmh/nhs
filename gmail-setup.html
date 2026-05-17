@@ -64,7 +64,7 @@
 
 <script>
 const REDIRECT_URI = location.href.split('?')[0]; // This page's URL
-const SCOPES = 'https://www.googleapis.com/auth/gmail.send';
+const SCOPES = 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly';
 
 function startAuth() {
   const clientId = document.getElementById('clientId').value.trim();
