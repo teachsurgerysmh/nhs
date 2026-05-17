@@ -258,6 +258,7 @@ body.is-learner .learner-only-block { display: block !important; }
       <span class="learner-badge" id="learnerBadge">Learner</span>
     </div>
     <div class="header-actions">
+      <button class="btn btn-outline admin-only" id="viewToggleBtn" onclick="toggleAdminLearnerView()" style="border-color:var(--nhs-green);color:white;">Learner View</button>
       <button class="btn btn-outline admin-only" onclick="exportCSV()">Export CSV</button>
       <button class="btn btn-outline admin-only" onclick="openBulkEmailModal()">Bulk Remind</button>
       <button class="btn btn-outline" id="learnerLoginBtn" onclick="openLearnerLoginModal()">Learner Login</button>
@@ -556,7 +557,10 @@ body.is-learner .learner-only-block { display: block !important; }
         <div style="margin-top:14px;text-align:center;">
           <button class="btn btn-green" onclick="doLearnerLogin()" style="width:100%;">Login</button>
         </div>
-        <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--nhs-grey);">
+        <div style="margin-top:8px;text-align:center;font-size:13px;color:var(--nhs-grey);">
+          <a href="#" onclick="showForgotPassword();return false;">Forgot password?</a>
+        </div>
+        <div style="margin-top:8px;text-align:center;font-size:13px;color:var(--nhs-grey);">
           Don't have an account? <a href="#" onclick="showLearnerRegister();return false;">Register here</a>
         </div>
       </div>
@@ -1083,17 +1087,17 @@ function getFilteredEvents() {
   const monthFilter = document.getElementById('monthSelect').value;
   let filtered = [...events];
 
-  // Non-admin: show only current rotation, exclude cancelled & TBD
-  if (!isAdmin) {
+  // Non-admin (or admin in learner view): show only current rotation, exclude cancelled & TBD
+  if (!isAdmin || adminViewAsLearner) {
     filtered = filtered.filter(e => e.published && isInCurrentRotation(e) && e.status !== 'cancelled' && e.status !== 'tbd');
-  } else if (currentView === 'list' || currentView === 'all') {
+  } else if (!adminViewAsLearner && (currentView === 'list' || currentView === 'all')) {
     if (currentFilter === 'all' || currentFilter === 'upcoming' || currentFilter === 'tbd') {
       filtered = filtered.filter(e => isFutureEvent(e));
     }
-  } else if (currentView === 'drafts') {
+  } else if (!adminViewAsLearner && currentView === 'drafts') {
     filtered = filtered.filter(e => !e.published && isFutureEvent(e));
   }
-  if (isAdmin && currentFilter !== 'all') filtered = filtered.filter(e => e.status === currentFilter);
+  if (isAdmin && !adminViewAsLearner && currentFilter !== 'all') filtered = filtered.filter(e => e.status === currentFilter);
   if (search) {
     filtered = filtered.filter(e =>
       (e.topic || '').toLowerCase().includes(search) ||
@@ -1128,7 +1132,7 @@ function getFilteredEvents() {
 function renderAll() { updateStats(); populateMonthSelect(); renderEvents(); }
 
 function updateStats() {
-  const src = isAdmin ? events : events.filter(e => e.published && isInCurrentRotation(e) && e.status !== 'cancelled' && e.status !== 'tbd');
+  const src = (isAdmin && !adminViewAsLearner) ? events : events.filter(e => e.published && isInCurrentRotation(e) && e.status !== 'cancelled' && e.status !== 'tbd');
   document.getElementById('statTotal').textContent = src.length;
   document.getElementById('statUpcoming').textContent = src.filter(e => e.status === 'upcoming').length;
   document.getElementById('statCompleted').textContent = src.filter(e => e.status === 'completed').length;
@@ -2110,6 +2114,97 @@ async function completeAccountSetup(learnerId) {
     console.error('Account setup error:', e);
     showToast('Setup failed. Please try again.');
   }
+}
+
+function showForgotPassword() {
+  document.getElementById('learnerLoginForm').style.display = 'none';
+  document.getElementById('learnerRegisterForm').style.display = 'none';
+  document.getElementById('learnerPinDisplay').style.display = 'none';
+  document.getElementById('learnerModalTitle').textContent = 'Reset Password';
+  // Create forgot password form
+  let fpDiv = document.getElementById('forgotPasswordForm');
+  if (!fpDiv) {
+    fpDiv = document.createElement('div');
+    fpDiv.id = 'forgotPasswordForm';
+    document.getElementById('learnerModalBody').appendChild(fpDiv);
+  }
+  fpDiv.style.display = '';
+  fpDiv.innerHTML = `
+    <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">Enter your NHS email to reset your password.</p>
+    <label>NHS Email</label>
+    <input type="email" id="fpEmail" placeholder="name@nhs.net or name@nbt.nhs.uk">
+    <div id="fpNewFields" style="display:none;margin-top:12px;">
+      <label>New Password</label>
+      <input type="password" id="fpNewPin1" placeholder="Enter new password">
+      <label>Confirm Password</label>
+      <input type="password" id="fpNewPin2" placeholder="Confirm new password">
+    </div>
+    <div style="margin-top:14px;text-align:center;">
+      <button class="btn btn-green" id="fpSubmitBtn" onclick="handleForgotPassword()" style="width:100%;">Verify Email</button>
+    </div>
+    <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--nhs-grey);">
+      <a href="#" onclick="showLearnerLoginForm();document.getElementById('forgotPasswordForm').style.display='none';return false;">Back to login</a>
+    </div>`;
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById('fpEmail').value.trim().toLowerCase();
+  if (!email) { showToast('Please enter your email'); return; }
+  const newFields = document.getElementById('fpNewFields');
+  if (newFields.style.display === 'none') {
+    // Step 1: verify email exists
+    try {
+      const data = await sbGet('learners', `email=eq.${encodeURIComponent(email)}&select=id,name`);
+      if (data.length === 0) { showToast('No account found with that email'); return; }
+      newFields.style.display = '';
+      document.getElementById('fpEmail').setAttribute('readonly', true);
+      document.getElementById('fpSubmitBtn').textContent = 'Reset Password';
+      document.getElementById('fpSubmitBtn').setAttribute('onclick', `doResetPassword('${email}', ${data[0].id})`);
+      showToast('Email verified! Set your new password.');
+    } catch(e) { showToast('Error verifying email'); }
+  }
+}
+
+async function doResetPassword(email, learnerId) {
+  const p1 = document.getElementById('fpNewPin1').value.trim();
+  const p2 = document.getElementById('fpNewPin2').value.trim();
+  if (!p1 || p1.length < 4) { showToast('Password must be at least 4 characters'); return; }
+  if (p1 !== p2) { showToast('Passwords do not match'); return; }
+  try {
+    await sbUpdate('learners', learnerId, { pin_code: p1 });
+    showToast('Password reset! You can now log in.');
+    document.getElementById('forgotPasswordForm').style.display = 'none';
+    showLearnerLoginForm();
+    document.getElementById('learnerEmail').value = email;
+  } catch(e) { showToast('Reset failed. Try again.'); }
+}
+
+// ===================== ADMIN/LEARNER VIEW TOGGLE =====================
+let adminViewAsLearner = false;
+
+function toggleAdminLearnerView() {
+  adminViewAsLearner = !adminViewAsLearner;
+  if (adminViewAsLearner) {
+    // Switch to learner view
+    document.body.classList.remove('is-admin');
+    document.body.classList.add('is-learner');
+    document.getElementById('adminBadge').textContent = 'Learner View';
+    document.getElementById('adminBadge').style.background = 'var(--nhs-green)';
+    document.getElementById('viewToggleBtn').textContent = 'Admin View';
+    // Hide admin nav tabs
+    document.querySelectorAll('.nav-tab[data-view="drafts"], .nav-tab[data-view="all"], .nav-tab[data-view="inbox"], .nav-tab[data-view="approvals"]').forEach(t => t.style.display = 'none');
+  } else {
+    // Switch back to admin view
+    document.body.classList.add('is-admin');
+    document.body.classList.remove('is-learner');
+    document.getElementById('adminBadge').textContent = 'Admin';
+    document.getElementById('adminBadge').style.background = '';
+    document.getElementById('viewToggleBtn').textContent = 'Learner View';
+    // Show admin nav tabs
+    document.querySelectorAll('.nav-tab[data-view="drafts"], .nav-tab[data-view="all"], .nav-tab[data-view="inbox"], .nav-tab[data-view="approvals"]').forEach(t => t.style.display = '');
+  }
+  switchView('list');
+  renderAll();
 }
 
 function onRotationBlockChange() {
@@ -3580,8 +3675,7 @@ function showActionLanding(title, bodyHtml, type) {
 
 // ===================== INBOX =====================
 function trackSentEmail(sessionId, to, subject, type, topic, teacher, dateStr) {
-  const log = JSON.parse(localStorage.getItem('sst_email_log') || '[]');
-  log.push({
+  const entry = {
     sessionId,
     to,
     subject,
@@ -3591,10 +3685,25 @@ function trackSentEmail(sessionId, to, subject, type, topic, teacher, dateStr) {
     dateStr,
     sentAt: new Date().toISOString(),
     sentBy: currentUser?.name || 'Admin'
-  });
-  // Keep last 200 entries
+  };
+  // Save to localStorage
+  const log = JSON.parse(localStorage.getItem('sst_email_log') || '[]');
+  log.push(entry);
   if (log.length > 200) log.splice(0, log.length - 200);
   localStorage.setItem('sst_email_log', JSON.stringify(log));
+  // Also save to Supabase for cross-device persistence
+  try {
+    sbInsert('email_log', {
+      session_id: sessionId,
+      to_email: to,
+      subject: subject,
+      email_type: type,
+      topic: entry.topic,
+      teacher: entry.teacher,
+      date_str: dateStr,
+      sent_by: entry.sentBy
+    });
+  } catch(e) { console.warn('DB email log failed:', e); }
 }
 
 function getEmailLog() {
@@ -3621,9 +3730,26 @@ async function loadInbox() {
     }
   } catch(e) { console.warn('Gmail inbox not available:', e); }
 
-  // Fallback to localStorage sent log if Gmail not available
+  // Fallback to Supabase email_log (then localStorage) if Gmail not available
   if (!gmailAvailable) {
-    const emailLog = getEmailLog();
+    let emailLog = [];
+    try {
+      const dbLog = await sbGet('email_log', 'order=created_at.desc&limit=200&select=*');
+      emailLog = dbLog.map(r => ({
+        sessionId: r.session_id,
+        to: r.to_email,
+        subject: r.subject,
+        type: r.email_type,
+        topic: r.topic || 'Session',
+        teacher: r.teacher || 'Unknown',
+        dateStr: r.date_str,
+        sentAt: r.created_at,
+        sentBy: r.sent_by || 'Admin'
+      }));
+    } catch(e) {
+      console.warn('DB email log fetch failed, using localStorage:', e);
+      emailLog = getEmailLog();
+    }
     const sessionGroups = {};
     emailLog.forEach(entry => {
       const key = entry.sessionId || 'unknown';
