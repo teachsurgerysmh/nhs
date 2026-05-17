@@ -340,8 +340,8 @@ body.is-learner .learner-only-block { display: block !important; }
 <div class="filters-bar" id="filtersBar">
   <div class="filters-inner">
     <input type="text" class="search-box" id="searchBox" placeholder="Search topics, teachers..." oninput="renderEvents()">
-    <div class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</div>
-    <div class="filter-chip" data-filter="upcoming" onclick="setFilter('upcoming')">Upcoming</div>
+    <div class="filter-chip" data-filter="all" onclick="setFilter('all')">All</div>
+    <div class="filter-chip active" data-filter="upcoming" onclick="setFilter('upcoming')">Upcoming</div>
     <div class="filter-chip" data-filter="completed" onclick="setFilter('completed')">Completed</div>
     <div class="filter-chip admin-only" data-filter="cancelled" onclick="setFilter('cancelled')">Cancelled</div>
     <div class="filter-chip admin-only" data-filter="tbd" onclick="setFilter('tbd')">TBD</div>
@@ -828,7 +828,7 @@ let isAdmin = false;
 let currentUser = null;
 let currentLearner = null;
 let currentView = 'list';
-let currentFilter = 'all';
+let currentFilter = 'upcoming';
 let calMonth = new Date().getMonth();
 let calYear = new Date().getFullYear();
 let editingEventId = null;
@@ -1171,6 +1171,7 @@ function getFilteredEvents() {
   if (!isAdmin || adminViewAsLearner) {
     filtered = filtered.filter(e => e.published && isInCurrentRotation(e) && e.status !== 'cancelled' && e.status !== 'tbd');
   } else if (!adminViewAsLearner && (currentView === 'list' || currentView === 'all')) {
+    // Admin: upcoming/all/tbd show future sessions (including drafts & TBD)
     if (currentFilter === 'all' || currentFilter === 'upcoming' || currentFilter === 'tbd') {
       filtered = filtered.filter(e => isFutureEvent(e));
     }
@@ -1179,12 +1180,18 @@ function getFilteredEvents() {
   }
   if (currentFilter !== 'all') {
     if (!isAdmin || adminViewAsLearner) {
-      // Non-admin: only allow upcoming/completed filters (tbd/cancelled already excluded)
-      if (currentFilter === 'upcoming' || currentFilter === 'completed') {
-        filtered = filtered.filter(e => e.status === currentFilter);
+      if (currentFilter === 'upcoming') {
+        // Upcoming = future sessions only (regardless of DB status)
+        filtered = filtered.filter(e => isFutureEvent(e));
+      } else if (currentFilter === 'completed') {
+        // Completed = past sessions or explicitly marked completed
+        filtered = filtered.filter(e => e.status === 'completed' || !isFutureEvent(e));
       }
     } else {
-      filtered = filtered.filter(e => e.status === currentFilter);
+      // Admin upcoming = all future (drafts + TBD + upcoming), don't filter by status
+      if (currentFilter !== 'upcoming') {
+        filtered = filtered.filter(e => e.status === currentFilter);
+      }
     }
   }
   if (search) {
