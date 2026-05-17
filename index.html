@@ -228,18 +228,50 @@ body.is-learner .learner-only-block { display: block !important; }
 .action-landing .slot-list li:hover { border-color: var(--nhs-blue); background: #e0f5fa; }
 .action-landing .slot-list li.selected { border-color: var(--nhs-green); background: #e6f4ea; }
 @media (max-width: 768px) {
-  .header-inner { flex-direction: column; align-items: flex-start; }
-  .header-actions { width: 100%; justify-content: flex-start; }
-  .filters-inner { flex-direction: column; align-items: stretch; }
+  .header-inner { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .header-left { width: 100%; justify-content: space-between; }
+  .header-logo { font-size: 18px; }
+  .header-logo small { font-size: 11px; }
+  .header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 4px; }
+  .header-actions .btn { padding: 5px 10px; font-size: 11px; }
+  .nav-bar { top: auto; position: relative; padding: 0 8px; }
+  .nav-inner { gap: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .nav-inner::-webkit-scrollbar { display: none; }
+  .nav-tab { padding: 9px 10px; font-size: 11px; }
+  .filters-inner { flex-direction: column; align-items: stretch; gap: 8px; }
   .search-box { width: 100%; }
-  .stats-inner { flex-direction: column; }
-  .stat-card { min-width: 100%; }
+  .filter-chips { flex-wrap: wrap; }
+  .stats-inner { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .stat-card { min-width: calc(50% - 4px); flex: 1; padding: 10px; }
+  .stat-card .stat-num { font-size: 20px; }
+  .welcome-banner { padding: 20px 16px; }
+  .welcome-banner h2 { font-size: 18px; }
+  .welcome-banner p { font-size: 13px; }
+  .welcome-banner button { padding: 12px 24px !important; font-size: 0.95rem !important; }
+  .event-card { padding: 12px 14px; }
+  .event-card .card-topic { font-size: 14px; }
+  .event-card .card-details { font-size: 12px; }
+  .event-card .card-details span { margin-right: 8px; display: inline-block; }
+  .event-card .card-actions { flex-wrap: wrap; gap: 4px; }
+  .event-card .card-actions .btn { font-size: 10px; padding: 3px 8px; }
   .cal-grid { font-size: 10px; }
-  .cal-cell { min-height: 60px; }
-  .nav-tab { padding: 10px 12px; font-size: 12px; }
-  .modal { max-width: 100%; margin: 10px; }
+  .cal-cell { min-height: 50px; padding: 2px; }
+  .cal-event { font-size: 9px; padding: 1px 3px; }
+  .modal { max-width: 100%; margin: 8px; max-height: 90vh; }
+  .modal-body { padding: 14px; }
   .inbox-container { grid-template-columns: 1fr; }
   .inbox-sidebar { max-height: 200px; border-right: none; border-bottom: 1px solid var(--nhs-pale-grey); }
+  #siteFeedbackFab { width: 42px; height: 42px; bottom: 16px; right: 16px; font-size: 18px; }
+  .main-content { padding: 12px 10px; }
+}
+
+@media (max-width: 400px) {
+  .header { padding: 8px 12px; }
+  .header-logo { font-size: 16px; }
+  .header-actions .btn { padding: 4px 8px; font-size: 10px; }
+  .nav-tab { padding: 8px 8px; font-size: 10px; }
+  .stat-card { min-width: calc(50% - 3px); }
+  .event-card .card-top { flex-direction: column; gap: 4px; }
 }
 </style>
 </head>
@@ -283,6 +315,7 @@ body.is-learner .learner-only-block { display: block !important; }
     <div class="nav-tab admin-only" data-view="inbox" onclick="switchView('inbox')">Inbox</div>
     <div class="nav-tab admin-only" data-view="approvals" onclick="switchView('approvals')">Approvals</div>
     <div class="nav-tab admin-only" data-view="attendanceChart" onclick="switchView('attendanceChart')">Attendance Chart</div>
+    <div class="nav-tab admin-only" data-view="siteFeedback" onclick="switchView('siteFeedback')">Site Feedback</div>
     <div class="nav-tab" data-view="dashboard" id="dashboardTab" style="display:none;" onclick="switchView('dashboard')">My Dashboard</div>
   </div>
 </nav>
@@ -328,6 +361,7 @@ body.is-learner .learner-only-block { display: block !important; }
   <div id="feedbackView" style="display:none;"></div>
   <div id="approvalsView" style="display:none;"></div>
   <div id="attendanceChartView" style="display:none;"></div>
+  <div id="siteFeedbackView" style="display:none;"></div>
   <div id="dashboardView" style="display:none;"></div>
   <div id="inboxView" style="display:none;"></div>
   <div id="actionLandingView" style="display:none;"></div>
@@ -731,6 +765,47 @@ body.is-learner .learner-only-block { display: block !important; }
   </div>
 </div>
 
+<!-- Floating Feedback Button -->
+<button id="siteFeedbackFab" onclick="openSiteFeedbackModal()" title="Report a bug or request a feature" style="position:fixed;bottom:24px;right:24px;z-index:99;width:48px;height:48px;border-radius:50%;background:var(--nhs-blue);color:white;border:none;box-shadow:0 4px 12px rgba(0,0,0,0.25);cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center;transition:transform 0.2s;">
+  <span style="line-height:1;">💬</span>
+</button>
+
+<!-- Site Feedback Modal -->
+<div class="modal-overlay" id="siteFeedbackModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header"><h3 id="siteFbTitle">Send Us Feedback</h3><button class="modal-close" onclick="closeModal('siteFeedbackModal')">&times;</button></div>
+    <div class="modal-body">
+      <div id="siteFbForm">
+        <label>What is this about? *</label>
+        <select id="siteFbType" onchange="updateSiteFbPlaceholder()" style="padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;width:100%;">
+          <option value="feature">🚀 Feature Request</option>
+          <option value="bug">🐛 Bug Report</option>
+          <option value="feedback">💡 General Feedback</option>
+          <option value="grievance">⚠️ Grievance / Concern</option>
+        </select>
+        <label style="margin-top:12px;">Subject *</label>
+        <input type="text" id="siteFbSubject" placeholder="Brief summary" style="width:100%;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;">
+        <label style="margin-top:12px;">Details</label>
+        <textarea id="siteFbDetail" rows="4" placeholder="Tell us more..." style="width:100%;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;resize:vertical;"></textarea>
+        <label style="margin-top:12px;">Your name (optional)</label>
+        <input type="text" id="siteFbName" placeholder="e.g. Dr Smith" style="width:100%;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;">
+        <label style="margin-top:12px;">Email (optional, for follow-up)</label>
+        <input type="email" id="siteFbEmail" placeholder="name@nhs.net" style="width:100%;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;">
+        <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('siteFeedbackModal')">Cancel</button>
+          <button class="btn btn-green" id="siteFbSubmitBtn" onclick="submitSiteFeedback()">Submit</button>
+        </div>
+      </div>
+      <div id="siteFbSuccess" style="display:none;text-align:center;padding:30px 20px;">
+        <div style="font-size:40px;margin-bottom:12px;">✅</div>
+        <h3 style="color:var(--nhs-green);margin-bottom:8px;">Thank you!</h3>
+        <p style="color:var(--nhs-grey);font-size:13px;">Your feedback has been submitted. We review all submissions regularly.</p>
+        <button class="btn btn-green" style="margin-top:16px;" onclick="closeModal('siteFeedbackModal')">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <div class="footer">Designed by Dr Suketu Batra</div>
@@ -1016,6 +1091,7 @@ function switchView(view) {
   document.getElementById('feedbackView').style.display = 'none';
   document.getElementById('approvalsView').style.display = 'none';
   document.getElementById('attendanceChartView').style.display = 'none';
+  document.getElementById('siteFeedbackView').style.display = 'none';
   document.getElementById('dashboardView').style.display = 'none';
   document.getElementById('inboxView').style.display = 'none';
   document.getElementById('actionLandingView').style.display = 'none';
@@ -1063,6 +1139,10 @@ function switchView(view) {
     document.getElementById('inboxView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     loadInbox();
+  } else if (view === 'siteFeedback') {
+    document.getElementById('siteFeedbackView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadSiteFeedbackView();
   } else if (view === 'actionLanding') {
     document.getElementById('actionLandingView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
@@ -1654,6 +1734,128 @@ function openBulkEmailModal() {
   });
   body.innerHTML = html;
   openModal('bulkEmailModal');
+}
+
+// ===================== SITE FEEDBACK =====================
+function openSiteFeedbackModal() {
+  document.getElementById('siteFbForm').style.display = '';
+  document.getElementById('siteFbSuccess').style.display = 'none';
+  document.getElementById('siteFbType').value = 'feature';
+  document.getElementById('siteFbSubject').value = '';
+  document.getElementById('siteFbDetail').value = '';
+  // Pre-fill name/email if logged in
+  const name = currentLearner?.name || currentUser?.name || '';
+  const email = currentLearner?.email || currentUser?.email || '';
+  document.getElementById('siteFbName').value = name;
+  document.getElementById('siteFbEmail').value = email;
+  updateSiteFbPlaceholder();
+  openModal('siteFeedbackModal');
+}
+
+function updateSiteFbPlaceholder() {
+  const type = document.getElementById('siteFbType').value;
+  const subj = document.getElementById('siteFbSubject');
+  const det = document.getElementById('siteFbDetail');
+  const titles = { feature: 'Send Us Feedback', bug: 'Report a Bug', feedback: 'Send Us Feedback', grievance: 'Raise a Concern' };
+  document.getElementById('siteFbTitle').textContent = titles[type] || 'Send Us Feedback';
+  const placeholders = {
+    feature: { s: 'e.g. Add calendar export to Google Calendar', d: 'Describe the feature you\'d like and how it would help...' },
+    bug: { s: 'e.g. Calendar not loading on mobile', d: 'What happened? What did you expect? Steps to reproduce...' },
+    feedback: { s: 'e.g. Love the new attendance chart!', d: 'Any thoughts, suggestions, or comments...' },
+    grievance: { s: 'Brief summary of your concern', d: 'Please describe your concern. All submissions are reviewed confidentially.' }
+  };
+  const p = placeholders[type] || placeholders.feedback;
+  subj.placeholder = p.s;
+  det.placeholder = p.d;
+}
+
+async function submitSiteFeedback() {
+  const type = document.getElementById('siteFbType').value;
+  const subject = document.getElementById('siteFbSubject').value.trim();
+  const detail = document.getElementById('siteFbDetail').value.trim();
+  const name = document.getElementById('siteFbName').value.trim();
+  const email = document.getElementById('siteFbEmail').value.trim();
+
+  if (!subject) { showToast('Please enter a subject'); return; }
+
+  const btn = document.getElementById('siteFbSubmitBtn');
+  btn.textContent = 'Submitting...';
+  btn.disabled = true;
+
+  let role = 'Public';
+  if (isAdmin) role = 'Admin';
+  else if (currentLearner) role = currentLearner.grade || 'Learner';
+
+  try {
+    await sbInsert('site_feedback', {
+      type, subject, detail: detail || null,
+      submitted_by: name || null, email: email || null, role
+    });
+    document.getElementById('siteFbForm').style.display = 'none';
+    document.getElementById('siteFbSuccess').style.display = '';
+  } catch(e) {
+    console.error('Feedback submit error:', e);
+    showToast('Failed to submit. Please try again.');
+  } finally {
+    btn.textContent = 'Submit';
+    btn.disabled = false;
+  }
+}
+
+async function loadSiteFeedbackView() {
+  const container = document.getElementById('siteFeedbackView');
+  container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div>';
+  try {
+    const items = await sbGet('site_feedback', 'order=created_at.desc&select=*');
+    const typeIcons = { feature: '🚀', bug: '🐛', feedback: '💡', grievance: '⚠️' };
+    const typeLabels = { feature: 'Feature Request', bug: 'Bug Report', feedback: 'Feedback', grievance: 'Grievance' };
+    const statusColors = { new: 'var(--nhs-blue)', reviewed: 'var(--nhs-orange)', resolved: 'var(--nhs-green)', dismissed: 'var(--nhs-grey)' };
+
+    let html = '<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Site Feedback & Bug Reports (' + items.length + ')</h3>';
+    if (items.length === 0) {
+      html += '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">No feedback submitted yet.</div>';
+    } else {
+      html += '<div style="background:white;border-radius:8px;box-shadow:var(--shadow);overflow:hidden;">';
+      items.forEach(item => {
+        const d = new Date(item.created_at);
+        const dateStr = d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        const icon = typeIcons[item.type] || '💬';
+        const label = typeLabels[item.type] || item.type;
+        const sc = statusColors[item.status] || 'var(--nhs-grey)';
+        html += `<div style="padding:14px 16px;border-bottom:1px solid var(--nhs-pale-grey);display:flex;gap:12px;align-items:flex-start;">
+          <span style="font-size:20px;">${icon}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+              <strong style="font-size:14px;">${esc(item.subject)}</strong>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${sc};color:white;">${item.status || 'new'}</span>
+                <select onchange="updateFeedbackStatus(${item.id}, this.value)" style="font-size:11px;padding:2px 6px;border:1px solid var(--nhs-pale-grey);border-radius:4px;">
+                  <option value="new" ${item.status === 'new' ? 'selected' : ''}>New</option>
+                  <option value="reviewed" ${item.status === 'reviewed' ? 'selected' : ''}>Reviewed</option>
+                  <option value="resolved" ${item.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                  <option value="dismissed" ${item.status === 'dismissed' ? 'selected' : ''}>Dismissed</option>
+                </select>
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--nhs-grey);margin-top:2px;">${label} &middot; ${dateStr}${item.submitted_by ? ' &middot; ' + esc(item.submitted_by) : ''}${item.role ? ' (' + esc(item.role) + ')' : ''}${item.email ? ' &middot; ' + esc(item.email) : ''}</div>
+            ${item.detail ? '<div style="font-size:13px;color:var(--nhs-black);margin-top:6px;white-space:pre-wrap;">' + esc(item.detail) + '</div>' : ''}
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  } catch(e) {
+    console.error('Load site feedback failed:', e);
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-red);">Failed to load feedback.</div>';
+  }
+}
+
+async function updateFeedbackStatus(id, status) {
+  try {
+    await sbUpdate('site_feedback', id, { status });
+    showToast('Status updated');
+  } catch(e) { showToast('Update failed'); }
 }
 
 // ===================== EXPORT =====================
