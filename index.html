@@ -1,0 +1,3459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Southmead Surgical Teaching | NBT</title>
+<style>
+:root {
+  --nhs-blue: #005eb8;
+  --nhs-dark-blue: #003087;
+  --nhs-light-blue: #41b6e6;
+  --nhs-aqua: #00a9ce;
+  --nhs-green: #009639;
+  --nhs-red: #da291c;
+  --nhs-orange: #ed8b00;
+  --nhs-grey: #768692;
+  --nhs-pale-grey: #e8edee;
+  --nhs-bg: #f0f4f5;
+  --nhs-white: #ffffff;
+  --nhs-black: #231f20;
+  --shadow: 0 2px 8px rgba(0,0,0,0.10);
+  --radius: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Arial', 'Helvetica Neue', sans-serif; background: var(--nhs-bg); color: var(--nhs-black); line-height: 1.5; }
+a { color: var(--nhs-blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.header { background: var(--nhs-blue); color: white; padding: 12px 20px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+.header-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.header-logo small { font-size: 13px; font-weight: 400; opacity: 0.85; display: block; }
+.admin-badge { background: var(--nhs-orange); color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: none; }
+.admin-badge.show { display: inline-block; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { padding: 7px 16px; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-white { background: white; color: var(--nhs-blue); }
+.btn-white:hover { background: var(--nhs-pale-grey); }
+.btn-outline { background: transparent; color: white; border: 1.5px solid rgba(255,255,255,0.5); }
+.btn-outline:hover { border-color: white; background: rgba(255,255,255,0.1); }
+.btn-green { background: var(--nhs-green); color: white; }
+.btn-green:hover { background: #007a2f; }
+.btn-red { background: var(--nhs-red); color: white; }
+.btn-red:hover { background: #b8221a; }
+.btn-orange { background: var(--nhs-orange); color: white; }
+.btn-orange:hover { background: #d17d00; }
+.admin-only { display: none !important; }
+body.is-admin .admin-only { display: inline-flex !important; }
+body.is-admin .admin-only-block { display: block !important; }
+body.is-admin .admin-badge { display: inline-block; }
+.offline-banner { background: #fff3cd; border-bottom: 2px solid var(--nhs-orange); padding: 10px 20px; text-align: center; font-size: 13px; color: #664d03; display: none; }
+.offline-banner.show { display: block; }
+.nav-bar { background: var(--nhs-dark-blue); padding: 0 20px; position: sticky; top: 56px; z-index: 99; }
+.nav-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 0; overflow-x: auto; }
+.nav-tab { padding: 11px 18px; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
+.nav-tab:hover { color: white; background: rgba(255,255,255,0.05); }
+.nav-tab.active { color: white; border-bottom-color: var(--nhs-light-blue); }
+.welcome-banner { background: linear-gradient(135deg, var(--nhs-blue), var(--nhs-dark-blue)); color: white; padding: 30px 20px; text-align: center; }
+.welcome-banner h2 { font-size: 22px; margin-bottom: 6px; }
+.welcome-banner p { opacity: 0.85; font-size: 14px; max-width: 600px; margin: 0 auto; }
+.stats-bar { background: white; border-bottom: 1px solid var(--nhs-pale-grey); padding: 16px 20px; display: none; }
+body.is-admin .stats-bar { display: block; }
+.stats-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 16px; flex-wrap: wrap; }
+.stat-card { background: var(--nhs-bg); border-radius: var(--radius); padding: 12px 18px; flex: 1; min-width: 120px; text-align: center; }
+.stat-card .stat-num { font-size: 26px; font-weight: 700; color: var(--nhs-blue); }
+.stat-card .stat-label { font-size: 11px; color: var(--nhs-grey); text-transform: uppercase; letter-spacing: 0.5px; }
+.filters-bar { background: white; border-bottom: 1px solid var(--nhs-pale-grey); padding: 14px 20px; }
+.filters-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.search-box { padding: 8px 14px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); font-size: 13px; width: 220px; outline: none; transition: border 0.2s; }
+.search-box:focus { border-color: var(--nhs-blue); }
+.filter-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--nhs-pale-grey); background: white; color: var(--nhs-grey); transition: all 0.2s; }
+.filter-chip:hover { border-color: var(--nhs-blue); color: var(--nhs-blue); }
+.filter-chip.active { background: var(--nhs-blue); color: white; border-color: var(--nhs-blue); }
+.month-select { padding: 8px 12px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); font-size: 13px; outline: none; background: white; cursor: pointer; }
+.main-content { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.month-group { margin-bottom: 24px; }
+.month-group h3 { font-size: 16px; color: var(--nhs-dark-blue); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--nhs-pale-grey); }
+.event-card { background: white; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); border-left: 5px solid var(--nhs-grey); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; position: relative; }
+.event-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+.event-card.status-completed { border-left-color: var(--nhs-green); }
+.event-card.status-cancelled { border-left-color: var(--nhs-red); }
+.event-card.status-tbd { border-left-color: var(--nhs-orange); }
+.event-card.status-upcoming { border-left-color: var(--nhs-aqua); }
+.event-card.draft { border-left-style: dashed; border-left-color: var(--nhs-grey); }
+.event-card .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.event-card .card-date { font-size: 13px; color: var(--nhs-grey); font-weight: 600; }
+.event-card .card-topic { font-size: 15px; font-weight: 700; color: var(--nhs-dark-blue); margin: 4px 0; }
+.event-card .card-details { font-size: 13px; color: var(--nhs-grey); }
+.event-card .card-details span { margin-right: 14px; }
+.event-card .card-status { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 10px; border-radius: 10px; }
+.status-pill-completed { background: #e6f4ea; color: var(--nhs-green); }
+.status-pill-cancelled { background: #fde8e8; color: var(--nhs-red); }
+.status-pill-tbd { background: #fff4e0; color: var(--nhs-orange); }
+.status-pill-upcoming { background: #e0f5fa; color: var(--nhs-aqua); }
+.event-card .card-notes { font-size: 12px; color: var(--nhs-orange); margin-top: 4px; font-style: italic; }
+.event-card .card-draft-badge { background: var(--nhs-pale-grey); color: var(--nhs-grey); font-size: 10px; padding: 1px 8px; border-radius: 8px; font-weight: 700; margin-left: 6px; }
+.event-card .last-edit-info { font-size: 11px; color: #aaa; margin-top: 6px; border-top: 1px solid var(--nhs-pale-grey); padding-top: 4px; }
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-header h3 { font-size: 18px; color: var(--nhs-dark-blue); }
+.cal-nav-btn { background: var(--nhs-blue); color: white; border: none; border-radius: var(--radius); padding: 6px 14px; font-size: 14px; cursor: pointer; }
+.cal-nav-btn:hover { background: var(--nhs-dark-blue); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-day-header { background: var(--nhs-dark-blue); color: white; text-align: center; padding: 8px 4px; font-size: 12px; font-weight: 700; }
+.cal-cell { background: white; min-height: 90px; padding: 4px; border: 1px solid var(--nhs-pale-grey); position: relative; }
+.cal-cell.empty { background: var(--nhs-bg); }
+.cal-cell .cal-date { font-size: 12px; color: var(--nhs-grey); font-weight: 600; margin-bottom: 2px; }
+.cal-cell.today { border: 2px solid var(--nhs-blue); }
+.cal-event { font-size: 10px; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cal-event.status-completed { background: #e6f4ea; color: var(--nhs-green); }
+.cal-event.status-cancelled { background: #fde8e8; color: var(--nhs-red); text-decoration: line-through; }
+.cal-event.status-tbd { background: #fff4e0; color: var(--nhs-orange); }
+.cal-event.status-upcoming { background: #e0f5fa; color: var(--nhs-aqua); }
+.cal-cell.has-empty-slot { cursor: pointer; }
+.cal-cell.has-empty-slot:hover { background: #f0faf0; }
+.cal-cell.bank-holiday { background: #fef7f0; }
+.cal-cell.bank-holiday .cal-date { color: #d5281b; }
+.cal-empty-slot { font-size: 10px; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor: pointer; background: #f0f4f5; color: var(--nhs-green); border: 1px dashed var(--nhs-green); text-align: center; transition: all 0.15s; }
+.cal-empty-slot:hover { background: #e6f4ea; border-color: var(--nhs-green); }
+.ideas-section { background: white; border-radius: var(--radius); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.ideas-section h3 { color: var(--nhs-dark-blue); font-size: 16px; margin-bottom: 10px; border-bottom: 2px solid var(--nhs-pale-grey); padding-bottom: 6px; }
+.idea-item { padding: 6px 0; border-bottom: 1px solid var(--nhs-pale-grey); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.idea-item:last-child { border-bottom: none; }
+.idea-done { color: var(--nhs-green); }
+.idea-pending { color: var(--nhs-orange); }
+.idea-assigned { font-size: 11px; color: var(--nhs-grey); background: var(--nhs-pale-grey); padding: 1px 8px; border-radius: 8px; }
+.idea-list-item { padding: 5px 0; font-size: 13px; color: var(--nhs-black); border-bottom: 1px solid var(--nhs-pale-grey); }
+.idea-list-item:last-child { border-bottom: none; }
+.log-entry { background: white; border-radius: var(--radius); padding: 12px 16px; margin-bottom: 8px; box-shadow: var(--shadow); border-left: 4px solid var(--nhs-light-blue); }
+.log-entry .log-time { font-size: 11px; color: var(--nhs-grey); }
+.log-entry .log-user { font-weight: 700; color: var(--nhs-dark-blue); font-size: 13px; }
+.log-entry .log-action { font-size: 13px; color: var(--nhs-black); margin-top: 2px; }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.show { display: flex; }
+.modal { background: white; border-radius: 12px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
+.modal-header { background: var(--nhs-blue); color: white; padding: 16px 20px; border-radius: 12px 12px 0 0; display: flex; align-items: center; justify-content: space-between; }
+.modal-header h3 { font-size: 16px; }
+.modal-close { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 0 4px; }
+.modal-body { padding: 20px; }
+.modal-body label { display: block; font-size: 13px; font-weight: 600; color: var(--nhs-dark-blue); margin-bottom: 4px; margin-top: 12px; }
+.modal-body label:first-child { margin-top: 0; }
+.modal-body input, .modal-body select, .modal-body textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); font-size: 13px; outline: none; font-family: inherit; }
+.modal-body input:focus, .modal-body select:focus, .modal-body textarea:focus { border-color: var(--nhs-blue); }
+.modal-body textarea { resize: vertical; min-height: 60px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--nhs-pale-grey); display: flex; gap: 8px; justify-content: flex-end; }
+.checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.checkbox-row input[type="checkbox"] { width: auto; }
+.detail-modal .modal { max-width: 600px; }
+.detail-field { margin-bottom: 10px; }
+.detail-field .detail-label { font-size: 11px; text-transform: uppercase; color: var(--nhs-grey); letter-spacing: 0.5px; font-weight: 700; }
+.detail-field .detail-value { font-size: 14px; color: var(--nhs-black); }
+.fab { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--nhs-green); color: white; border: none; font-size: 28px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.2); z-index: 50; display: none; transition: transform 0.2s; }
+.fab:hover { transform: scale(1.08); }
+body.is-admin .fab { display: flex; align-items: center; justify-content: center; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--nhs-dark-blue); color: white; padding: 12px 24px; border-radius: var(--radius); font-size: 14px; font-weight: 600; box-shadow: var(--shadow); z-index: 300; opacity: 0; transition: all 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.footer { text-align: center; padding: 20px; color: var(--nhs-grey); font-size: 12px; margin-top: 30px; border-top: 1px solid var(--nhs-pale-grey); }
+.email-preview { background: var(--nhs-bg); border-radius: var(--radius); padding: 14px; font-size: 13px; margin-top: 10px; white-space: pre-wrap; word-break: break-word; }
+.loading-spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid var(--nhs-pale-grey); border-top-color: var(--nhs-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* Learner styles */
+.learner-badge { background: var(--nhs-green); color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: none; }
+.learner-badge.show { display: inline-block; }
+body.is-learner .learner-only { display: inline-flex !important; }
+body.is-learner .learner-only-block { display: block !important; }
+.learner-only { display: none !important; }
+.star-rating { display: inline-flex; gap: 2px; cursor: pointer; font-size: 24px; }
+.star-rating .star { color: #ccc; transition: color 0.15s; user-select: none; }
+.star-rating .star.filled { color: #f5a623; }
+.star-rating .star:hover, .star-rating .star.hover { color: #f5a623; }
+.feedback-card { background: white; border-radius: var(--radius); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); border-left: 4px solid var(--nhs-light-blue); }
+.progress-bar { background: var(--nhs-pale-grey); border-radius: 10px; height: 12px; overflow: hidden; }
+.progress-bar-fill { background: linear-gradient(90deg, var(--nhs-blue), var(--nhs-green)); height: 100%; border-radius: 10px; transition: width 0.5s; }
+.dashboard-card { background: white; border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.dashboard-card h4 { color: var(--nhs-dark-blue); margin-bottom: 12px; font-size: 15px; }
+.attendance-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.attendance-table th, .attendance-table td { padding: 8px 12px; border-bottom: 1px solid var(--nhs-pale-grey); text-align: left; }
+.attendance-table th { background: var(--nhs-bg); font-weight: 600; color: var(--nhs-dark-blue); }
+.pace-radio { display: inline-flex; gap: 8px; }
+.pace-radio label { padding: 6px 14px; border: 1.5px solid var(--nhs-pale-grey); border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.pace-radio label:hover { border-color: var(--nhs-blue); }
+.pace-radio input:checked + label, .pace-radio label.selected { background: var(--nhs-blue); color: white; border-color: var(--nhs-blue); }
+.pace-radio input { display: none; }
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 24px; transition: 0.3s; }
+.toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+.toggle-switch input:checked + .toggle-slider { background: var(--nhs-green); }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+/* Inbox styles */
+.inbox-container { display: grid; grid-template-columns: 320px 1fr; gap: 0; min-height: 500px; background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.inbox-sidebar { border-right: 1px solid var(--nhs-pale-grey); overflow-y: auto; max-height: 600px; }
+.inbox-sidebar-header { padding: 14px 16px; background: var(--nhs-bg); border-bottom: 1px solid var(--nhs-pale-grey); font-size: 14px; font-weight: 700; color: var(--nhs-dark-blue); }
+.inbox-thread-item { padding: 12px 16px; border-bottom: 1px solid var(--nhs-pale-grey); cursor: pointer; transition: background 0.15s; }
+.inbox-thread-item:hover { background: var(--nhs-bg); }
+.inbox-thread-item.active { background: #e0f5fa; border-left: 3px solid var(--nhs-light-blue); }
+.inbox-thread-item .thread-subject { font-size: 13px; font-weight: 600; color: var(--nhs-dark-blue); margin-bottom: 2px; }
+.inbox-thread-item .thread-meta { font-size: 11px; color: var(--nhs-grey); }
+.inbox-main { display: flex; flex-direction: column; }
+.inbox-main-header { padding: 14px 20px; background: var(--nhs-bg); border-bottom: 1px solid var(--nhs-pale-grey); }
+.inbox-main-header h4 { font-size: 15px; color: var(--nhs-dark-blue); margin-bottom: 2px; }
+.inbox-main-header .inbox-meta { font-size: 12px; color: var(--nhs-grey); }
+.inbox-messages { flex: 1; overflow-y: auto; padding: 16px 20px; max-height: 380px; }
+.inbox-message { margin-bottom: 14px; padding: 12px 16px; border-radius: var(--radius); font-size: 13px; }
+.inbox-message.sent { background: #e0f5fa; border-left: 3px solid var(--nhs-light-blue); }
+.inbox-message.received { background: var(--nhs-bg); border-left: 3px solid var(--nhs-green); }
+.inbox-message .msg-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.inbox-message .msg-from { font-weight: 600; color: var(--nhs-dark-blue); font-size: 12px; }
+.inbox-message .msg-time { font-size: 11px; color: var(--nhs-grey); }
+.inbox-message .msg-body { color: var(--nhs-black); line-height: 1.5; }
+.inbox-reply-box { padding: 14px 20px; border-top: 1px solid var(--nhs-pale-grey); background: var(--nhs-bg); }
+.inbox-reply-box textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; outline: none; }
+.inbox-reply-box textarea:focus { border-color: var(--nhs-blue); }
+.inbox-reply-actions { display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end; }
+.inbox-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--nhs-grey); font-size: 14px; text-align: center; padding: 40px; }
+.inbox-notice { background: #fff4e0; border: 1px solid var(--nhs-orange); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #664d03; }
+/* Reschedule landing styles */
+.action-landing { max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.action-landing-header { background: linear-gradient(135deg, var(--nhs-blue), var(--nhs-dark-blue)); color: white; padding: 30px 24px; text-align: center; }
+.action-landing-header h2 { font-size: 20px; margin-bottom: 6px; }
+.action-landing-header p { opacity: 0.85; font-size: 14px; }
+.action-landing-body { padding: 24px; }
+.action-landing .slot-list { list-style: none; padding: 0; margin: 16px 0; }
+.action-landing .slot-list li { padding: 10px 14px; margin-bottom: 6px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); cursor: pointer; font-size: 14px; transition: all 0.15s; }
+.action-landing .slot-list li:hover { border-color: var(--nhs-blue); background: #e0f5fa; }
+.action-landing .slot-list li.selected { border-color: var(--nhs-green); background: #e6f4ea; }
+@media (max-width: 768px) {
+  .header-inner { flex-direction: column; align-items: flex-start; }
+  .header-actions { width: 100%; justify-content: flex-start; }
+  .filters-inner { flex-direction: column; align-items: stretch; }
+  .search-box { width: 100%; }
+  .stats-inner { flex-direction: column; }
+  .stat-card { min-width: 100%; }
+  .cal-grid { font-size: 10px; }
+  .cal-cell { min-height: 60px; }
+  .nav-tab { padding: 10px 12px; font-size: 12px; }
+  .modal { max-width: 100%; margin: 10px; }
+  .inbox-container { grid-template-columns: 1fr; }
+  .inbox-sidebar { max-height: 200px; border-right: none; border-bottom: 1px solid var(--nhs-pale-grey); }
+}
+</style>
+</head>
+<body>
+
+<div class="offline-banner" id="offlineBanner">Unable to connect to database. Please check your internet connection.</div>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="header-logo">
+        Southmead Surgical Teaching
+        <small>North Bristol NHS Trust</small>
+      </div>
+      <span class="admin-badge" id="adminBadge">Admin</span>
+      <span class="learner-badge" id="learnerBadge">Learner</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline admin-only" onclick="exportCSV()">Export CSV</button>
+      <button class="btn btn-outline admin-only" onclick="openBulkEmailModal()">Bulk Remind</button>
+      <button class="btn btn-outline" id="learnerLoginBtn" onclick="openLearnerLoginModal()">Learner Login</button>
+      <button class="btn btn-white" id="loginBtn" onclick="openLoginModal()">Admin Login</button>
+      <button class="btn btn-outline" id="logoutBtn" style="display:none;" onclick="doLogout()">Logout</button>
+      <button class="btn btn-outline" id="learnerLogoutBtn" style="display:none;" onclick="doLearnerLogout()">Learner Logout</button>
+    </div>
+  </div>
+</header>
+
+<nav class="nav-bar">
+  <div class="nav-inner" id="navInner">
+    <div class="nav-tab active" data-view="list" onclick="switchView('list')">Upcoming Sessions</div>
+    <div class="nav-tab" data-view="calendar" onclick="switchView('calendar')">Calendar</div>
+    <div class="nav-tab admin-only" data-view="all" onclick="switchView('all')">All Sessions</div>
+    <div class="nav-tab admin-only" data-view="drafts" onclick="switchView('drafts')">Drafts</div>
+    <div class="nav-tab admin-only" data-view="ideas" onclick="switchView('ideas')">Topic Ideas</div>
+    <div class="nav-tab admin-only" data-view="log" onclick="switchView('log')" id="logTab" style="display:none !important;">Activity Log</div>
+    <div class="nav-tab admin-only" data-view="requests" onclick="switchView('requests')">Requests</div>
+    <div class="nav-tab admin-only" data-view="contacts" onclick="switchView('contacts')">Contacts</div>
+    <div class="nav-tab admin-only" data-view="feedback" onclick="switchView('feedback')">Feedback</div>
+    <div class="nav-tab admin-only" data-view="inbox" onclick="switchView('inbox')">Inbox</div>
+    <div class="nav-tab admin-only" data-view="approvals" onclick="switchView('approvals')">Approvals</div>
+    <div class="nav-tab admin-only" data-view="attendanceChart" onclick="switchView('attendanceChart')">Attendance Chart</div>
+    <div class="nav-tab" data-view="dashboard" id="dashboardTab" style="display:none;" onclick="switchView('dashboard')">My Dashboard</div>
+  </div>
+</nav>
+
+<div class="welcome-banner" id="welcomeBanner">
+  <h2>Surgical Teaching at Southmead Hospital</h2>
+  <p>Weekly teaching sessions for foundation doctors and trainees on the General Surgery rotation at North Bristol NHS Trust.</p>
+  <button onclick="showRequestSessionModal()" style="margin-top:18px;padding:14px 36px;font-size:1.1rem;font-weight:700;background:#009639;color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 15px rgba(0,150,57,0.4);letter-spacing:0.3px;transition:all 0.2s;" onmouseover="this.style.background='#007a2e';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#009639';this.style.transform='translateY(0)'">Request a Teaching Session</button>
+</div>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stats-inner">
+    <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Total Sessions</div></div>
+    <div class="stat-card"><div class="stat-num" id="statUpcoming">0</div><div class="stat-label">Upcoming</div></div>
+    <div class="stat-card"><div class="stat-num" id="statCompleted">0</div><div class="stat-label">Completed</div></div>
+    <div class="stat-card"><div class="stat-num" id="statCancelled">0</div><div class="stat-label">Cancelled</div></div>
+    <div class="stat-card"><div class="stat-num" id="statTbd">0</div><div class="stat-label">TBD</div></div>
+    <div class="stat-card"><div class="stat-num" id="statDraft">0</div><div class="stat-label">Drafts</div></div>
+  </div>
+</div>
+
+<div class="filters-bar" id="filtersBar">
+  <div class="filters-inner">
+    <input type="text" class="search-box" id="searchBox" placeholder="Search topics, teachers..." oninput="renderEvents()">
+    <div class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</div>
+    <div class="filter-chip" data-filter="upcoming" onclick="setFilter('upcoming')">Upcoming</div>
+    <div class="filter-chip" data-filter="completed" onclick="setFilter('completed')">Completed</div>
+    <div class="filter-chip" data-filter="cancelled" onclick="setFilter('cancelled')">Cancelled</div>
+    <div class="filter-chip" data-filter="tbd" onclick="setFilter('tbd')">TBD</div>
+    <select class="month-select" id="monthSelect" onchange="renderEvents()">
+      <option value="">All months</option>
+    </select>
+  </div>
+</div>
+
+<div class="main-content">
+  <div id="listView"></div>
+  <div id="calendarView" style="display:none;"></div>
+  <div id="topicIdeasView" style="display:none;"></div>
+  <div id="activityLogView" style="display:none;"></div>
+  <div id="requestsView" style="display:none;"></div>
+  <div id="contactsView" style="display:none;"></div>
+  <div id="feedbackView" style="display:none;"></div>
+  <div id="approvalsView" style="display:none;"></div>
+  <div id="attendanceChartView" style="display:none;"></div>
+  <div id="dashboardView" style="display:none;"></div>
+  <div id="inboxView" style="display:none;"></div>
+  <div id="actionLandingView" style="display:none;"></div>
+</div>
+
+<button class="fab" onclick="openAddModal()" title="Add Session">+</button>
+
+<!-- Login Modal -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Admin Login</h3><button class="modal-close" onclick="closeModal('loginModal')">&times;</button></div>
+    <div class="modal-body">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="Enter username" autocomplete="username">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Enter password" autocomplete="current-password">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('loginModal')">Cancel</button>
+      <button class="btn btn-green" onclick="doLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="eventModalTitle">Add Session</h3><button class="modal-close" onclick="closeModal('eventModal')">&times;</button></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div><label>Day</label><select id="evDay"><option>Tues</option><option>Wed</option><option>Mon</option><option>Thurs</option><option>Fri</option></select></div>
+        <div><label>Date</label><input type="text" id="evDate" placeholder="e.g. 13th"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div><label>Month</label><select id="evMonth"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
+        <div><label>Year</label><input type="number" id="evYear" value="2026"></div>
+      </div>
+      <label>Time</label><input type="text" id="evTime" placeholder="e.g. 0800-0900">
+      <label>Room</label><input type="text" id="evRoom" placeholder="e.g. Seacole L2">
+      <label>Topic</label><input type="text" id="evTopic" placeholder="Topic title">
+      <label>Teacher</label><input type="text" id="evTeacher" placeholder="e.g. Mr Arvind / Ms Orchard">
+      <label>Teacher Email</label><input type="email" id="evTeacherEmail" placeholder="teacher@nhs.net">
+      <div style="background:var(--nhs-bg);border-radius:var(--radius);padding:12px;margin-top:12px;">
+        <label style="margin-top:0;color:var(--nhs-grey);font-size:12px;">Backup Teacher (optional)</label>
+        <input type="text" id="evBackupTeacher" placeholder="e.g. Ms Orchard (backup)">
+        <label style="color:var(--nhs-grey);font-size:12px;">Backup Email</label>
+        <input type="email" id="evBackupEmail" placeholder="backup@nhs.net">
+      </div>
+      <label>Status</label>
+      <select id="evStatus"><option value="upcoming">Upcoming</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="tbd">TBD</option></select>
+      <label>Notes</label><textarea id="evNotes" rows="2"></textarea>
+      <div class="checkbox-row">
+        <input type="checkbox" id="evPublished" checked>
+        <label for="evPublished" style="margin:0;">Published (visible to all users)</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-red" id="evDeleteBtn" style="margin-right:auto;display:none;" onclick="deleteEvent()">Delete</button>
+      <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('eventModal')">Cancel</button>
+      <button class="btn btn-green" onclick="saveEvent()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay detail-modal" id="detailModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Session Details</h3><button class="modal-close" onclick="closeModal('detailModal')">&times;</button></div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer" id="detailFooter"></div>
+  </div>
+</div>
+
+<!-- Email Modal -->
+<div class="modal-overlay" id="emailModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Send Email Reminder</h3><button class="modal-close" onclick="closeModal('emailModal')">&times;</button></div>
+    <div class="modal-body" id="emailBody"></div>
+    <div class="modal-footer"><button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('emailModal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Bulk Email Modal -->
+<div class="modal-overlay" id="bulkEmailModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Bulk Reminder</h3><button class="modal-close" onclick="closeModal('bulkEmailModal')">&times;</button></div>
+    <div class="modal-body" id="bulkEmailBody"></div>
+    <div class="modal-footer"><button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('bulkEmailModal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Request Session Modal (public) -->
+<div class="modal-overlay" id="requestSessionModal">
+  <div class="modal" style="max-width:480px;">
+    <div style="background:linear-gradient(135deg,var(--nhs-blue),var(--nhs-dark-blue));color:white;padding:28px 24px 20px;border-radius:12px 12px 0 0;text-align:center;position:relative;">
+      <button class="modal-close" onclick="closeModal('requestSessionModal')" style="position:absolute;top:12px;right:16px;">&times;</button>
+      <div style="font-size:28px;margin-bottom:6px;">&#127891;</div>
+      <h3 style="font-size:18px;margin-bottom:4px;">Request a Teaching Session</h3>
+      <p style="opacity:0.8;font-size:13px;margin:0;">Want to present at Southmead? Pick an available slot below.</p>
+    </div>
+    <div class="modal-body" style="padding:24px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div>
+          <label style="margin-top:0;">Your Name *</label>
+          <input type="text" id="reqName" placeholder="Mr/Ms/Dr Smith">
+        </div>
+        <div>
+          <label style="margin-top:0;">Your Email *</label>
+          <input type="email" id="reqEmail" placeholder="name@nhs.net">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <label style="margin-top:0;">Phone Number</label>
+          <input type="tel" id="reqPhone" placeholder="07xxx xxx xxx">
+        </div>
+        <div></div>
+      </div>
+      <label>Available Slot *</label>
+      <select id="reqSlot" style="width:100%;padding:10px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;background:white;cursor:pointer;">
+        <option value="">-- Choose an available date --</option>
+      </select>
+      <div id="reqSlotInfo" style="display:none;margin-top:8px;padding:10px 14px;background:#e0f5fa;border-radius:var(--radius);font-size:13px;color:var(--nhs-dark-blue);"></div>
+      <label>Topic / Subject *</label>
+      <input type="text" id="reqTopic" placeholder="e.g. Bariatric Surgery Complications">
+      <label>Additional Message <span style="font-weight:400;color:var(--nhs-grey);">(optional)</span></label>
+      <textarea id="reqMessage" rows="2" placeholder="Any other details..." style="margin-bottom:4px;"></textarea>
+    </div>
+    <div style="padding:0 24px 24px;display:flex;gap:10px;">
+      <button class="btn btn-outline" style="flex:1;color:var(--nhs-grey);border-color:var(--nhs-pale-grey);justify-content:center;" onclick="closeModal('requestSessionModal')">Cancel</button>
+      <button class="btn btn-green" style="flex:2;justify-content:center;padding:11px 16px;font-size:14px;" onclick="submitSessionRequest()">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- Respond to Request Modal -->
+<div class="modal-overlay" id="respondModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="respondTitle">Respond to Request</h3><button class="modal-close" onclick="closeModal('respondModal')">&times;</button></div>
+    <div class="modal-body">
+      <div id="respondDetails" style="margin-bottom:16px;"></div>
+      <label>Message to requester (optional)</label>
+      <textarea id="respondMessage" rows="3" placeholder="e.g. We've scheduled you for Tues 10th June, Seacole L2, 0800-0900..."></textarea>
+      <input type="hidden" id="respondId">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-red" onclick="respondToRequest('rejected')">Reject</button>
+      <button class="btn btn-green" onclick="respondToRequest('accepted')">Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Contact Modal -->
+<div class="modal-overlay" id="contactModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="contactModalTitle">Add Contact</h3><button class="modal-close" onclick="closeModal('contactModal')">&times;</button></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <label style="margin-top:0;">Name *</label>
+          <input type="text" id="ctName" placeholder="e.g. Mr Arvind / Ms Orchard">
+        </div>
+        <div>
+          <label style="margin-top:0;">Role</label>
+          <input type="text" id="ctRole" placeholder="e.g. Consultant, Registrar, SHO">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <label style="margin-top:0;">Email</label>
+          <input type="email" id="ctEmail" placeholder="name@nhs.net">
+        </div>
+        <div>
+          <label style="margin-top:0;">Phone</label>
+          <input type="tel" id="ctPhone" placeholder="07xxx xxx xxx">
+        </div>
+      </div>
+      <label>Specialty</label>
+      <input type="text" id="ctSpecialty" placeholder="e.g. Upper GI, Colorectal, Vascular">
+      <label>Notes <span style="font-weight:400;color:var(--nhs-grey);">(optional)</span></label>
+      <textarea id="ctNotes" rows="2" placeholder="e.g. Available Tuesdays, prefers morning sessions"></textarea>
+      <input type="hidden" id="ctId">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-white" onclick="closeModal('contactModal')">Cancel</button>
+      <button class="btn" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Idea Modal -->
+<div class="modal-overlay" id="addIdeaModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Add Topic Idea</h3><button class="modal-close" onclick="closeModal('addIdeaModal')">&times;</button></div>
+    <div class="modal-body">
+      <label>Category</label>
+      <select id="ideaCategory">
+        <option>Core Topics (Tuesday)</option>
+        <option>Clinical Skills (Wednesday)</option>
+        <option selected>General Ideas</option>
+        <option>Lydia's Suggestions</option>
+        <option>Junior Doctor Requests</option>
+        <option>Planning Notes</option>
+      </select>
+      <label>Topic *</label>
+      <input type="text" id="ideaTopic" placeholder="e.g. Bariatric Surgery Complications">
+      <label>Assigned to (optional)</label>
+      <input type="text" id="ideaAssigned" placeholder="e.g. Mr Arvind">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('addIdeaModal')">Cancel</button>
+      <button class="btn btn-green" onclick="submitIdea()">Add Idea</button>
+    </div>
+  </div>
+</div>
+
+<!-- Learner Login Modal -->
+<div class="modal-overlay" id="learnerLoginModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="learnerModalTitle">Learner Login</h3><button class="modal-close" onclick="closeModal('learnerLoginModal')">&times;</button></div>
+    <div class="modal-body" id="learnerModalBody">
+      <div id="learnerLoginForm">
+        <label>NHS Email</label>
+        <input type="email" id="learnerEmail" placeholder="name@nhs.net or name@nbt.nhs.uk">
+        <label>PIN</label>
+        <input type="password" id="learnerPin" placeholder="6-digit PIN" maxlength="6">
+        <div style="margin-top:14px;text-align:center;">
+          <button class="btn btn-green" onclick="doLearnerLogin()" style="width:100%;">Login</button>
+        </div>
+        <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--nhs-grey);">
+          Don't have an account? <a href="#" onclick="showLearnerRegister();return false;">Register here</a>
+        </div>
+      </div>
+      <div id="learnerRegisterForm" style="display:none;">
+        <label>Full Name *</label>
+        <input type="text" id="regName" placeholder="e.g. Dr John Smith">
+        <label>NHS Email *</label>
+        <input type="email" id="regEmail" placeholder="name@nhs.net or name@nbt.nhs.uk">
+        <label>Grade *</label>
+        <select id="regGrade">
+          <option value="">-- Select grade --</option>
+          <option>FY1</option><option>FY2</option><option>CT1</option><option>CT2</option>
+          <option>ST3</option><option>ST4</option><option>ST5</option><option>ST6</option><option>ST7</option><option>ST8</option>
+          <option>Other</option>
+        </select>
+        <label>Placement *</label>
+        <select id="regPlacement">
+          <option value="">-- Select placement --</option>
+          <option>UGI</option><option>LGI</option><option>Transplant</option><option>Vascular</option><option>Other</option>
+        </select>
+        <label>Rotation Block</label>
+        <select id="regRotationBlock" onchange="onRotationBlockChange()">
+          <option value="">-- Custom dates (set below) --</option>
+          <option value="aug_dec">August - December</option>
+          <option value="dec_apr">December - April</option>
+          <option value="apr_aug">April - August</option>
+        </select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><label>Placement Start</label><input type="date" id="regPlacementStart"></div>
+          <div><label>Placement End</label><input type="date" id="regPlacementEnd"></div>
+        </div>
+        <div style="margin-top:14px;text-align:center;">
+          <button class="btn btn-green" onclick="doLearnerRegister()" style="width:100%;">Register</button>
+        </div>
+        <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--nhs-grey);">
+          Already registered? <a href="#" onclick="showLearnerLoginForm();return false;">Login here</a>
+        </div>
+      </div>
+      <div id="learnerPinDisplay" style="display:none;text-align:center;padding:20px;">
+        <div style="font-size:16px;font-weight:700;color:var(--nhs-dark-blue);margin-bottom:10px;">Registration Successful!</div>
+        <div style="font-size:14px;color:var(--nhs-grey);margin-bottom:14px;">Your PIN code (save it - shown only once):</div>
+        <div id="generatedPin" style="font-size:36px;font-weight:700;color:var(--nhs-blue);letter-spacing:6px;padding:16px;background:var(--nhs-bg);border-radius:8px;"></div>
+        <div style="margin-top:16px;"><button class="btn btn-green" onclick="closeModal('learnerLoginModal');showToast('Welcome! You are now logged in.');">Continue</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><h3>Session Feedback</h3><button class="modal-close" onclick="closeModal('feedbackModal')">&times;</button></div>
+    <div class="modal-body" id="feedbackModalBody">
+      <div id="feedbackSessionInfo" style="background:var(--nhs-bg);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <label>Content Quality</label>
+      <div class="star-rating" id="starsContent" data-field="content"></div>
+      <label>Teaching Quality</label>
+      <div class="star-rating" id="starsTeaching" data-field="teaching"></div>
+      <label>Relevance to Training</label>
+      <div class="star-rating" id="starsRelevance" data-field="relevance"></div>
+      <label>Pace</label>
+      <div class="pace-radio">
+        <input type="radio" name="feedbackPace" id="paceSlow" value="too_slow"><label for="paceSlow">Too slow</label>
+        <input type="radio" name="feedbackPace" id="paceRight" value="just_right" checked><label for="paceRight">Just right</label>
+        <input type="radio" name="feedbackPace" id="paceFast" value="too_fast"><label for="paceFast">Too fast</label>
+      </div>
+      <label>Overall Rating</label>
+      <div class="star-rating" id="starsOverall" data-field="overall"></div>
+      <label>One thing you learned today</label>
+      <textarea id="feedbackLearned" rows="2" placeholder="What was your key takeaway?"></textarea>
+      <label>Suggestions for future topics</label>
+      <textarea id="feedbackSuggestions" rows="2" placeholder="Any topics you'd like covered?"></textarea>
+      <label>Additional comments</label>
+      <textarea id="feedbackComments" rows="2" placeholder="Any other feedback..."></textarea>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+        <span style="font-size:13px;font-weight:600;">Would you recommend this session?</span>
+        <label class="toggle-switch"><input type="checkbox" id="feedbackRecommend" checked><span class="toggle-slider"></span></label>
+        <span style="font-size:12px;color:var(--nhs-grey);">Yes</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+        <span style="font-size:13px;font-weight:600;">Submit anonymously</span>
+        <label class="toggle-switch"><input type="checkbox" id="feedbackAnonymous"><span class="toggle-slider"></span></label>
+        <span style="font-size:12px;color:var(--nhs-grey);">Your name won't be shown to the presenter</span>
+      </div>
+      <input type="hidden" id="feedbackSessionId">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('feedbackModal')">Cancel</button>
+      <button class="btn btn-green" onclick="submitFeedback()">Submit Feedback</button>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance Modal (Admin) -->
+<div class="modal-overlay" id="attendanceModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><h3>Mark Attendance</h3><button class="modal-close" onclick="closeModal('attendanceModal')">&times;</button></div>
+    <div class="modal-body" id="attendanceModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('attendanceModal')">Close</button>
+      <button class="btn btn-green" onclick="saveAttendance()">Save Attendance</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Request Modal (Admin - Retrospective) -->
+<div class="modal-overlay" id="feedbackRequestModal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header"><h3>Send Feedback Request</h3><button class="modal-close" onclick="closeModal('feedbackRequestModal')">&times;</button></div>
+    <div class="modal-body" id="feedbackRequestBody">
+      <div id="fbReqSessionInfo" style="background:var(--nhs-bg);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <div style="margin-bottom:14px;">
+        <label style="font-weight:600;font-size:13px;">Feedback Link</label>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <input type="text" id="fbReqLink" readonly style="flex:1;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:12px;background:#f8f9fa;">
+          <button class="btn" style="font-size:12px;padding:6px 14px;" onclick="copyFeedbackLink()">Copy</button>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="font-weight:600;font-size:13px;">Select Recipients</label>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="fbReqSelectGroup('all')">All</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="fbReqSelectGroup('none')">None</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="fbReqSelectGroup('Surgical Trainee')">Trainees</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="fbReqSelectGroup('Consultant')">Consultants</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;" onclick="fbReqSelectGroup('attended')">Attended Only</button>
+        </div>
+        <input type="text" id="fbReqSearch" placeholder="Search contacts..." oninput="filterFbReqContacts()" style="width:100%;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;margin-top:8px;">
+      </div>
+      <div id="fbReqContactsList" style="max-height:280px;overflow-y:auto;border:1px solid var(--nhs-pale-grey);border-radius:var(--radius);padding:8px;"></div>
+      <div style="margin-top:12px;font-size:12px;color:var(--nhs-grey);">
+        <span id="fbReqSelectedCount">0</span> recipients selected
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('feedbackRequestModal')">Cancel</button>
+      <button class="btn btn-white" style="border:1px solid var(--nhs-pale-grey);color:var(--nhs-grey);" onclick="copyFeedbackEmails()">Copy Emails</button>
+      <button class="btn btn-white" style="border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="sendFeedbackMailto()">Use Email Client</button>
+      <button class="btn btn-green" onclick="sendFeedbackEmails()">Send Directly</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="footer">Designed by Dr Suketu Batra</div>
+
+<script>
+// ===================== SUPABASE CONFIG =====================
+const SUPABASE_URL = 'https://rufihxjquwrluaenmbaa.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1ZmloeGpxdXdybHVhZW5tYmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyOTg4NDMsImV4cCI6MjA5Mzg3NDg0M30.6o8GrCPcQ__JjrGLUiqQwdgWcM1Qk_02TvLvTOwUjyg';
+
+const headers = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_KEY,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+// ===================== STATE =====================
+let events = [];
+let isAdmin = false;
+let currentUser = null;
+let currentLearner = null;
+let currentView = 'list';
+let currentFilter = 'all';
+let calMonth = new Date().getMonth();
+let calYear = new Date().getFullYear();
+let editingEventId = null;
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+// ===================== SUPABASE REST HELPERS =====================
+async function sbGet(table, query = '') {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers });
+  if (!res.ok) throw new Error(`GET ${table} failed: ${res.status}`);
+  return res.json();
+}
+
+async function sbInsert(table, data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST', headers, body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(`INSERT ${table} failed: ${res.status}`);
+  return res.json();
+}
+
+async function sbUpdate(table, id, data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'PATCH', headers: { ...headers, 'Prefer': 'return=representation' }, body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(`UPDATE ${table} failed: ${res.status}`);
+  return res.json();
+}
+
+async function sbDelete(table, id) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'DELETE', headers
+  });
+  if (!res.ok) throw new Error(`DELETE ${table} failed: ${res.status}`);
+}
+
+// ===================== DATE HELPERS =====================
+function monthIndex(m) { return MONTHS.indexOf(m); }
+function parseDateNum(d) { return parseInt(d); }
+function eventToDate(ev) {
+  const mi = monthIndex(ev.month);
+  const day = parseDateNum(ev.date);
+  if (mi < 0 || isNaN(day)) return null;
+  return new Date(ev.year, mi, day);
+}
+function isFutureEvent(ev) {
+  const d = eventToDate(ev);
+  if (!d) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return d >= today;
+}
+
+// ===================== DATA LOADING =====================
+async function loadEvents() {
+  try {
+    let data;
+    if (isAdmin) {
+      // Admin sees everything
+      data = await sbGet('schedule', 'order=year.asc,id.asc&select=*');
+    } else {
+      // Public sees only published
+      data = await sbGet('schedule', 'published=eq.true&order=year.asc,id.asc&select=*');
+    }
+    events = data.map(row => ({
+      id: row.id,
+      event_id: row.event_id,
+      day: row.day || '',
+      date: row.date || '',
+      month: row.month || '',
+      year: row.year || 2026,
+      time: row.time || '',
+      room: row.room || '',
+      topic: row.topic || '',
+      teacher: row.teacher || '',
+      teacherEmail: row.teacher_email || '',
+      status: row.status || 'tbd',
+      published: row.published !== false,
+      notes: row.notes || '',
+      lastEditBy: row.last_edit_by || '',
+      lastEditAt: row.last_edit_at || '',
+      backupTeacher: row.backup_teacher || '',
+      backupTeacherEmail: row.backup_teacher_email || '',
+    }));
+    document.getElementById('offlineBanner').classList.remove('show');
+  } catch(e) {
+    console.error('Failed to load events:', e);
+    document.getElementById('offlineBanner').classList.add('show');
+  }
+}
+
+// ===================== AUTH =====================
+async function doLogin() {
+  const user = document.getElementById('loginUser').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value.trim();
+  if (!user || !pass) { showToast('Enter username and password'); return; }
+
+  try {
+    const data = await sbGet('users', `username=eq.${encodeURIComponent(user)}&select=*`);
+    if (data.length === 0) { showToast('User not found'); return; }
+    const u = data[0];
+    if (u.password !== pass) { showToast('Incorrect password'); return; }
+    currentUser = { id: u.id, username: u.username, name: u.display_name, role: u.role };
+    sessionStorage.setItem('sst_user', JSON.stringify(currentUser));
+    setAdmin(true);
+    closeModal('loginModal');
+    showToast('Welcome, ' + currentUser.name);
+    await loadEvents();
+    renderAll();
+    logAction('Logged in');
+  } catch(e) {
+    console.error('Login error:', e);
+    showToast('Login failed - check connection');
+  }
+}
+
+function doLogout() {
+  logAction('Logged out');
+  currentUser = null;
+  currentLearner = null;
+  sessionStorage.removeItem('sst_user');
+  localStorage.removeItem('sst_learner');
+  document.body.classList.remove('is-learner');
+  setAdmin(false);
+  switchView('list');
+  showToast('Logged out');
+  loadEvents().then(() => renderAll());
+}
+
+function setAdmin(val) {
+  isAdmin = val;
+  document.body.classList.toggle('is-admin', val);
+  updateHeaderButtons();
+  // Activity log only visible to admin role (not managers)
+  const logTab = document.getElementById('logTab');
+  if (val && currentUser?.role === 'admin') {
+    logTab.style.cssText = '';
+  } else {
+    logTab.style.cssText = 'display:none !important;';
+  }
+  // Auto-link admin to learner record
+  if (val && currentUser) {
+    linkAdminToLearner();
+  }
+}
+
+async function linkAdminToLearner() {
+  if (!currentUser) return;
+  // Admin email mapping
+  const adminEmails = {
+    suketu: 'Suketu.Batra@nbt.nhs.uk',
+    ilgin: 'Ilgin.Kilic@nbt.nhs.uk',
+    rob: 'rob@nbt.nhs.uk',
+    nitin: 'Nitin.Arvind@nbt.nhs.uk'
+  };
+  const email = (adminEmails[currentUser.username] || (currentUser.username + '@nbt.nhs.uk')).toLowerCase();
+  try {
+    const data = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
+    if (data.length > 0) {
+      currentLearner = data[0];
+    } else {
+      // Create a learner record for this admin
+      const result = await sbInsert('learners', {
+        name: currentUser.name,
+        email: email,
+        grade: 'Consultant',
+        placement: 'Admin',
+        pin_code: String(Math.floor(100000 + Math.random() * 900000)),
+        verified: true
+      });
+      currentLearner = result[0];
+    }
+    localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    document.body.classList.add('is-learner');
+    // Show My Dashboard tab for admins
+    updateHeaderButtons();
+  } catch(e) {
+    console.warn('Could not link admin to learner:', e);
+  }
+}
+
+function updateHeaderButtons() {
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const learnerLoginBtn = document.getElementById('learnerLoginBtn');
+  const learnerLogoutBtn = document.getElementById('learnerLogoutBtn');
+  const adminBadge = document.getElementById('adminBadge');
+  const learnerBadge = document.getElementById('learnerBadge');
+
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (isAdmin) {
+    // Admin logged in: show only admin logout, hide learner buttons
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = '';
+    logoutBtn.textContent = 'Admin Logout';
+    learnerLoginBtn.style.display = 'none';
+    learnerLogoutBtn.style.display = 'none';
+    adminBadge.classList.add('show');
+    learnerBadge.classList.remove('show');
+    if (dashboardTab) dashboardTab.style.display = '';
+  } else if (currentLearner) {
+    // Learner (non-admin) logged in
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'none';
+    learnerLoginBtn.style.display = 'none';
+    learnerLogoutBtn.style.display = '';
+    adminBadge.classList.remove('show');
+    learnerBadge.classList.add('show');
+    learnerBadge.textContent = currentLearner.name.split(' ')[0];
+    if (dashboardTab) dashboardTab.style.display = '';
+  } else {
+    // Nobody logged in
+    loginBtn.style.display = '';
+    logoutBtn.style.display = 'none';
+    learnerLoginBtn.style.display = '';
+    learnerLogoutBtn.style.display = 'none';
+    adminBadge.classList.remove('show');
+    learnerBadge.classList.remove('show');
+    if (dashboardTab) dashboardTab.style.display = 'none';
+  }
+}
+
+function checkSession() {
+  const stored = sessionStorage.getItem('sst_user');
+  if (stored) {
+    try { currentUser = JSON.parse(stored); setAdmin(true); } catch(e) {}
+  }
+}
+
+// ===================== VIEW SWITCHING =====================
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  // Restore nav bar visibility (may have been hidden by action landing)
+  document.querySelector('.nav-bar').style.display = '';
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('calendarView').style.display = 'none';
+  document.getElementById('topicIdeasView').style.display = 'none';
+  document.getElementById('activityLogView').style.display = 'none';
+  document.getElementById('requestsView').style.display = 'none';
+  document.getElementById('contactsView').style.display = 'none';
+  document.getElementById('feedbackView').style.display = 'none';
+  document.getElementById('approvalsView').style.display = 'none';
+  document.getElementById('attendanceChartView').style.display = 'none';
+  document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('inboxView').style.display = 'none';
+  document.getElementById('actionLandingView').style.display = 'none';
+  const filtersBar = document.getElementById('filtersBar');
+  const statsBar = document.getElementById('statsBar');
+  const welcomeBanner = document.getElementById('welcomeBanner');
+
+  if (view === 'calendar') {
+    document.getElementById('calendarView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    renderCalendar();
+  } else if (view === 'ideas') {
+    document.getElementById('topicIdeasView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    renderIdeas();
+  } else if (view === 'log') {
+    document.getElementById('activityLogView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadActivityLog();
+  } else if (view === 'requests') {
+    document.getElementById('requestsView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadRequests();
+  } else if (view === 'contacts') {
+    document.getElementById('contactsView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadContacts();
+  } else if (view === 'feedback') {
+    document.getElementById('feedbackView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadFeedbackView();
+  } else if (view === 'approvals') {
+    document.getElementById('approvalsView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadApprovals();
+  } else if (view === 'attendanceChart') {
+    document.getElementById('attendanceChartView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadAttendanceChart();
+  } else if (view === 'dashboard') {
+    document.getElementById('dashboardView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadDashboard();
+  } else if (view === 'inbox') {
+    document.getElementById('inboxView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadInbox();
+  } else if (view === 'actionLanding') {
+    document.getElementById('actionLandingView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+  } else {
+    document.getElementById('listView').style.display = 'block';
+    filtersBar.style.display = '';
+    if (isAdmin) statsBar.style.display = '';
+    welcomeBanner.style.display = (isAdmin || currentLearner) ? 'none' : '';
+    renderEvents();
+  }
+}
+
+// ===================== FILTERING =====================
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  renderEvents();
+}
+
+function getFilteredEvents() {
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  const monthFilter = document.getElementById('monthSelect').value;
+  let filtered = [...events];
+
+  if (currentView === 'list') {
+    if (currentFilter === 'all' || currentFilter === 'upcoming') filtered = filtered.filter(e => isFutureEvent(e));
+    if (!isAdmin) filtered = filtered.filter(e => e.published && e.status !== 'cancelled');
+  } else if (currentView === 'drafts') {
+    filtered = filtered.filter(e => !e.published);
+  }
+  if (currentFilter !== 'all') filtered = filtered.filter(e => e.status === currentFilter);
+  if (search) {
+    filtered = filtered.filter(e =>
+      (e.topic || '').toLowerCase().includes(search) ||
+      (e.teacher || '').toLowerCase().includes(search) ||
+      (e.room || '').toLowerCase().includes(search) ||
+      (e.notes || '').toLowerCase().includes(search)
+    );
+  }
+  if (monthFilter) {
+    const [m, y] = monthFilter.split('|');
+    filtered = filtered.filter(e => e.month === m && String(e.year) === y);
+  }
+  // Filter by learner placement dates (non-admin only)
+  if (!isAdmin && currentLearner && currentLearner.placement_start && currentLearner.placement_end) {
+    const pStart = new Date(currentLearner.placement_start); pStart.setHours(0,0,0,0);
+    const pEnd = new Date(currentLearner.placement_end); pEnd.setHours(23,59,59,999);
+    filtered = filtered.filter(e => {
+      const d = eventToDate(e);
+      if (!d) return true;
+      return d >= pStart && d <= pEnd;
+    });
+  }
+  filtered.sort((a, b) => {
+    const da = eventToDate(a), db = eventToDate(b);
+    if (!da || !db) return 0;
+    return da - db;
+  });
+  return filtered;
+}
+
+// ===================== RENDER =====================
+function renderAll() { updateStats(); populateMonthSelect(); renderEvents(); }
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = events.length;
+  document.getElementById('statUpcoming').textContent = events.filter(e => e.status === 'upcoming').length;
+  document.getElementById('statCompleted').textContent = events.filter(e => e.status === 'completed').length;
+  document.getElementById('statCancelled').textContent = events.filter(e => e.status === 'cancelled').length;
+  document.getElementById('statTbd').textContent = events.filter(e => e.status === 'tbd').length;
+  document.getElementById('statDraft').textContent = events.filter(e => !e.published).length;
+}
+
+function populateMonthSelect() {
+  const sel = document.getElementById('monthSelect');
+  const months = new Set();
+  events.forEach(e => months.add(e.month + '|' + e.year));
+  const sorted = [...months].sort((a, b) => {
+    const [am, ay] = a.split('|'); const [bm, by] = b.split('|');
+    return (parseInt(ay) - parseInt(by)) || (monthIndex(am) - monthIndex(bm));
+  });
+  sel.innerHTML = '<option value="">All months</option>';
+  sorted.forEach(m => { const [mn, yr] = m.split('|'); sel.innerHTML += `<option value="${m}">${mn} ${yr}</option>`; });
+}
+
+function renderEvents() {
+  const container = document.getElementById('listView');
+  const filtered = getFilteredEvents();
+  updateStats();
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">No sessions found.</div>';
+    return;
+  }
+  const groups = {};
+  filtered.forEach(e => { const key = e.month + ' ' + e.year; if (!groups[key]) groups[key] = []; groups[key].push(e); });
+  let html = '';
+  for (const [monthLabel, evts] of Object.entries(groups)) {
+    html += `<div class="month-group"><h3>${monthLabel}</h3>`;
+    evts.forEach(e => {
+      const isDraft = !e.published;
+      const topicDisplay = e.topic || (e.teacher ? e.teacher : 'TBD');
+      html += `<div class="event-card status-${e.status}${isDraft ? ' draft' : ''}" onclick="showDetail(${e.id})">
+        <div class="card-top">
+          <div>
+            <div class="card-date">${e.day} ${e.date} ${e.month} ${e.year}${e.time ? ' | ' + e.time : ''}</div>
+            <div class="card-topic">${esc(topicDisplay)}${isDraft ? '<span class="card-draft-badge">DRAFT</span>' : ''}</div>
+            <div class="card-details">
+              ${e.teacher ? '<span>&#128100; ' + esc(e.teacher) + '</span>' : ''}
+              ${e.backupTeacher ? '<span style="color:var(--nhs-orange);font-size:12px;">&#128260; ' + esc(e.backupTeacher) + '</span>' : ''}
+              ${e.room ? '<span>&#128205; ' + esc(e.room) + '</span>' : ''}
+            </div>
+            ${e.notes ? '<div class="card-notes">' + esc(e.notes) + '</div>' : ''}
+          </div>
+          <span class="card-status status-pill-${e.status}">${e.status}</span>
+        </div>
+        ${(isAdmin && e.lastEditBy) ? '<div class="last-edit-info">Last edited by ' + esc(e.lastEditBy) + (e.lastEditAt ? ' at ' + new Date(e.lastEditAt).toLocaleString() : '') + '</div>' : ''}
+        ${currentLearner && e.status !== 'cancelled' && (e.status === 'completed' || (eventToDate(e) && eventToDate(e) < new Date())) ? '<div style="margin-top:8px;display:flex;gap:6px;"><button class="btn btn-green" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();markSelfAttendance(' + e.id + ')">I Attended</button><button class="btn btn-white" style="font-size:11px;padding:4px 10px;border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="event.stopPropagation();openFeedbackModal(' + e.id + ')">Give Feedback</button></div>' : ''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ===================== CALENDAR =====================
+function renderCalendar() {
+  const container = document.getElementById('calendarView');
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = new Date();
+  const monthEvents = events.filter(e => monthIndex(e.month) === calMonth && e.year === calYear);
+  let html = `<div class="cal-header">
+    <button class="cal-nav-btn" onclick="calPrev()">&laquo; Prev</button>
+    <h3>${MONTHS[calMonth]} ${calYear}</h3>
+    <button class="cal-nav-btn" onclick="calNext()">Next &raquo;</button>
+  </div><div class="cal-grid">`;
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => { html += `<div class="cal-day-header">${d}</div>`; });
+  for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell empty"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
+    const cellDate = new Date(calYear, calMonth, d);
+    const dayOfWeek = cellDate.getDay(); // 0=Sun, 2=Tue, 3=Wed
+    const isTueWed = (dayOfWeek === 2 || dayOfWeek === 3);
+    const bankHol = getBankHoliday(calYear, calMonth, d);
+    const dayEvents = monthEvents.filter(e => parseDateNum(e.date) === d);
+    // Check if this Tue/Wed has an empty/tbd slot (not on bank holidays)
+    const hasEmptySlot = isTueWed && !bankHol && cellDate >= today && dayEvents.some(e => e.status !== 'cancelled' && (!e.topic || !e.teacher));
+    const isEmptyTueWed = isTueWed && !bankHol && cellDate >= today && dayEvents.length === 0;
+    html += `<div class="cal-cell${isToday ? ' today' : ''}${(hasEmptySlot || isEmptyTueWed) ? ' has-empty-slot' : ''}${bankHol ? ' bank-holiday' : ''}"><div class="cal-date">${d}</div>`;
+    if (bankHol) {
+      html += `<div style="font-size:10px;color:#d5281b;font-weight:600;padding:1px 4px;background:#fde8e8;border-radius:3px;margin-bottom:2px;line-height:1.2;">${esc(bankHol)}</div>`;
+    }
+    dayEvents.forEach(e => {
+      if (!isAdmin && (!e.published || e.status === 'cancelled')) return;
+      const label = e.topic || e.teacher || e.status;
+      html += `<div class="cal-event status-${e.status}" onclick="event.stopPropagation();showDetail(${e.id})" title="${esc(label)}">${esc(label)}</div>`;
+    });
+    // Show clickable "available" slot on empty Tue/Wed
+    if ((hasEmptySlot || isEmptyTueWed) && cellDate >= today) {
+      const ordinal = getOrdinal(d);
+      const slotLabel = `${dayOfWeek === 2 ? 'Tues' : 'Wed'} ${ordinal} ${MONTHS[calMonth]} ${calYear}`;
+      if (isAdmin) {
+        // Managers: click to add session directly
+        const emptyEv = dayEvents.find(e => e.status === 'tbd' && !e.topic && !e.teacher);
+        if (emptyEv) {
+          html += `<div class="cal-empty-slot" onclick="event.stopPropagation();openEditModal(${emptyEv.id})" title="Fill this slot">+ Fill slot</div>`;
+        } else {
+          html += `<div class="cal-empty-slot" onclick="event.stopPropagation();openAddModalPrefilled('${dayOfWeek === 2 ? 'Tues' : 'Wed'}','${ordinal}','${MONTHS[calMonth]}',${calYear})" title="Add session">+ Add session</div>`;
+        }
+      } else {
+        // Public: click to request
+        html += `<div class="cal-empty-slot" onclick="event.stopPropagation();openRequestForSlot('${slotLabel}')" title="Request this slot">+ Available</div>`;
+      }
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function getOrdinal(n) {
+  const s = ['th','st','nd','rd'];
+  const v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+
+function openAddModalPrefilled(day, date, month, year) {
+  editingEventId = null;
+  document.getElementById('eventModalTitle').textContent = 'Add Session';
+  document.getElementById('evDeleteBtn').style.display = 'none';
+  document.getElementById('evDay').value = day;
+  document.getElementById('evDate').value = date;
+  document.getElementById('evMonth').value = month;
+  document.getElementById('evYear').value = year;
+  ['evTime','evRoom','evTopic','evTeacher','evTeacherEmail','evBackupTeacher','evBackupEmail','evNotes'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('evStatus').value = 'upcoming';
+  document.getElementById('evPublished').checked = true;
+  openModal('eventModal');
+}
+
+function openRequestForSlot(slotLabel) {
+  showRequestSessionModal(slotLabel);
+}
+function calPrev() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
+function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); }
+
+// ===================== TOPIC IDEAS =====================
+async function renderIdeas() {
+  const container = document.getElementById('topicIdeasView');
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading ideas...</div>';
+  try {
+    const ideas = await sbGet('ideas', 'order=id.asc&select=*');
+    const groups = {};
+    ideas.forEach(i => { const cat = i.category || 'General Ideas'; if (!groups[cat]) groups[cat] = []; groups[cat].push(i); });
+    let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">';
+    html += '<h3 style="color:var(--nhs-dark-blue);margin:0;">Topic Ideas</h3>';
+    if (isAdmin) html += '<button class="btn btn-green" style="font-size:0.85rem;padding:8px 16px;" onclick="showAddIdeaModal()">+ Add Idea</button>';
+    html += '</div>';
+    const categoryOrder = ['Core Topics (Tuesday)', 'Clinical Skills (Wednesday)', 'General Ideas', "Lydia's Suggestions", 'Junior Doctor Requests', 'Planning Notes'];
+    const sortedCats = Object.keys(groups).sort((a, b) => {
+      const ai = categoryOrder.indexOf(a), bi = categoryOrder.indexOf(b);
+      if (ai >= 0 && bi >= 0) return ai - bi; if (ai >= 0) return -1; if (bi >= 0) return 1; return a.localeCompare(b);
+    });
+    sortedCats.forEach(cat => {
+      const hasCheckmarks = cat.includes('Core Topics') || cat.includes('Clinical Skills');
+      html += '<div class="ideas-section"><h3>' + esc(cat) + '</h3>';
+      groups[cat].forEach(i => {
+        if (hasCheckmarks) {
+          html += '<div class="idea-item"><span class="' + (i.done ? 'idea-done' : 'idea-pending') + '">' + (i.done ? '&#10003;' : '&#9675;') + '</span><span style="flex:1;">' + esc(i.topic) + '</span>' + (i.assigned ? '<span class="idea-assigned">' + esc(i.assigned) + '</span>' : '') + (isAdmin ? '<button onclick="toggleIdeaDone(' + i.id + ',' + !i.done + ')" style="background:none;border:none;color:var(--nhs-blue);cursor:pointer;font-size:11px;padding:2px 6px;" title="Toggle">' + (i.done ? 'undo' : 'done') + '</button><button onclick="deleteIdea(' + i.id + ')" style="background:none;border:none;color:var(--nhs-red);cursor:pointer;font-size:1rem;padding:2px 6px;opacity:0.5;" title="Delete">&times;</button>' : '') + '</div>';
+        } else {
+          html += '<div class="idea-list-item" style="display:flex;align-items:center;gap:8px;"><span style="flex:1;">' + esc(i.topic) + '</span>' + (isAdmin ? '<button onclick="deleteIdea(' + i.id + ')" style="background:none;border:none;color:var(--nhs-red);cursor:pointer;font-size:1rem;padding:2px 6px;opacity:0.5;" title="Delete">&times;</button>' : '') + '</div>';
+        }
+      });
+      html += '</div>';
+    });
+    container.innerHTML = html;
+  } catch(e) {
+    console.error('Failed to load ideas:', e);
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">Failed to load ideas.</div>';
+  }
+}
+
+function showAddIdeaModal() {
+  document.getElementById('ideaCategory').value = 'General Ideas';
+  document.getElementById('ideaTopic').value = '';
+  document.getElementById('ideaAssigned').value = '';
+  openModal('addIdeaModal');
+  setTimeout(() => document.getElementById('ideaTopic').focus(), 100);
+}
+
+async function submitIdea() {
+  const topic = document.getElementById('ideaTopic').value.trim();
+  const category = document.getElementById('ideaCategory').value;
+  const assigned = document.getElementById('ideaAssigned').value.trim();
+  if (!topic) { showToast('Please enter a topic'); return; }
+  try {
+    await sbInsert('ideas', { topic, category, assigned, done: false, added_by: currentUser?.name || 'Unknown' });
+    closeModal('addIdeaModal'); showToast('Idea added');
+    logAction('Added idea: ' + topic);
+    renderIdeas();
+  } catch(e) { console.error('Add idea failed', e); showToast('Failed to add idea'); }
+}
+
+async function deleteIdea(id) {
+  if (!confirm('Delete this idea?')) return;
+  try {
+    await sbDelete('ideas', id);
+    showToast('Idea deleted'); logAction('Deleted idea #' + id); renderIdeas();
+  } catch(e) { console.error('Delete idea failed', e); showToast('Failed to delete idea'); }
+}
+
+async function toggleIdeaDone(id, done) {
+  try {
+    await sbUpdate('ideas', id, { done });
+    renderIdeas();
+  } catch(e) { console.error('Toggle idea failed', e); }
+}
+
+// ===================== ACTIVITY LOG =====================
+async function loadActivityLog() {
+  const container = document.getElementById('activityLogView');
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading activity...</div>';
+  try {
+    const data = await sbGet('log', 'order=timestamp.desc&limit=50&select=*');
+    let html = '<h3 style="color:var(--nhs-dark-blue);margin-bottom:14px;">Recent Activity</h3>';
+    if (data.length === 0) {
+      html += '<div style="text-align:center;padding:30px;color:var(--nhs-grey);">No activity recorded yet.</div>';
+    } else {
+      data.forEach(entry => {
+        html += `<div class="log-entry">
+          <div class="log-time">${entry.timestamp ? new Date(entry.timestamp).toLocaleString() : ''}</div>
+          <div class="log-user">${esc(entry.user_display || '')}</div>
+          <div class="log-action">${esc(entry.action || '')} ${entry.detail ? '- ' + esc(entry.detail) : ''}</div>
+        </div>`;
+      });
+    }
+    container.innerHTML = html;
+  } catch(e) {
+    console.error('Failed to load log:', e);
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">Failed to load activity log.</div>';
+  }
+}
+
+async function logAction(action, detail = '') {
+  try {
+    await sbInsert('log', {
+      user_display: currentUser?.name || 'System',
+      action: action,
+      detail: detail
+    });
+  } catch(e) { console.warn('Log failed:', e); }
+}
+
+// ===================== DETAIL MODAL =====================
+function showDetail(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  const body = document.getElementById('detailBody');
+  const footer = document.getElementById('detailFooter');
+  const topicDisplay = ev.topic || ev.teacher || 'TBD';
+  body.innerHTML = `
+    <div class="detail-field"><div class="detail-label">Date &amp; Time</div><div class="detail-value">${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}${ev.time ? ' | ' + esc(ev.time) : ''}</div></div>
+    <div class="detail-field"><div class="detail-label">Topic</div><div class="detail-value" style="font-size:18px;font-weight:700;color:var(--nhs-dark-blue);">${esc(topicDisplay)}</div></div>
+    ${ev.teacher ? '<div class="detail-field"><div class="detail-label">Teacher</div><div class="detail-value">' + esc(ev.teacher) + '</div></div>' : ''}
+    ${ev.backupTeacher ? '<div class="detail-field"><div class="detail-label">Backup Teacher</div><div class="detail-value" style="color:var(--nhs-orange);">' + esc(ev.backupTeacher) + '</div></div>' : ''}
+    ${ev.room ? '<div class="detail-field"><div class="detail-label">Room</div><div class="detail-value">' + esc(ev.room) + '</div></div>' : ''}
+    <div class="detail-field"><div class="detail-label">Status</div><div class="detail-value"><span class="card-status status-pill-${ev.status}" style="font-size:12px;">${ev.status}</span>${!ev.published ? ' <span class="card-draft-badge">DRAFT</span>' : ''}</div></div>
+    ${ev.notes ? '<div class="detail-field"><div class="detail-label">Notes</div><div class="detail-value" style="color:var(--nhs-orange);font-style:italic;">' + esc(ev.notes) + '</div></div>' : ''}
+    ${ev.lastEditBy ? '<div class="detail-field"><div class="detail-label">Last Edited</div><div class="detail-value" style="font-size:12px;color:var(--nhs-grey);">By ' + esc(ev.lastEditBy) + (ev.lastEditAt ? ' at ' + new Date(ev.lastEditAt).toLocaleString() : '') + '</div></div>' : ''}
+  `;
+  let footerHtml = '';
+  if (isAdmin) {
+    footerHtml += `<button class="btn btn-orange" onclick="closeModal('detailModal');openEditModal(${ev.id})">Edit</button>`;
+    footerHtml += `<button class="btn btn-outline" style="color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="togglePublish(${ev.id})">${ev.published ? 'Unpublish' : 'Publish'}</button>`;
+    if (ev.teacherEmail || ev.teacher) {
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-blue);color:var(--nhs-blue);font-size:12px;" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'confirmation')">Send Confirmation</button>`;
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-orange);color:var(--nhs-orange);font-size:12px;" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'reminder')">Send Reminder</button>`;
+    }
+    footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-pale-grey);" onclick="closeModal('detailModal');openAttendanceModal(${ev.id})">Attendance</button>`;
+    const evDateAdmin = eventToDate(ev);
+    const isPastAdmin = evDateAdmin && evDateAdmin < new Date();
+    if (isPastAdmin || ev.status === 'completed') {
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-green);color:var(--nhs-green);" onclick="closeModal('detailModal');openFeedbackRequestModal(${ev.id})">Request Feedback</button>`;
+    }
+  }
+  if (currentLearner && ev.status !== 'cancelled') {
+    const evDate = eventToDate(ev);
+    const isPast = evDate && evDate < new Date();
+    if (isPast || ev.status === 'completed') {
+      footerHtml += `<button class="btn btn-green" onclick="closeModal('detailModal');markSelfAttendance(${ev.id})">I Attended</button>`;
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="closeModal('detailModal');openFeedbackModal(${ev.id})">Give Feedback</button>`;
+    }
+  }
+  footerHtml += `<button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('detailModal')">Close</button>`;
+  footer.innerHTML = footerHtml;
+  openModal('detailModal');
+}
+
+// ===================== ADD/EDIT =====================
+function openAddModal() {
+  editingEventId = null;
+  document.getElementById('eventModalTitle').textContent = 'Add Session';
+  document.getElementById('evDeleteBtn').style.display = 'none';
+  ['evDay','evDate','evTime','evRoom','evTopic','evTeacher','evTeacherEmail','evBackupTeacher','evBackupEmail','evNotes'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('evMonth').value = MONTHS[new Date().getMonth()];
+  document.getElementById('evYear').value = new Date().getFullYear();
+  document.getElementById('evStatus').value = 'upcoming';
+  document.getElementById('evPublished').checked = true;
+  openModal('eventModal');
+}
+
+function openEditModal(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  editingEventId = id;
+  document.getElementById('eventModalTitle').textContent = 'Edit Session';
+  document.getElementById('evDeleteBtn').style.display = '';
+  document.getElementById('evDay').value = ev.day || 'Tues';
+  document.getElementById('evDate').value = ev.date || '';
+  document.getElementById('evMonth').value = ev.month || 'January';
+  document.getElementById('evYear').value = ev.year || 2026;
+  document.getElementById('evTime').value = ev.time || '';
+  document.getElementById('evRoom').value = ev.room || '';
+  document.getElementById('evTopic').value = ev.topic || '';
+  document.getElementById('evTeacher').value = ev.teacher || '';
+  document.getElementById('evTeacherEmail').value = ev.teacherEmail || '';
+  document.getElementById('evBackupTeacher').value = ev.backupTeacher || '';
+  document.getElementById('evBackupEmail').value = ev.backupTeacherEmail || '';
+  document.getElementById('evStatus').value = ev.status || 'upcoming';
+  document.getElementById('evNotes').value = ev.notes || '';
+  document.getElementById('evPublished').checked = ev.published !== false;
+  openModal('eventModal');
+}
+
+async function saveEvent() {
+  const evData = {
+    day: document.getElementById('evDay').value,
+    date: document.getElementById('evDate').value.trim(),
+    month: document.getElementById('evMonth').value,
+    year: parseInt(document.getElementById('evYear').value),
+    time: document.getElementById('evTime').value.trim(),
+    room: document.getElementById('evRoom').value.trim(),
+    topic: document.getElementById('evTopic').value.trim(),
+    teacher: document.getElementById('evTeacher').value.trim(),
+    teacher_email: document.getElementById('evTeacherEmail').value.trim(),
+    backup_teacher: document.getElementById('evBackupTeacher').value.trim(),
+    backup_teacher_email: document.getElementById('evBackupEmail').value.trim(),
+    status: document.getElementById('evStatus').value,
+    notes: document.getElementById('evNotes').value.trim(),
+    published: document.getElementById('evPublished').checked,
+    last_edit_by: currentUser?.name || 'Unknown',
+    last_edit_at: new Date().toISOString(),
+  };
+  if (!evData.date || !evData.month || !evData.year) { showToast('Date, month and year are required'); return; }
+
+  try {
+    if (editingEventId) {
+      await sbUpdate('schedule', editingEventId, evData);
+      showToast('Session updated');
+      logAction('Updated session', evData.topic || evData.date);
+    } else {
+      evData.event_id = 'EVT' + Date.now();
+      await sbInsert('schedule', evData);
+      showToast('Session added');
+      logAction('Added session', evData.topic || evData.date);
+    }
+    await loadEvents();
+    closeModal('eventModal');
+    renderAll();
+  } catch(e) {
+    console.error('Save failed:', e);
+    showToast('Failed to save - check connection');
+  }
+}
+
+async function deleteEvent() {
+  if (!editingEventId) return;
+  if (!confirm('Delete this session?')) return;
+  const ev = events.find(e => e.id === editingEventId);
+  try {
+    await sbDelete('schedule', editingEventId);
+    showToast('Session deleted');
+    logAction('Deleted session', ev?.topic || ev?.date || '');
+    await loadEvents();
+    closeModal('eventModal');
+    renderAll();
+  } catch(e) {
+    console.error('Delete failed:', e);
+    showToast('Failed to delete');
+  }
+}
+
+async function togglePublish(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  try {
+    await sbUpdate('schedule', id, {
+      published: !ev.published,
+      last_edit_by: currentUser?.name || 'Unknown',
+      last_edit_at: new Date().toISOString()
+    });
+    closeModal('detailModal');
+    showToast(ev.published ? 'Unpublished' : 'Published');
+    logAction((ev.published ? 'Unpublished' : 'Published') + ' session', ev.topic || ev.date);
+    await loadEvents();
+    renderAll();
+  } catch(e) { console.error('Toggle publish failed:', e); showToast('Failed to update'); }
+}
+
+// ===================== EMAIL =====================
+function openEmailModal(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  const to = ev.teacherEmail || '';
+  const subject = encodeURIComponent('Teaching Reminder: ' + (ev.topic || 'Session') + ' - ' + ev.day + ' ' + ev.date + ' ' + ev.month);
+  const body = encodeURIComponent(
+    'Dear ' + (ev.teacher || 'Colleague') + ',\n\nThis is a reminder about your upcoming teaching session:\n\nTopic: ' + (ev.topic || 'TBD') + '\nDate: ' + ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year + '\nTime: ' + (ev.time || 'TBC') + '\nRoom: ' + (ev.room || 'TBC') + '\n\nPlease confirm your availability.\n\nBest regards,\nSouthmead Surgical Teaching Team'
+  );
+  document.getElementById('emailBody').innerHTML = `
+    <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:10px;">Click the button below to open your email client with a pre-filled reminder.</p>
+    <div class="email-preview">To: ${esc(to || '(no email on file)')}\nSubject: Teaching Reminder: ${esc(ev.topic || 'Session')}\n\nDear ${esc(ev.teacher || 'Colleague')},\n\nThis is a reminder about your upcoming teaching session:\n\nTopic: ${esc(ev.topic || 'TBD')}\nDate: ${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}\nTime: ${esc(ev.time || 'TBC')}\nRoom: ${esc(ev.room || 'TBC')}\n\nPlease confirm your availability.\n\nBest regards,\nSouthmead Surgical Teaching Team</div>
+    <div style="margin-top:14px;text-align:center;">
+      <a href="mailto:${to}?subject=${subject}&body=${body}" class="btn btn-green" style="display:inline-flex;text-decoration:none;color:white;padding:10px 24px;">Open Email Client</a>
+    </div>
+  `;
+  openModal('emailModal');
+}
+
+async function sendSessionEmail(id, type) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) { showToast('Session not found'); return; }
+  const to = ev.teacherEmail;
+  if (!to) { showToast('No email on file for teacher. Opening email preview instead.'); openEmailModal(id); return; }
+
+  const isConfirm = type === 'confirmation';
+  const subject = isConfirm
+    ? `Teaching Session Confirmation: ${ev.topic || 'Session'} - ${ev.day} ${ev.date} ${ev.month} ${ev.year}`
+    : `Teaching Reminder: ${ev.topic || 'Session'} - ${ev.day} ${ev.date} ${ev.month} ${ev.year}`;
+
+  // Generate action token and links
+  const actionToken = btoa(ev.id + ':' + (to || ''));
+  const siteUrl = location.origin + location.pathname;
+  const confirmLink = `${siteUrl}?action=confirm&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
+  const declineLink = `${siteUrl}?action=decline&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
+  const rescheduleLink = `${siteUrl}?action=reschedule&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
+
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;">
+      <h2 style="color:white;margin:0;">Southmead Surgical Teaching</h2>
+    </div>
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+      <p>Dear ${ev.teacher || 'Colleague'},</p>
+      <p>${isConfirm ? 'Thank you for agreeing to teach. Please find the details of your session below:' : 'This is a friendly reminder about your upcoming teaching session:'}</p>
+      <table style="margin:16px 0;font-size:14px;border-collapse:collapse;">
+        <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Topic:</td><td>${ev.topic || 'TBD'}</td></tr>
+        <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Date:</td><td>${ev.day} ${ev.date} ${ev.month} ${ev.year}</td></tr>
+        <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Time:</td><td>${ev.time || 'TBC'}</td></tr>
+        <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Room:</td><td>${ev.room || 'TBC'}</td></tr>
+      </table>
+      <p style="margin-bottom:8px;"><strong>Please let us know your availability:</strong></p>
+      <div style="margin:20px 0;text-align:center;">
+        <a href="${confirmLink}" style="display:inline-block;padding:12px 24px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">I Can Attend</a>
+        <a href="${declineLink}" style="display:inline-block;padding:12px 24px;background:#da291c;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">I Cannot Attend</a>
+        <a href="${rescheduleLink}" style="display:inline-block;padding:12px 24px;background:#ed8b00;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">Reschedule</a>
+      </div>
+      ${isConfirm ? '<p>If you have any questions or need to make changes, please reply to this email.</p>' : '<p>If you can no longer attend, please let us know as soon as possible so we can arrange cover.</p>'}
+      <p>Best regards,<br>Southmead Surgical Teaching Team</p>
+    </div>
+  </div>`;
+
+  showToast(`Sending ${type}...`);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'apikey': SUPABASE_KEY
+      },
+      body: JSON.stringify({ to: [to], subject, html })
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast(`${isConfirm ? 'Confirmation' : 'Reminder'} sent to ${ev.teacher}!`);
+      logAction(`Sent ${type} email`, `${ev.topic || 'Session'} → ${ev.teacher}`);
+      // Track email in local storage for inbox view
+      trackSentEmail(ev.id, to, subject, type, ev.topic, ev.teacher, ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year);
+    } else {
+      console.warn('Send failed:', result);
+      showToast(`Send failed: ${result.error || 'Unknown error'}. Try email client instead.`);
+      openEmailModal(id);
+    }
+  } catch(e) {
+    console.warn('Send error:', e);
+    showToast('Send failed. Opening email client...');
+    openEmailModal(id);
+  }
+}
+
+function openBulkEmailModal() {
+  const upcoming = events.filter(e => isFutureEvent(e) && e.status === 'upcoming' && e.teacher && e.published);
+  const body = document.getElementById('bulkEmailBody');
+  if (upcoming.length === 0) {
+    body.innerHTML = '<p style="color:var(--nhs-grey);text-align:center;">No upcoming sessions with teachers to remind.</p>';
+    openModal('bulkEmailModal'); return;
+  }
+  let html = '<p style="font-size:13px;color:var(--nhs-grey);margin-bottom:12px;">Upcoming sessions with assigned teachers:</p>';
+  upcoming.slice(0, 20).forEach(ev => {
+    const to = ev.teacherEmail || '';
+    const subject = encodeURIComponent('Teaching Reminder: ' + (ev.topic || 'Session') + ' - ' + ev.day + ' ' + ev.date + ' ' + ev.month);
+    const emailBody = encodeURIComponent(
+      'Dear ' + (ev.teacher || 'Colleague') + ',\n\nReminder: you have a teaching session on ' + ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year +
+      (ev.time ? ' at ' + ev.time : '') + (ev.room ? ' in ' + ev.room : '') + '.\n\nTopic: ' + (ev.topic || 'TBD') + '\n\nPlease confirm.\n\nBest,\nSurgical Teaching Team'
+    );
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--nhs-pale-grey);font-size:13px;">
+      <div><strong>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)}</strong> - ${esc(ev.topic || 'TBD')} (${esc(ev.teacher)})</div>
+      <a href="mailto:${to}?subject=${subject}&body=${emailBody}" class="btn btn-white" style="font-size:11px;padding:4px 10px;border:1px solid var(--nhs-pale-grey);text-decoration:none;">Email</a>
+    </div>`;
+  });
+  body.innerHTML = html;
+  openModal('bulkEmailModal');
+}
+
+// ===================== EXPORT =====================
+function exportCSV() {
+  const headers = ['Day','Date','Month','Year','Time','Room','Topic','Teacher','Email','Backup Teacher','Backup Email','Status','Published','Notes'];
+  const rows = events.map(e => [
+    e.day, e.date, e.month, e.year, e.time, e.room, e.topic, e.teacher, e.teacherEmail, e.backupTeacher, e.backupTeacherEmail, e.status, e.published ? 'Yes' : 'No', e.notes
+  ].map(v => '"' + String(v || '').replace(/"/g, '""') + '"').join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'southmead-teaching-export.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exported');
+}
+
+// ===================== REQUESTS =====================
+function showRequestSessionModal(preselectedSlot) {
+  ['reqName','reqEmail','reqPhone','reqTopic','reqMessage'].forEach(id => document.getElementById(id).value = '');
+  // Populate available slots dropdown
+  const sel = document.getElementById('reqSlot');
+  const today = new Date(); today.setHours(0,0,0,0);
+  // Generate ALL future Tues/Wed dates through end of academic year
+  const DAYNAMES = ['Sun','Mon','Tues','Wed','Thurs','Fri','Sat'];
+  const endDate = new Date(today.getFullYear() + 1, 11, 31); // rolling to end of next year
+  const allSlots = [];
+  const d = new Date(today);
+  while (d <= endDate) {
+    const dow = d.getDay();
+    if (dow === 2 || dow === 3) { // Tues or Wed
+      const bankHol = getBankHoliday(d.getFullYear(), d.getMonth(), d.getDate());
+      if (bankHol) { d.setDate(d.getDate() + 1); continue; } // skip bank holidays
+      const dateStr = getOrdinal(d.getDate());
+      const monthStr = MONTHS[d.getMonth()];
+      const yearStr = String(d.getFullYear());
+      const dayName = DAYNAMES[dow];
+      // Check if there's already a fully-booked event on this date
+      const existing = events.filter(e => {
+        const ed = eventToDate(e);
+        return ed && ed.getTime() === d.getTime();
+      });
+      const fullyBooked = existing.length > 0 && existing.every(e => e.topic && e.teacher && e.status !== 'cancelled');
+      if (!fullyBooked) {
+        const partial = existing.find(e => e.status !== 'cancelled');
+        const info = partial ? (partial.topic ? ` [Topic: ${partial.topic}]` : partial.teacher ? ` [Teacher: ${partial.teacher}]` : '') : '';
+        const time = partial?.time || '';
+        const room = partial?.room || '';
+        allSlots.push({ dayName, dateStr, monthStr, yearStr, time, room, info });
+      }
+    }
+    d.setDate(d.getDate() + 1);
+  }
+
+  sel.innerHTML = '<option value="">-- Choose an available date --</option>';
+  allSlots.forEach(s => {
+    const label = `${s.dayName} ${s.dateStr} ${s.monthStr} ${s.yearStr}${s.time ? ' (' + s.time + ')' : ''}${s.room ? ' - ' + s.room : ''}${s.info}`;
+    sel.innerHTML += `<option value="${label}">${label}</option>`;
+  });
+
+  if (allSlots.length === 0) {
+    sel.innerHTML = '<option value="">No available slots right now</option>';
+  }
+
+  // Pre-select if clicked from calendar
+  if (preselectedSlot) {
+    const match = [...sel.options].find(o => o.value.includes(preselectedSlot.split(' ').slice(0,4).join(' ')));
+    if (match) match.selected = true;
+  }
+
+  // Slot info display
+  sel.onchange = function() {
+    const info = document.getElementById('reqSlotInfo');
+    if (this.value) {
+      info.style.display = 'block';
+      info.innerHTML = '&#9989; <strong>' + esc(this.value) + '</strong>';
+    } else {
+      info.style.display = 'none';
+    }
+  };
+  sel.dispatchEvent(new Event('change'));
+
+  openModal('requestSessionModal');
+  setTimeout(() => document.getElementById('reqName').focus(), 100);
+}
+
+async function submitSessionRequest() {
+  const name = document.getElementById('reqName').value.trim();
+  const email = document.getElementById('reqEmail').value.trim();
+  const phone = document.getElementById('reqPhone').value.trim();
+  const slot = document.getElementById('reqSlot').value;
+  const topic = document.getElementById('reqTopic').value.trim();
+  const message = document.getElementById('reqMessage').value.trim();
+  if (!name || !email) { showToast('Please enter your name and email'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Please enter a valid email'); return; }
+  if (!slot) { showToast('Please select an available slot'); return; }
+  if (!topic) { showToast('Please enter a topic'); return; }
+  try {
+    await sbInsert('requests', { name, email, phone, topic, preferred_date: slot, message, status: 'pending' });
+    closeModal('requestSessionModal');
+    showToast("Request submitted! The teaching team will get back to you.");
+  } catch(e) { console.error('Submit request failed:', e); showToast('Failed to submit request'); }
+}
+
+async function loadRequests() {
+  const container = document.getElementById('requestsView');
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading requests...</div>';
+  try {
+    const data = await sbGet('requests', 'order=created_at.desc&select=*');
+    if (data.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">No session requests yet.</div>';
+      return;
+    }
+    const pending = data.filter(r => r.status === 'pending');
+    const resolved = data.filter(r => r.status !== 'pending');
+    let html = '<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Session Requests</h3>';
+    if (pending.length > 0) {
+      html += '<div style="margin-bottom:24px;"><h4 style="color:var(--nhs-orange);margin-bottom:10px;">Pending (' + pending.length + ')</h4>';
+      pending.forEach(r => { html += renderRequestCard(r); }); html += '</div>';
+    }
+    if (resolved.length > 0) {
+      html += '<div><h4 style="color:var(--nhs-grey);margin-bottom:10px;">Resolved (' + resolved.length + ')</h4>';
+      resolved.forEach(r => { html += renderRequestCard(r); }); html += '</div>';
+    }
+    container.innerHTML = html;
+  } catch(e) { console.error('Load requests failed:', e); container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">Failed to load requests.</div>'; }
+}
+
+function renderRequestCard(r) {
+  const statusColors = { pending: '#ed8b00', accepted: '#009639', rejected: '#d5281b' };
+  const statusColor = statusColors[r.status] || '#768692';
+  return `<div style="background:white;border-radius:8px;padding:18px 20px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-left:4px solid ${statusColor};">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-weight:700;color:var(--nhs-dark-blue);font-size:1rem;">${esc(r.name)}</div>
+        <div style="font-size:0.85rem;color:var(--nhs-grey);margin-top:2px;">${esc(r.email)}${r.phone ? ' &middot; ' + esc(r.phone) : ''}</div>
+        ${r.topic ? '<div style="margin-top:8px;font-size:0.9rem;"><strong>Topic:</strong> ' + esc(r.topic) + '</div>' : ''}
+        ${r.preferred_date ? '<div style="font-size:0.9rem;"><strong>Preferred date:</strong> ' + esc(r.preferred_date) + '</div>' : ''}
+        ${r.message ? '<div style="font-size:0.85rem;color:#425563;margin-top:6px;font-style:italic;">"' + esc(r.message) + '"</div>' : ''}
+        <div style="font-size:0.78rem;color:var(--nhs-grey);margin-top:8px;">Submitted: ${r.created_at ? new Date(r.created_at).toLocaleString() : ''}</div>
+        ${r.responded_by ? '<div style="font-size:0.78rem;color:var(--nhs-grey);">Responded by ' + esc(r.responded_by) + ' on ' + (r.responded_at ? new Date(r.responded_at).toLocaleString() : '') + '</div>' : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:600;color:white;background:${statusColor};">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span>
+        ${r.status === 'pending' ? '<button class="btn btn-white" style="font-size:0.82rem;padding:6px 14px;border:1px solid var(--nhs-pale-grey);" onclick="showRespondModal(' + r.id + ')">Respond</button>' : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+async function showRespondModal(id) {
+  try {
+    const data = await sbGet('requests', `id=eq.${id}&select=*`);
+    if (data.length === 0) return;
+    const r = data[0];
+    document.getElementById('respondId').value = r.id;
+    document.getElementById('respondMessage').value = '';
+    document.getElementById('respondDetails').innerHTML = `<div style="background:var(--nhs-pale-grey);border-radius:8px;padding:14px;font-size:0.9rem;">
+      <div><strong>From:</strong> ${esc(r.name)} (${esc(r.email)})</div>
+      ${r.topic ? '<div><strong>Topic:</strong> ' + esc(r.topic) + '</div>' : ''}
+      ${r.preferred_date ? '<div><strong>Preferred Date:</strong> ' + esc(r.preferred_date) + '</div>' : ''}
+      ${r.message ? '<div style="margin-top:6px;font-style:italic;color:#425563;">"' + esc(r.message) + '"</div>' : ''}
+    </div>`;
+    openModal('respondModal');
+  } catch(e) { console.error('Show respond modal failed:', e); }
+}
+
+async function respondToRequest(response) {
+  const requestId = document.getElementById('respondId').value;
+  const responseNote = document.getElementById('respondMessage').value.trim();
+  if (!requestId) return;
+  try {
+    await sbUpdate('requests', requestId, {
+      status: response,
+      responded_by: currentUser?.name || 'Unknown',
+      response_note: responseNote,
+      responded_at: new Date().toISOString()
+    });
+    closeModal('respondModal');
+    showToast('Request ' + response + '!');
+    logAction((response === 'accepted' ? 'Accepted' : 'Rejected') + ' session request', '#' + requestId);
+    loadRequests();
+  } catch(e) { console.error('Respond failed:', e); showToast('Failed to respond'); }
+}
+
+// ===================== MODAL HELPERS =====================
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function openLoginModal() {
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  openModal('loginModal');
+  setTimeout(() => document.getElementById('loginUser').focus(), 100);
+}
+
+// ===================== TOAST =====================
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===================== KEYBOARD =====================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+  if (e.key === 'Enter' && document.getElementById('loginModal').classList.contains('show')) doLogin();
+});
+
+// ===================== CONTACTS =====================
+async function loadContacts() {
+  const container = document.getElementById('contactsView');
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading contacts...</div>';
+  try {
+    const data = await sbGet('contacts', 'order=name.asc&select=*');
+    let html = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">';
+    html += '<h3 style="color:var(--nhs-dark-blue);margin:0;">Contacts Directory</h3>';
+    html += '<div style="display:flex;gap:10px;align-items:center;">';
+    html += '<input type="text" id="contactSearch" placeholder="Search contacts..." oninput="filterContacts()" style="padding:8px 14px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;width:220px;">';
+    html += '<button class="btn" onclick="showContactModal()">+ Add Contact</button>';
+    html += '</div></div>';
+    if (data.length === 0) {
+      html += '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">No contacts yet. Add your first contact above.</div>';
+    } else {
+      html += '<div id="contactsList">';
+      data.forEach(c => { html += renderContactCard(c); });
+      html += '</div>';
+    }
+    container.innerHTML = html;
+    window._contactsData = data;
+  } catch(e) { console.error('Load contacts failed:', e); container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">Failed to load contacts.</div>'; }
+}
+
+function renderContactCard(c) {
+  const initials = (c.name || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  const colors = ['#005eb8','#009639','#ed8b00','#7C2855','#330072','#41B6E6','#003087'];
+  const color = colors[c.id % colors.length];
+  return `<div class="contact-card" data-name="${esc(c.name).toLowerCase()}" data-role="${esc(c.role||'').toLowerCase()}" data-specialty="${esc(c.specialty||'').toLowerCase()}" style="background:white;border-radius:8px;padding:16px 20px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;gap:16px;">
+    <div style="width:44px;height:44px;border-radius:50%;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">${initials}</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:700;color:var(--nhs-dark-blue);font-size:0.95rem;">${esc(c.name)}</div>
+      <div style="font-size:0.82rem;color:var(--nhs-grey);">${[c.role, c.specialty].filter(Boolean).map(esc).join(' · ')}</div>
+      <div style="font-size:0.82rem;color:#425563;margin-top:3px;">
+        ${c.email ? '<span style="margin-right:14px;">✉ ' + esc(c.email) + '</span>' : ''}
+        ${c.phone ? '<span>☎ ' + esc(c.phone) + '</span>' : ''}
+      </div>
+      ${c.notes ? '<div style="font-size:0.78rem;color:var(--nhs-grey);margin-top:4px;font-style:italic;">' + esc(c.notes) + '</div>' : ''}
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button class="btn btn-white" style="font-size:0.78rem;padding:5px 12px;" onclick="showContactModal(${c.id})">Edit</button>
+      <button class="btn btn-red" style="font-size:0.78rem;padding:5px 12px;" onclick="deleteContact(${c.id})">Delete</button>
+    </div>
+  </div>`;
+}
+
+function filterContacts() {
+  const q = (document.getElementById('contactSearch')?.value || '').toLowerCase();
+  document.querySelectorAll('.contact-card').forEach(card => {
+    const match = card.dataset.name.includes(q) || card.dataset.role.includes(q) || card.dataset.specialty.includes(q);
+    card.style.display = match ? '' : 'none';
+  });
+}
+
+function showContactModal(editId) {
+  ['ctName','ctRole','ctEmail','ctPhone','ctSpecialty','ctNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ctId').value = '';
+  if (editId && window._contactsData) {
+    const c = window._contactsData.find(x => x.id === editId);
+    if (c) {
+      document.getElementById('ctName').value = c.name || '';
+      document.getElementById('ctRole').value = c.role || '';
+      document.getElementById('ctEmail').value = c.email || '';
+      document.getElementById('ctPhone').value = c.phone || '';
+      document.getElementById('ctSpecialty').value = c.specialty || '';
+      document.getElementById('ctNotes').value = c.notes || '';
+      document.getElementById('ctId').value = c.id;
+      document.getElementById('contactModalTitle').textContent = 'Edit Contact';
+    }
+  } else {
+    document.getElementById('contactModalTitle').textContent = 'Add Contact';
+  }
+  openModal('contactModal');
+  setTimeout(() => document.getElementById('ctName').focus(), 100);
+}
+
+async function saveContact() {
+  const name = document.getElementById('ctName').value.trim();
+  if (!name) { showToast('Please enter a name'); return; }
+  const obj = {
+    name,
+    role: document.getElementById('ctRole').value.trim(),
+    email: document.getElementById('ctEmail').value.trim(),
+    phone: document.getElementById('ctPhone').value.trim(),
+    specialty: document.getElementById('ctSpecialty').value.trim(),
+    notes: document.getElementById('ctNotes').value.trim(),
+    added_by: currentUser?.name || ''
+  };
+  const editId = document.getElementById('ctId').value;
+  try {
+    if (editId) {
+      await sbUpdate('contacts', editId, obj);
+      await logAction('Edited contact: ' + name);
+    } else {
+      await sbInsert('contacts', obj);
+      await logAction('Added contact: ' + name);
+    }
+    closeModal('contactModal');
+    showToast(editId ? 'Contact updated' : 'Contact added');
+    loadContacts();
+  } catch(e) { console.error('Save contact failed:', e); showToast('Failed to save contact'); }
+}
+
+async function deleteContact(id) {
+  if (!confirm('Delete this contact?')) return;
+  try {
+    const c = window._contactsData?.find(x => x.id === id);
+    await sbDelete('contacts', id);
+    await logAction('Deleted contact: ' + (c?.name || id));
+    showToast('Contact deleted');
+    loadContacts();
+  } catch(e) { console.error('Delete contact failed:', e); showToast('Failed to delete contact'); }
+}
+
+// ===================== UK BANK HOLIDAYS =====================
+const UK_BANK_HOLIDAYS = {};
+async function fetchBankHolidays() {
+  try {
+    const res = await fetch('https://www.gov.uk/bank-holidays.json');
+    const data = await res.json();
+    (data['england-and-wales']?.events || []).forEach(h => {
+      UK_BANK_HOLIDAYS[h.date] = h.title;
+    });
+  } catch(e) { console.warn('Could not fetch bank holidays:', e); }
+}
+
+function getBankHoliday(year, month, day) {
+  const key = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  return UK_BANK_HOLIDAYS[key] || null;
+}
+
+// ===================== LEARNER AUTH =====================
+function openLearnerLoginModal() {
+  showLearnerLoginForm();
+  document.getElementById('learnerEmail').value = '';
+  document.getElementById('learnerPin').value = '';
+  openModal('learnerLoginModal');
+  setTimeout(() => document.getElementById('learnerEmail').focus(), 100);
+}
+
+function showLearnerLoginForm() {
+  document.getElementById('learnerLoginForm').style.display = '';
+  document.getElementById('learnerRegisterForm').style.display = 'none';
+  document.getElementById('learnerPinDisplay').style.display = 'none';
+  document.getElementById('learnerModalTitle').textContent = 'Learner Login';
+}
+
+function showLearnerRegister() {
+  document.getElementById('learnerLoginForm').style.display = 'none';
+  document.getElementById('learnerRegisterForm').style.display = '';
+  document.getElementById('learnerPinDisplay').style.display = 'none';
+  document.getElementById('learnerModalTitle').textContent = 'Learner Registration';
+}
+
+async function doLearnerLogin() {
+  const email = document.getElementById('learnerEmail').value.trim().toLowerCase();
+  const pin = document.getElementById('learnerPin').value.trim();
+  if (!email || !pin) { showToast('Enter email and PIN'); return; }
+  try {
+    const data = await sbGet('learners', `email=eq.${encodeURIComponent(email)}&select=*`);
+    if (data.length === 0) { showToast('Account not found. Please register.'); return; }
+    const learner = data[0];
+    if (learner.pin_code !== pin) { showToast('Incorrect PIN'); return; }
+    currentLearner = learner;
+    localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    setLearnerUI(true);
+    closeModal('learnerLoginModal');
+    showToast('Welcome, ' + learner.name + '!');
+    // Check URL params for auto-actions
+    handleLearnerURLParams();
+  } catch(e) { console.error('Learner login error:', e); showToast('Login failed'); }
+}
+
+function onRotationBlockChange() {
+  const block = document.getElementById('regRotationBlock').value;
+  const startField = document.getElementById('regPlacementStart');
+  const endField = document.getElementById('regPlacementEnd');
+  if (!block) {
+    startField.removeAttribute('readonly');
+    endField.removeAttribute('readonly');
+    return;
+  }
+  // Determine academic year: if current month >= August, year starts this year; else last year
+  const now = new Date();
+  const academicYearStart = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  const blocks = {
+    aug_dec: { start: `${academicYearStart}-08-01`, end: `${academicYearStart}-12-31` },
+    dec_apr: { start: `${academicYearStart}-12-01`, end: `${academicYearStart + 1}-04-30` },
+    apr_aug: { start: `${academicYearStart + 1}-04-01`, end: `${academicYearStart + 1}-08-31` }
+  };
+  const dates = blocks[block];
+  if (dates) {
+    startField.value = dates.start;
+    endField.value = dates.end;
+    startField.setAttribute('readonly', true);
+    endField.setAttribute('readonly', true);
+  }
+}
+
+async function doLearnerRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim().toLowerCase();
+  const grade = document.getElementById('regGrade').value;
+  const placement = document.getElementById('regPlacement').value;
+  const placementStart = document.getElementById('regPlacementStart').value;
+  const placementEnd = document.getElementById('regPlacementEnd').value;
+  const rotationBlock = document.getElementById('regRotationBlock').value;
+
+  if (!name || !email || !grade || !placement) { showToast('Please fill in all required fields'); return; }
+  if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) { showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return; }
+
+  // Generate 6-digit PIN
+  const pin = String(Math.floor(100000 + Math.random() * 900000));
+
+  try {
+    const result = await sbInsert('learners', {
+      name, email, grade, specialty: '', placement,
+      placement_start: placementStart || null,
+      placement_end: placementEnd || null,
+      rotation_block: rotationBlock || null,
+      pin_code: pin, verified: true
+    });
+    currentLearner = result[0];
+    localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    setLearnerUI(true);
+
+    // Show PIN
+    document.getElementById('learnerLoginForm').style.display = 'none';
+    document.getElementById('learnerRegisterForm').style.display = 'none';
+    document.getElementById('learnerPinDisplay').style.display = '';
+    document.getElementById('generatedPin').textContent = pin;
+    document.getElementById('learnerModalTitle').textContent = 'Registration Complete';
+  } catch(e) {
+    console.error('Registration error:', e);
+    if (e.message && e.message.includes('409')) {
+      showToast('An account with this email already exists. Please login.');
+    } else {
+      showToast('Registration failed. Please try again.');
+    }
+  }
+}
+
+function doLearnerLogout() {
+  currentLearner = null;
+  localStorage.removeItem('sst_learner');
+  setLearnerUI(false);
+  updateSessionsTabLabel();
+  if (currentView === 'dashboard') switchView('list');
+  showToast('Learner logged out');
+}
+
+function setLearnerUI(loggedIn) {
+  document.body.classList.toggle('is-learner', loggedIn);
+  updateHeaderButtons();
+  // Update sessions tab label
+  updateSessionsTabLabel();
+}
+
+function checkLearnerSession() {
+  const stored = localStorage.getItem('sst_learner');
+  if (stored) {
+    try {
+      currentLearner = JSON.parse(stored);
+      setLearnerUI(true);
+      updateSessionsTabLabel();
+    } catch(e) { localStorage.removeItem('sst_learner'); }
+  }
+}
+
+function handleLearnerURLParams() {
+  const params = new URLSearchParams(window.location.search);
+  const attendId = params.get('attend');
+  const feedbackId = params.get('feedback');
+  if (attendId && currentLearner) {
+    markSelfAttendance(parseInt(attendId));
+  }
+  if (feedbackId && currentLearner) {
+    openFeedbackModal(parseInt(feedbackId));
+  }
+}
+
+// ===================== ATTENDANCE =====================
+async function markSelfAttendance(sessionId) {
+  if (!currentLearner) { showToast('Please login first'); return; }
+  try {
+    const ev = events.find(e => e.id === sessionId);
+    const sessionDate = ev ? eventToDate(ev) : null;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const isPast = sessionDate && sessionDate < today;
+    const attData = {
+      session_id: sessionId,
+      learner_id: currentLearner.id,
+      method: 'self',
+      status: isPast ? 'pending' : 'approved',
+      retrospective: isPast ? true : false
+    };
+    await sbInsert('attendance', attData);
+    showToast(isPast ? 'Attendance submitted for approval' : 'Attendance marked!');
+  } catch(e) {
+    if (e.message && e.message.includes('409')) {
+      showToast('Already marked as attended');
+    } else {
+      console.error('Mark attendance failed:', e);
+      showToast('Failed to mark attendance');
+    }
+  }
+}
+
+async function openAttendanceModal(sessionId) {
+  const body = document.getElementById('attendanceModalBody');
+  body.innerHTML = '<div style="text-align:center;padding:20px;"><div class="loading-spinner"></div></div>';
+  openModal('attendanceModal');
+  try {
+    const [learners, existing] = await Promise.all([
+      sbGet('learners', 'order=name.asc&select=*'),
+      sbGet('attendance', `session_id=eq.${sessionId}&select=*`)
+    ]);
+    const attendanceMap = {};
+    existing.forEach(a => { attendanceMap[a.learner_id] = a; });
+    const attendedIds = new Set(existing.map(a => a.learner_id));
+    let html = `<input type="hidden" id="attendanceSessionId" value="${sessionId}">`;
+    html += `<div style="margin-bottom:12px;font-size:13px;color:var(--nhs-grey);">${learners.length} registered learners</div>`;
+    if (learners.length === 0) {
+      html += '<div style="text-align:center;padding:20px;color:var(--nhs-grey);">No learners registered yet.</div>';
+    } else {
+      html += '<div style="max-height:400px;overflow-y:auto;">';
+      learners.forEach(l => {
+        const att = attendanceMap[l.id];
+        const status = att ? (att.status || 'approved') : '';
+        let statusBadge = '';
+        if (status === 'pending') statusBadge = '<span style="background:#fff4e0;color:var(--nhs-orange);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;">PENDING</span>';
+        else if (status === 'approved') statusBadge = '<span style="background:#e6f4ea;color:var(--nhs-green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;">APPROVED</span>';
+        else if (status === 'rejected') statusBadge = '<span style="background:#fde8e8;color:var(--nhs-red);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;">REJECTED</span>';
+        const retroBadge = att && att.retrospective ? '<span style="background:#e0f5fa;color:var(--nhs-aqua);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px;">RETRO</span>' : '';
+        const approveButtons = (status === 'pending') ? `<div style="display:flex;gap:4px;margin-left:auto;">
+          <button class="btn btn-green" style="padding:3px 10px;font-size:11px;" onclick="approveAttendance(${att.id}, true, ${sessionId})">Approve</button>
+          <button class="btn btn-red" style="padding:3px 10px;font-size:11px;" onclick="approveAttendance(${att.id}, false, ${sessionId})">Reject</button>
+        </div>` : '';
+        html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--nhs-pale-grey);">
+          <input type="checkbox" id="att_${l.id}" value="${l.id}" ${attendedIds.has(l.id) ? 'checked' : ''} style="width:18px;height:18px;">
+          <label for="att_${l.id}" style="margin:0;font-size:13px;cursor:pointer;flex:1;">
+            <strong>${esc(l.name)}</strong> <span style="color:var(--nhs-grey);">(${esc(l.grade)} - ${esc(l.placement)})</span>
+            ${statusBadge}${retroBadge}
+          </label>
+          ${approveButtons}
+        </div>`;
+      });
+      html += '</div>';
+    }
+    // QR Code
+    const qrUrl = `${window.location.origin}${window.location.pathname}?attend=${sessionId}`;
+    html += `<div style="margin-top:16px;padding:14px;background:var(--nhs-bg);border-radius:8px;text-align:center;">
+      <div style="font-size:13px;font-weight:600;color:var(--nhs-dark-blue);margin-bottom:8px;">QR Code for Self-Registration</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}" alt="QR Code" style="border-radius:8px;">
+      <div style="font-size:11px;color:var(--nhs-grey);margin-top:6px;">Learners scan this to mark attendance</div>
+    </div>`;
+    body.innerHTML = html;
+  } catch(e) { console.error('Load attendance failed:', e); body.innerHTML = '<div style="color:var(--nhs-red);padding:20px;">Failed to load attendance data.</div>'; }
+}
+
+async function saveAttendance() {
+  const sessionId = parseInt(document.getElementById('attendanceSessionId').value);
+  const checkboxes = document.querySelectorAll('#attendanceModalBody input[type="checkbox"][id^="att_"]');
+  const checkedIds = [];
+  const uncheckedIds = [];
+  checkboxes.forEach(cb => {
+    if (cb.checked) checkedIds.push(parseInt(cb.value));
+    else uncheckedIds.push(parseInt(cb.value));
+  });
+  try {
+    // Insert new attendance records
+    for (const learnerId of checkedIds) {
+      try {
+        await sbInsert('attendance', { session_id: sessionId, learner_id: learnerId, method: 'admin', status: 'approved' });
+      } catch(e) { /* ignore duplicates */ }
+    }
+    // Remove unchecked (delete where session+learner match)
+    for (const learnerId of uncheckedIds) {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/attendance?session_id=eq.${sessionId}&learner_id=eq.${learnerId}`, { method: 'DELETE', headers });
+      } catch(e) { /* ignore */ }
+    }
+    closeModal('attendanceModal');
+    showToast('Attendance saved');
+  } catch(e) { console.error('Save attendance failed:', e); showToast('Failed to save attendance'); }
+}
+
+// ===================== FEEDBACK SYSTEM =====================
+let feedbackRatings = { content: 0, teaching: 0, relevance: 0, overall: 0 };
+
+function initStarRatings() {
+  document.querySelectorAll('.star-rating').forEach(container => {
+    const field = container.dataset.field;
+    container.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const star = document.createElement('span');
+      star.className = 'star';
+      star.textContent = '☆';
+      star.dataset.value = i;
+      star.onclick = () => setStarRating(field, i);
+      star.onmouseenter = () => highlightStars(field, i);
+      star.onmouseleave = () => highlightStars(field, feedbackRatings[field]);
+      container.appendChild(star);
+    }
+  });
+}
+
+function setStarRating(field, value) {
+  feedbackRatings[field] = value;
+  highlightStars(field, value);
+}
+
+function highlightStars(field, upTo) {
+  const container = document.querySelector(`.star-rating[data-field="${field}"]`);
+  if (!container) return;
+  container.querySelectorAll('.star').forEach(star => {
+    const v = parseInt(star.dataset.value);
+    star.classList.toggle('filled', v <= upTo);
+    star.textContent = v <= upTo ? '★' : '☆';
+  });
+}
+
+function openFeedbackModal(sessionId) {
+  if (!currentLearner) { showToast('Please login as a learner first'); openLearnerLoginModal(); return; }
+  const ev = events.find(e => e.id === sessionId);
+  if (!ev) { showToast('Session not found'); return; }
+  document.getElementById('feedbackSessionId').value = sessionId;
+  document.getElementById('feedbackSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year} | ${esc(ev.teacher || 'TBD')}`;
+  feedbackRatings = { content: 0, teaching: 0, relevance: 0, overall: 0 };
+  initStarRatings();
+  document.getElementById('feedbackLearned').value = '';
+  document.getElementById('feedbackSuggestions').value = '';
+  document.getElementById('feedbackComments').value = '';
+  document.getElementById('feedbackRecommend').checked = true;
+  document.getElementById('feedbackAnonymous').checked = false;
+  document.getElementById('paceRight').checked = true;
+  openModal('feedbackModal');
+}
+
+async function submitFeedback() {
+  if (!currentLearner) { showToast('Please login first'); return; }
+  const sessionId = parseInt(document.getElementById('feedbackSessionId').value);
+  if (!feedbackRatings.overall) { showToast('Please rate the session overall'); return; }
+  const pace = document.querySelector('input[name="feedbackPace"]:checked')?.value || 'just_right';
+  const data = {
+    session_id: sessionId,
+    learner_id: currentLearner.id,
+    anonymous: document.getElementById('feedbackAnonymous').checked,
+    rating_content: feedbackRatings.content || null,
+    rating_teaching: feedbackRatings.teaching || null,
+    rating_relevance: feedbackRatings.relevance || null,
+    rating_pace: pace,
+    rating_overall: feedbackRatings.overall,
+    learned_today: document.getElementById('feedbackLearned').value.trim(),
+    suggestions: document.getElementById('feedbackSuggestions').value.trim(),
+    comments: document.getElementById('feedbackComments').value.trim(),
+    would_recommend: document.getElementById('feedbackRecommend').checked
+  };
+  try {
+    await sbInsert('feedback', data);
+    closeModal('feedbackModal');
+    showToast('Thank you for your feedback!');
+  } catch(e) {
+    console.error('Submit feedback failed:', e);
+    if (e.message && e.message.includes('409')) {
+      showToast('You have already submitted feedback for this session');
+    } else {
+      showToast('Failed to submit feedback');
+    }
+  }
+}
+
+// ===================== FEEDBACK REQUEST (RETROSPECTIVE) =====================
+let fbReqSessionId = null;
+let fbReqAttendees = [];
+
+async function openFeedbackRequestModal(sessionId) {
+  fbReqSessionId = sessionId;
+  const ev = events.find(e => e.id === sessionId);
+  if (!ev) { showToast('Session not found'); return; }
+
+  // Generate feedback link
+  const feedbackUrl = `https://suketubatra-bit.github.io/southmead-surgical-teaching/?feedback=${sessionId}`;
+  document.getElementById('fbReqLink').value = feedbackUrl;
+  document.getElementById('fbReqSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year} | ${esc(ev.teacher || 'TBD')}`;
+
+  // Load contacts and attendance for this session
+  let contacts = window._contactsData || [];
+  if (!contacts.length) {
+    try { contacts = await sbGet('contacts', 'order=name.asc&select=*'); } catch(e) { contacts = []; }
+  }
+  try {
+    const att = await sbGet('attendance', `session_id=eq.${sessionId}&select=learner_id`);
+    fbReqAttendees = att.map(a => a.learner_id);
+  } catch(e) { fbReqAttendees = []; }
+
+  // Also load learners to match attendees to emails
+  let learners = [];
+  try { learners = await sbGet('learners', 'select=id,email'); } catch(e) {}
+  const attendeeEmails = new Set(learners.filter(l => fbReqAttendees.includes(l.id)).map(l => l.email?.toLowerCase()));
+
+  // Render contacts list with checkboxes
+  let html = '';
+  contacts.forEach(c => {
+    const isAttendee = attendeeEmails.has(c.email?.toLowerCase());
+    html += `<label class="fb-req-contact" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;" data-role="${esc(c.role || '')}" data-name="${esc(c.name?.toLowerCase() || '')}" data-email="${esc(c.email?.toLowerCase() || '')}" data-attended="${isAttendee}">
+      <input type="checkbox" class="fb-req-check" value="${esc(c.email)}" style="width:16px;height:16px;">
+      <span style="flex:1;">${esc(c.name)}</span>
+      <span style="font-size:11px;color:var(--nhs-grey);">${esc(c.role || '')}</span>
+      ${isAttendee ? '<span style="font-size:10px;background:var(--nhs-green);color:white;padding:2px 6px;border-radius:10px;">attended</span>' : ''}
+    </label>`;
+  });
+  document.getElementById('fbReqContactsList').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--nhs-grey);">No contacts found. Add contacts in the Contacts tab.</div>';
+  document.getElementById('fbReqSearch').value = '';
+  updateFbReqCount();
+  openModal('feedbackRequestModal');
+}
+
+function fbReqSelectGroup(group) {
+  const checks = document.querySelectorAll('.fb-req-check');
+  checks.forEach(cb => {
+    const label = cb.closest('.fb-req-contact');
+    if (group === 'all') { cb.checked = label.style.display !== 'none'; }
+    else if (group === 'none') { cb.checked = false; }
+    else if (group === 'attended') { cb.checked = label.dataset.attended === 'true' && label.style.display !== 'none'; }
+    else { cb.checked = label.dataset.role === group && label.style.display !== 'none'; }
+  });
+  updateFbReqCount();
+}
+
+function filterFbReqContacts() {
+  const q = document.getElementById('fbReqSearch').value.toLowerCase();
+  document.querySelectorAll('.fb-req-contact').forEach(label => {
+    const name = label.dataset.name || '';
+    const email = label.dataset.email || '';
+    const role = label.dataset.role?.toLowerCase() || '';
+    label.style.display = (!q || name.includes(q) || email.includes(q) || role.includes(q)) ? 'flex' : 'none';
+  });
+}
+
+function updateFbReqCount() {
+  const count = document.querySelectorAll('.fb-req-check:checked').length;
+  document.getElementById('fbReqSelectedCount').textContent = count;
+}
+// Attach change listener
+document.addEventListener('change', (e) => { if (e.target.classList.contains('fb-req-check')) updateFbReqCount(); });
+
+function getSelectedFbEmails() {
+  return Array.from(document.querySelectorAll('.fb-req-check:checked')).map(cb => cb.value).filter(Boolean);
+}
+
+function copyFeedbackLink() {
+  const link = document.getElementById('fbReqLink').value;
+  navigator.clipboard.writeText(link).then(() => showToast('Feedback link copied!')).catch(() => {
+    const inp = document.getElementById('fbReqLink'); inp.select(); document.execCommand('copy'); showToast('Link copied!');
+  });
+}
+
+function copyFeedbackEmails() {
+  const emails = getSelectedFbEmails();
+  if (!emails.length) { showToast('No recipients selected'); return; }
+  navigator.clipboard.writeText(emails.join('; ')).then(() => showToast(`${emails.length} email(s) copied!`)).catch(() => showToast('Failed to copy'));
+}
+
+async function sendFeedbackEmails() {
+  const emails = getSelectedFbEmails();
+  if (!emails.length) { showToast('No recipients selected'); return; }
+  const ev = events.find(e => e.id === fbReqSessionId);
+  const topic = ev?.topic || 'Teaching Session';
+  const date = ev ? `${ev.day} ${ev.date} ${ev.month} ${ev.year}` : '';
+  const link = document.getElementById('fbReqLink').value;
+  const subject = `Feedback Request: ${topic} (${date})`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;">
+      <h2 style="color:white;margin:0;">Southmead Surgical Teaching</h2>
+    </div>
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+      <p>Hi,</p>
+      <p>Please take a moment to provide feedback for the recent teaching session:</p>
+      <table style="margin:16px 0;font-size:14px;">
+        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${topic}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${date}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Teacher:</td><td>${ev?.teacher || 'N/A'}</td></tr>
+      </table>
+      <a href="${link}" style="display:inline-block;background:#009639;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0;">Submit Feedback</a>
+      <p style="font-size:13px;color:#666;margin-top:20px;">Your feedback helps us improve our surgical teaching programme. It only takes 2 minutes.</p>
+      <p>Thank you,<br>Southmead Surgical Teaching Team</p>
+    </div>
+  </div>`;
+
+  // Send via Edge Function
+  const btn = document.querySelector('#feedbackRequestModal .btn-green');
+  const originalText = btn.textContent;
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'apikey': SUPABASE_KEY
+      },
+      body: JSON.stringify({ to: emails, subject, html })
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast(`Feedback request sent to ${emails.length} recipient(s)!`);
+      closeModal('feedbackRequestModal');
+    } else {
+      console.warn('Edge function failed:', result);
+      const errMsg = result.error || 'Unknown error';
+      if (confirm(`Direct send failed: ${errMsg}\n\nWould you like to open your email client instead?`)) {
+        sendFeedbackMailto(emails, subject, topic, date, ev, link);
+      }
+    }
+  } catch(e) {
+    console.warn('Send failed:', e);
+    if (confirm(`Direct send failed: ${e.message}\n\nWould you like to open your email client instead?`)) {
+      sendFeedbackMailto(emails, subject, topic, date, ev, link);
+    }
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
+
+function sendFeedbackMailto(emailsArg, subjectArg, topicArg, dateArg, evArg, linkArg) {
+  const emails = emailsArg || getSelectedFbEmails();
+  if (!emails.length) { showToast('No recipients selected'); return; }
+  const ev = evArg || events.find(e => e.id === fbReqSessionId);
+  const topic = topicArg || ev?.topic || 'Teaching Session';
+  const date = dateArg || (ev ? `${ev.day} ${ev.date} ${ev.month} ${ev.year}` : '');
+  const link = linkArg || document.getElementById('fbReqLink').value;
+  const subject = subjectArg || `Feedback Request: ${topic} (${date})`;
+  const body = encodeURIComponent(`Hi,\n\nPlease take a moment to provide feedback for the recent teaching session:\n\nTopic: ${topic}\nDate: ${date}\nTeacher: ${ev?.teacher || 'N/A'}\n\nClick here to submit your feedback:\n${link}\n\nYour feedback helps us improve our surgical teaching programme.\n\nThank you,\nSouthmead Surgical Teaching Team`);
+  const bcc = emails.join(',');
+  window.open(`mailto:?bcc=${bcc}&subject=${encodeURIComponent(subject)}&body=${body}`, '_self');
+  showToast('Opening email client...');
+}
+
+// ===================== FEEDBACK ADMIN VIEW =====================
+async function loadFeedbackView() {
+  const container = document.getElementById('feedbackView');
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading feedback...</div>';
+  try {
+    const [feedback, learners] = await Promise.all([
+      sbGet('feedback', 'order=submitted_at.desc&select=*'),
+      sbGet('learners', 'select=id,name')
+    ]);
+    const learnerMap = {};
+    learners.forEach(l => learnerMap[l.id] = l.name);
+
+    let html = '<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Feedback Overview</h3>';
+
+    if (feedback.length === 0) {
+      html += '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">No feedback submitted yet.</div>';
+      container.innerHTML = html;
+      return;
+    }
+
+    // Overall stats
+    const avgOverall = (feedback.reduce((s, f) => s + (f.rating_overall || 0), 0) / feedback.length).toFixed(1);
+    const avgContent = (feedback.filter(f=>f.rating_content).reduce((s,f)=>s+f.rating_content,0) / (feedback.filter(f=>f.rating_content).length || 1)).toFixed(1);
+    const avgTeaching = (feedback.filter(f=>f.rating_teaching).reduce((s,f)=>s+f.rating_teaching,0) / (feedback.filter(f=>f.rating_teaching).length || 1)).toFixed(1);
+    const recommendPct = Math.round(feedback.filter(f => f.would_recommend).length / feedback.length * 100);
+
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-num">${avgOverall}</div><div class="stat-label">Overall Rating</div></div>
+      <div class="stat-card"><div class="stat-num">${avgContent}</div><div class="stat-label">Content</div></div>
+      <div class="stat-card"><div class="stat-num">${avgTeaching}</div><div class="stat-label">Teaching</div></div>
+      <div class="stat-card"><div class="stat-num">${recommendPct}%</div><div class="stat-label">Would Recommend</div></div>
+      <div class="stat-card"><div class="stat-num">${feedback.length}</div><div class="stat-label">Total Responses</div></div>
+    </div>`;
+
+    // Filter controls
+    html += `<div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <select id="feedbackFilterSession" onchange="filterFeedbackCards()" style="padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;">
+        <option value="">All sessions</option>
+        ${[...new Set(feedback.map(f => f.session_id))].map(sid => {
+          const ev = events.find(e => e.id === sid);
+          return `<option value="${sid}">${ev ? esc(ev.topic || ev.date + ' ' + ev.month) : 'Session #' + sid}</option>`;
+        }).join('')}
+      </select>
+    </div>`;
+
+    // Per-session breakdown
+    const bySession = {};
+    feedback.forEach(f => { if (!bySession[f.session_id]) bySession[f.session_id] = []; bySession[f.session_id].push(f); });
+
+    html += '<div id="feedbackCards">';
+    for (const [sid, items] of Object.entries(bySession)) {
+      const ev = events.find(e => e.id === parseInt(sid));
+      const sessionLabel = ev ? `${ev.topic || 'TBD'} - ${ev.day} ${ev.date} ${ev.month} ${ev.year}` : 'Session #' + sid;
+      const sessionAvg = (items.reduce((s,f) => s + (f.rating_overall||0), 0) / items.length).toFixed(1);
+      html += `<div class="feedback-session-group" data-session="${sid}">
+        <div style="background:var(--nhs-bg);border-radius:8px;padding:12px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+          <div><strong>${esc(sessionLabel)}</strong><br><span style="font-size:12px;color:var(--nhs-grey);">${items.length} response${items.length!==1?'s':''}</span></div>
+          <div style="font-size:20px;font-weight:700;color:var(--nhs-blue);">${sessionAvg} ★</div>
+        </div>`;
+      items.forEach(f => {
+        const name = f.anonymous ? 'Anonymous' : (learnerMap[f.learner_id] || 'Unknown');
+        html += `<div class="feedback-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-weight:600;color:var(--nhs-dark-blue);">${esc(name)}</span>
+            <span style="font-size:11px;color:var(--nhs-grey);">${f.submitted_at ? new Date(f.submitted_at).toLocaleDateString() : ''}</span>
+          </div>
+          <div style="font-size:13px;margin-bottom:6px;">
+            Overall: ${'★'.repeat(f.rating_overall||0)}${'☆'.repeat(5-(f.rating_overall||0))}
+            ${f.rating_content ? ' | Content: ' + '★'.repeat(f.rating_content) + '☆'.repeat(5-f.rating_content) : ''}
+            ${f.rating_teaching ? ' | Teaching: ' + '★'.repeat(f.rating_teaching) + '☆'.repeat(5-f.rating_teaching) : ''}
+          </div>
+          ${f.rating_pace ? '<div style="font-size:12px;color:var(--nhs-grey);">Pace: ' + f.rating_pace.replace('_',' ') + '</div>' : ''}
+          ${f.learned_today ? '<div style="font-size:13px;margin-top:6px;"><strong>Learned:</strong> ' + esc(f.learned_today) + '</div>' : ''}
+          ${f.suggestions ? '<div style="font-size:13px;margin-top:4px;"><strong>Suggestions:</strong> ' + esc(f.suggestions) + '</div>' : ''}
+          ${f.comments ? '<div style="font-size:13px;margin-top:4px;font-style:italic;color:#425563;">' + esc(f.comments) + '</div>' : ''}
+        </div>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    container.innerHTML = html;
+  } catch(e) { console.error('Load feedback failed:', e); container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">Failed to load feedback.</div>'; }
+}
+
+function filterFeedbackCards() {
+  const sid = document.getElementById('feedbackFilterSession').value;
+  document.querySelectorAll('.feedback-session-group').forEach(g => {
+    g.style.display = (!sid || g.dataset.session === sid) ? '' : 'none';
+  });
+}
+
+// ===================== LEARNER DASHBOARD =====================
+async function loadDashboard() {
+  const container = document.getElementById('dashboardView');
+  if (!currentLearner) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">Please login as a learner to view your dashboard.</div>';
+    return;
+  }
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading dashboard...</div>';
+  try {
+    const attendance = await sbGet('attendance', `learner_id=eq.${currentLearner.id}&select=*`);
+    const attendedSessionIds = attendance.map(a => a.session_id);
+    const attendedSessions = events.filter(e => attendedSessionIds.includes(e.id));
+    const totalHours = attendedSessions.length; // 1 hour per session default
+
+    // Placement progress
+    let placementProgress = 0;
+    if (currentLearner.placement_start && currentLearner.placement_end) {
+      const start = new Date(currentLearner.placement_start);
+      const end = new Date(currentLearner.placement_end);
+      const now = new Date();
+      const total = end - start;
+      const elapsed = now - start;
+      placementProgress = Math.min(100, Math.max(0, Math.round(elapsed / total * 100)));
+    }
+
+    let html = `<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">My Dashboard</h3>`;
+
+    // Profile card
+    html += `<div class="dashboard-card">
+      <h4>Profile</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
+        <div><strong>Name:</strong> ${esc(currentLearner.name)}</div>
+        <div><strong>Email:</strong> ${esc(currentLearner.email)}</div>
+        <div><strong>Grade:</strong> ${esc(currentLearner.grade)}</div>
+        <div><strong>Placement:</strong> ${esc(currentLearner.placement)}</div>
+        ${currentLearner.placement_start ? '<div><strong>Start:</strong> ' + currentLearner.placement_start + '</div>' : ''}
+        ${currentLearner.placement_end ? '<div><strong>End:</strong> ' + currentLearner.placement_end + '</div>' : ''}
+      </div>
+      ${currentLearner.placement_start && currentLearner.placement_end ? `
+        <div style="margin-top:12px;">
+          <div style="font-size:12px;color:var(--nhs-grey);margin-bottom:4px;">Placement Progress: ${placementProgress}%</div>
+          <div class="progress-bar"><div class="progress-bar-fill" style="width:${placementProgress}%;"></div></div>
+        </div>` : ''}
+    </div>`;
+
+    // CPD Stats
+    html += `<div class="dashboard-card">
+      <h4>CPD Summary</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;text-align:center;">
+        <div class="stat-card"><div class="stat-num">${attendedSessions.length}</div><div class="stat-label">Sessions Attended</div></div>
+        <div class="stat-card"><div class="stat-num">${totalHours}</div><div class="stat-label">CPD Hours</div></div>
+      </div>
+    </div>`;
+
+    // Attendance list
+    html += `<div class="dashboard-card">
+      <h4>Sessions Attended</h4>`;
+    if (attendedSessions.length === 0) {
+      html += '<div style="text-align:center;padding:20px;color:var(--nhs-grey);">No sessions attended yet. Mark your attendance on session cards!</div>';
+    } else {
+      html += '<table class="attendance-table"><thead><tr><th>Date</th><th>Topic</th><th>Teacher</th></tr></thead><tbody>';
+      attendedSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (db||0)-(da||0); });
+      attendedSessions.forEach(s => {
+        html += `<tr><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+
+    // Generate Certificate button
+    if (attendedSessions.length > 0) {
+      html += `<div style="text-align:center;margin-top:16px;">
+        <button class="btn btn-green" style="padding:12px 32px;font-size:14px;" onclick="generateCertificate()">Generate Certificate</button>
+      </div>`;
+    }
+
+    container.innerHTML = html;
+  } catch(e) { console.error('Load dashboard failed:', e); container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">Failed to load dashboard.</div>'; }
+}
+
+// ===================== ATTENDANCE APPROVAL =====================
+async function approveAttendance(attendanceId, approve, sessionId) {
+  try {
+    await sbUpdate('attendance', attendanceId, {
+      status: approve ? 'approved' : 'rejected',
+      approved_by: currentUser ? currentUser.name : 'admin',
+      approved_at: new Date().toISOString()
+    });
+    // Send email notification to learner
+    try {
+      const attRecords = await sbGet('attendance', `id=eq.${attendanceId}&select=*`);
+      if (attRecords.length > 0) {
+        const learnerRecords = await sbGet('learners', `id=eq.${attRecords[0].learner_id}&select=*`);
+        if (learnerRecords.length > 0) {
+          const learner = learnerRecords[0];
+          const ev = events.find(e => e.id === attRecords[0].session_id);
+          const sessionLabel = ev ? `${ev.topic || 'Session'} (${ev.day} ${ev.date} ${ev.month} ${ev.year})` : 'a teaching session';
+          await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: learner.email,
+              subject: `Attendance ${approve ? 'Approved' : 'Rejected'} - ${sessionLabel}`,
+              body: `Dear ${learner.name},\n\nYour retrospective attendance for ${sessionLabel} has been ${approve ? 'approved' : 'rejected'}.\n\nRegards,\nSouthmead Surgical Teaching`
+            })
+          });
+        }
+      }
+    } catch(emailErr) { console.warn('Email notification failed:', emailErr); }
+    showToast(approve ? 'Attendance approved' : 'Attendance rejected');
+    if (sessionId) openAttendanceModal(sessionId);
+    if (currentView === 'approvals') loadApprovals();
+  } catch(e) {
+    console.error('Approve attendance failed:', e);
+    showToast('Failed to update attendance');
+  }
+}
+
+// ===================== APPROVALS VIEW =====================
+async function loadApprovals() {
+  const container = document.getElementById('approvalsView');
+  container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div>';
+  try {
+    const [pending, recent] = await Promise.all([
+      sbGet('attendance', 'status=eq.pending&select=*&order=created_at.desc'),
+      sbGet('attendance', 'status=neq.pending&order=approved_at.desc&limit=20&select=*')
+    ]);
+    const allLearnerIds = [...new Set([...pending, ...recent].map(a => a.learner_id))];
+    let learnersMap = {};
+    if (allLearnerIds.length > 0) {
+      const learners = await sbGet('learners', `id=in.(${allLearnerIds.join(',')})&select=*`);
+      learners.forEach(l => { learnersMap[l.id] = l; });
+    }
+    let html = '<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Attendance Approvals</h3>';
+
+    // Pending
+    html += '<h4 style="color:var(--nhs-orange);margin-bottom:10px;">Pending Approval (' + pending.length + ')</h4>';
+    if (pending.length === 0) {
+      html += '<div style="text-align:center;padding:20px;color:var(--nhs-grey);background:white;border-radius:8px;margin-bottom:20px;">No pending approvals</div>';
+    } else {
+      html += '<div style="background:white;border-radius:8px;box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden;">';
+      pending.forEach(a => {
+        const learner = learnersMap[a.learner_id] || {};
+        const ev = events.find(e => e.id === a.session_id);
+        const sessionLabel = ev ? `${esc(ev.topic || 'TBD')} - ${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}` : `Session #${a.session_id}`;
+        const requestedDate = a.created_at ? new Date(a.created_at).toLocaleDateString('en-GB') : '';
+        html += `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--nhs-pale-grey);flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <strong>${esc(learner.name || 'Unknown')}</strong> <span style="color:var(--nhs-grey);font-size:12px;">(${esc(learner.grade || '')} - ${esc(learner.placement || '')})</span>
+            <div style="font-size:12px;color:var(--nhs-grey);margin-top:2px;">${sessionLabel}</div>
+            <div style="font-size:11px;color:var(--nhs-grey);">Requested: ${requestedDate}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-green" style="padding:5px 14px;font-size:12px;" onclick="approveAttendance(${a.id}, true)">Approve</button>
+            <button class="btn btn-red" style="padding:5px 14px;font-size:12px;" onclick="approveAttendance(${a.id}, false)">Reject</button>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Recent
+    html += '<h4 style="color:var(--nhs-grey);margin-bottom:10px;">Recently Processed</h4>';
+    if (recent.length === 0) {
+      html += '<div style="text-align:center;padding:20px;color:var(--nhs-grey);background:white;border-radius:8px;">No recent approvals</div>';
+    } else {
+      html += '<div style="background:white;border-radius:8px;box-shadow:var(--shadow);overflow:hidden;">';
+      recent.forEach(a => {
+        const learner = learnersMap[a.learner_id] || {};
+        const ev = events.find(e => e.id === a.session_id);
+        const sessionLabel = ev ? `${esc(ev.topic || 'TBD')} - ${esc(ev.date)} ${esc(ev.month)}` : `Session #${a.session_id}`;
+        const statusColor = a.status === 'approved' ? 'var(--nhs-green)' : 'var(--nhs-red)';
+        const statusBg = a.status === 'approved' ? '#e6f4ea' : '#fde8e8';
+        html += `<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--nhs-pale-grey);">
+          <div style="flex:1;">
+            <strong style="font-size:13px;">${esc(learner.name || 'Unknown')}</strong>
+            <span style="font-size:12px;color:var(--nhs-grey);"> - ${sessionLabel}</span>
+          </div>
+          <span style="background:${statusBg};color:${statusColor};font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;">${esc(a.status)}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  } catch(e) {
+    console.error('Load approvals failed:', e);
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-red);">Failed to load approvals.</div>';
+  }
+}
+
+// ===================== MASTER ATTENDANCE CHART =====================
+let attendanceChartMode = 'summary';
+let _chartPlacementFilter = '';
+
+async function loadAttendanceChart() {
+  const container = document.getElementById('attendanceChartView');
+  // Preserve filter value before re-render
+  const existingFilter = document.getElementById('chartPlacementFilter');
+  if (existingFilter) _chartPlacementFilter = existingFilter.value;
+  container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div>';
+  try {
+    const [learners, attendance] = await Promise.all([
+      sbGet('learners', 'order=name.asc&select=*'),
+      sbGet('attendance', 'status=eq.approved&select=*')
+    ]);
+
+    // Build attendance set
+    const attendanceSet = new Set(attendance.map(a => `${a.learner_id}_${a.session_id}`));
+    const pendingAttendance = new Set();
+    // Also fetch pending for grid icons
+    try {
+      const pendingRecords = await sbGet('attendance', 'status=eq.pending&select=*');
+      pendingRecords.forEach(a => pendingAttendance.add(`${a.learner_id}_${a.session_id}`));
+    } catch(e) {}
+
+    const completedSessions = events.filter(e => e.status === 'completed' || !isFutureEvent(e));
+    completedSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (da||0)-(db||0); });
+
+    // Filter controls
+    let html = '<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Master Attendance Chart</h3>';
+    html += '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">';
+    html += `<select id="chartPlacementFilter" onchange="loadAttendanceChart()" style="padding:6px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;">
+      <option value="">All Placements</option>
+      <option value="UGI" ${_chartPlacementFilter === 'UGI' ? 'selected' : ''}>UGI</option>
+      <option value="LGI" ${_chartPlacementFilter === 'LGI' ? 'selected' : ''}>LGI</option>
+      <option value="Transplant" ${_chartPlacementFilter === 'Transplant' ? 'selected' : ''}>Transplant</option>
+      <option value="Vascular" ${_chartPlacementFilter === 'Vascular' ? 'selected' : ''}>Vascular</option>
+    </select>`;
+    html += `<button class="btn ${attendanceChartMode === 'summary' ? 'btn-green' : 'btn-outline'}" style="${attendanceChartMode !== 'summary' ? 'color:var(--nhs-grey);border-color:var(--nhs-pale-grey);' : ''}" onclick="attendanceChartMode='summary';loadAttendanceChart()">Summary View</button>`;
+    html += `<button class="btn ${attendanceChartMode === 'grid' ? 'btn-green' : 'btn-outline'}" style="${attendanceChartMode !== 'grid' ? 'color:var(--nhs-grey);border-color:var(--nhs-pale-grey);' : ''}" onclick="attendanceChartMode='grid';loadAttendanceChart()">Grid View</button>`;
+    html += `<button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);margin-left:auto;" onclick="exportAttendanceCSV()">Export CSV</button>`;
+    html += '</div>';
+
+    // Apply placement filter
+    const placementFilter = _chartPlacementFilter;
+    const filteredLearners = placementFilter ? learners.filter(l => l.placement === placementFilter) : learners;
+
+    if (attendanceChartMode === 'grid') {
+      // GRID VIEW
+      html += '<div style="overflow-x:auto;background:white;border-radius:8px;box-shadow:var(--shadow);">';
+      html += '<table style="border-collapse:collapse;font-size:12px;width:100%;">';
+      html += '<thead><tr><th style="position:sticky;left:0;background:var(--nhs-dark-blue);color:white;padding:8px 12px;z-index:2;min-width:160px;text-align:left;">Learner</th>';
+      completedSessions.forEach(s => {
+        const d = eventToDate(s);
+        const label = d ? `${d.getDate()}/${d.getMonth()+1}` : '';
+        html += `<th style="background:var(--nhs-dark-blue);color:white;padding:6px 4px;font-size:10px;text-align:center;min-width:40px;writing-mode:vertical-lr;transform:rotate(180deg);" title="${esc(s.topic || 'TBD')}">${esc(s.topic ? s.topic.substring(0,15) : label)}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+      filteredLearners.forEach(l => {
+        html += `<tr><td style="position:sticky;left:0;background:white;padding:6px 10px;border-bottom:1px solid var(--nhs-pale-grey);z-index:1;font-weight:600;white-space:nowrap;">${esc(l.name)} <span style="font-weight:400;color:var(--nhs-grey);font-size:10px;">(${esc(l.grade)})</span></td>`;
+        completedSessions.forEach(s => {
+          const key = `${l.id}_${s.id}`;
+          let cell = '<span style="color:var(--nhs-pale-grey);">-</span>';
+          if (attendanceSet.has(key)) cell = '<span style="color:var(--nhs-green);font-weight:700;">&#10003;</span>';
+          else if (pendingAttendance.has(key)) cell = '<span style="color:var(--nhs-orange);">&#9201;</span>';
+          // Check if session was during their placement
+          if (l.placement_start && l.placement_end) {
+            const sd = eventToDate(s);
+            const ps = new Date(l.placement_start);
+            const pe = new Date(l.placement_end);
+            if (sd && (sd < ps || sd > pe)) cell = '<span style="color:var(--nhs-pale-grey);font-size:10px;">n/a</span>';
+          }
+          // But if they attended, always show the checkmark
+          if (attendanceSet.has(key)) cell = '<span style="color:var(--nhs-green);font-weight:700;">&#10003;</span>';
+          html += `<td style="text-align:center;padding:4px;border-bottom:1px solid var(--nhs-pale-grey);border-left:1px solid var(--nhs-pale-grey);">${cell}</td>`;
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+    } else {
+      // SUMMARY VIEW
+      html += '<div style="background:white;border-radius:8px;box-shadow:var(--shadow);overflow-x:auto;">';
+      html += '<table style="border-collapse:collapse;width:100%;font-size:13px;">';
+      html += `<thead><tr>
+        <th style="background:var(--nhs-dark-blue);color:white;padding:10px 12px;text-align:left;cursor:pointer;" onclick="sortAttendanceChart('name')">Name</th>
+        <th style="background:var(--nhs-dark-blue);color:white;padding:10px 12px;text-align:left;cursor:pointer;" onclick="sortAttendanceChart('grade')">Grade</th>
+        <th style="background:var(--nhs-dark-blue);color:white;padding:10px 12px;text-align:left;cursor:pointer;" onclick="sortAttendanceChart('placement')">Placement</th>
+        <th style="background:var(--nhs-dark-blue);color:white;padding:10px 12px;text-align:left;cursor:pointer;" onclick="sortAttendanceChart('rotation')">Rotation</th>
+        <th style="background:var(--nhs-dark-blue);color:white;padding:10px 12px;text-align:center;cursor:pointer;" onclick="sortAttendanceChart('attended')">Attended</th>
+        <th style="background:var(--nhs-dark-blue);color:white;padding:10px 12px;text-align:center;cursor:pointer;" onclick="sortAttendanceChart('available')">Available</th>
+        <th style="background:var(--nhs-dark-blue);color:white;padding:10px 12px;text-align:center;cursor:pointer;" onclick="sortAttendanceChart('percent')">Attendance %</th>
+        <th style="background:var(--nhs-dark-blue);color:white;padding:10px 12px;text-align:center;">CPD Hours</th>
+      </tr></thead><tbody>`;
+
+      const rows = filteredLearners.map(l => {
+        const attended = completedSessions.filter(s => attendanceSet.has(`${l.id}_${s.id}`)).length;
+        let available = completedSessions.length;
+        if (l.placement_start && l.placement_end) {
+          const ps = new Date(l.placement_start); ps.setHours(0,0,0,0);
+          const pe = new Date(l.placement_end); pe.setHours(23,59,59,999);
+          available = completedSessions.filter(s => {
+            const d = eventToDate(s);
+            return d && d >= ps && d <= pe;
+          }).length;
+        }
+        const pct = available > 0 ? Math.round((attended / available) * 100) : 0;
+        const rotationLabels = { aug_dec: 'Aug-Dec', dec_apr: 'Dec-Apr', apr_aug: 'Apr-Aug' };
+        return { learner: l, attended, available, pct, rotation: rotationLabels[l.rotation_block] || '-' };
+      });
+
+      // Sort if needed
+      const sortField = window._attChartSortField || 'name';
+      const sortDir = window._attChartSortDir || 'asc';
+      rows.sort((a, b) => {
+        let va, vb;
+        if (sortField === 'name') { va = a.learner.name; vb = b.learner.name; }
+        else if (sortField === 'grade') { va = a.learner.grade; vb = b.learner.grade; }
+        else if (sortField === 'placement') { va = a.learner.placement; vb = b.learner.placement; }
+        else if (sortField === 'rotation') { va = a.rotation; vb = b.rotation; }
+        else if (sortField === 'attended') { va = a.attended; vb = b.attended; }
+        else if (sortField === 'available') { va = a.available; vb = b.available; }
+        else if (sortField === 'percent') { va = a.pct; vb = b.pct; }
+        else { va = a.learner.name; vb = b.learner.name; }
+        if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      rows.forEach(r => {
+        const l = r.learner;
+        let pctColor = 'var(--nhs-red)';
+        let pctBg = '#fde8e8';
+        if (r.pct >= 75) { pctColor = 'var(--nhs-green)'; pctBg = '#e6f4ea'; }
+        else if (r.pct >= 50) { pctColor = 'var(--nhs-orange)'; pctBg = '#fff4e0'; }
+        html += `<tr style="border-bottom:1px solid var(--nhs-pale-grey);">
+          <td style="padding:8px 12px;font-weight:600;">${esc(l.name)}</td>
+          <td style="padding:8px 12px;">${esc(l.grade || '-')}</td>
+          <td style="padding:8px 12px;">${esc(l.placement || '-')}</td>
+          <td style="padding:8px 12px;">${esc(r.rotation)}</td>
+          <td style="padding:8px 12px;text-align:center;">${r.attended}</td>
+          <td style="padding:8px 12px;text-align:center;">${r.available}</td>
+          <td style="padding:8px 12px;text-align:center;"><span style="background:${pctBg};color:${pctColor};font-weight:700;padding:2px 10px;border-radius:10px;font-size:12px;">${r.pct}%</span></td>
+          <td style="padding:8px 12px;text-align:center;">${r.attended}</td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+    }
+
+    container.innerHTML = html;
+  } catch(e) {
+    console.error('Load attendance chart failed:', e);
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-red);">Failed to load attendance chart.</div>';
+  }
+}
+
+function sortAttendanceChart(field) {
+  if (window._attChartSortField === field) {
+    window._attChartSortDir = window._attChartSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    window._attChartSortField = field;
+    window._attChartSortDir = 'asc';
+  }
+  loadAttendanceChart();
+}
+
+function exportAttendanceCSV() {
+  try {
+    const table = document.querySelector('#attendanceChartView table');
+    if (!table) { showToast('No data to export'); return; }
+    let csv = '';
+    table.querySelectorAll('tr').forEach(row => {
+      const cells = [];
+      row.querySelectorAll('th, td').forEach(cell => {
+        cells.push('"' + cell.textContent.trim().replace(/"/g, '""') + '"');
+      });
+      csv += cells.join(',') + '\n';
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'attendance_chart_' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('CSV exported');
+  } catch(e) {
+    console.error('Export CSV failed:', e);
+    showToast('Failed to export CSV');
+  }
+}
+
+// ===================== CERTIFICATE GENERATION =====================
+async function generateCertificate() {
+  if (!currentLearner) return;
+  try {
+    const attendance = await sbGet('attendance', `learner_id=eq.${currentLearner.id}&select=*`);
+    const attendedSessionIds = attendance.map(a => a.session_id);
+    const attendedSessions = events.filter(e => attendedSessionIds.includes(e.id));
+    attendedSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (da||0)-(db||0); });
+    const totalHours = attendedSessions.length;
+
+    const certWindow = window.open('', '_blank');
+    certWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Certificate of Attendance</title>
+<style>
+  @media print { body { margin: 0; } .no-print { display: none; } }
+  body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background: white; color: #231f20; }
+  .cert-container { max-width: 900px; margin: 0 auto; border: 3px solid #005eb8; padding: 50px; position: relative; }
+  .cert-container::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 1px solid #41b6e6; pointer-events: none; }
+  .cert-header { text-align: center; margin-bottom: 30px; }
+  .cert-header h1 { color: #005eb8; font-size: 32px; margin: 0 0 8px; letter-spacing: 1px; }
+  .cert-header h2 { color: #003087; font-size: 18px; margin: 0; font-weight: 400; }
+  .cert-nhs { color: #005eb8; font-size: 14px; margin-top: 10px; }
+  .cert-body { margin: 30px 0; }
+  .cert-name { text-align: center; font-size: 26px; font-weight: 700; color: #003087; margin: 20px 0; padding: 10px; border-bottom: 2px solid #41b6e6; }
+  .cert-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; margin: 20px 0; }
+  .cert-details dt { font-weight: 600; color: #005eb8; }
+  .cert-details dd { margin: 0; }
+  .cert-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px; }
+  .cert-table th { background: #005eb8; color: white; padding: 8px 10px; text-align: left; }
+  .cert-table td { padding: 6px 10px; border-bottom: 1px solid #e8edee; }
+  .cert-table tr:nth-child(even) { background: #f0f4f5; }
+  .cert-footer { text-align: center; margin-top: 40px; font-size: 13px; color: #768692; }
+  .cert-total { text-align: center; font-size: 18px; font-weight: 700; color: #005eb8; margin: 20px 0; padding: 14px; background: #f0f4f5; border-radius: 8px; }
+  .print-btn { display: block; margin: 20px auto; padding: 12px 30px; background: #005eb8; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .print-btn:hover { background: #003087; }
+</style></head><body>
+<button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+<div class="cert-container">
+  <div class="cert-header">
+    <h1>CERTIFICATE OF ATTENDANCE</h1>
+    <h2>Southmead Surgical Teaching Programme</h2>
+    <div class="cert-nhs">North Bristol NHS Trust | Southmead Hospital</div>
+  </div>
+  <div class="cert-body">
+    <div style="text-align:center;font-size:14px;color:#768692;">This is to certify that</div>
+    <div class="cert-name">${esc(currentLearner.name)}</div>
+    <div class="cert-details">
+      <dt>Grade</dt><dd>${esc(currentLearner.grade)}</dd>
+      <dt>Placement</dt><dd>${esc(currentLearner.placement)}</dd>
+      ${currentLearner.placement_start ? '<dt>Period</dt><dd>' + currentLearner.placement_start + ' to ' + (currentLearner.placement_end || 'present') + '</dd>' : ''}
+    </div>
+    <div style="text-align:center;font-size:14px;color:#768692;margin:20px 0;">has attended the following teaching sessions:</div>
+    <table class="cert-table">
+      <thead><tr><th>#</th><th>Date</th><th>Topic</th><th>Teacher</th></tr></thead>
+      <tbody>${attendedSessions.map((s, i) => `<tr><td>${i+1}</td><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td></tr>`).join('')}</tbody>
+    </table>
+    <div class="cert-total">Total CPD Hours: ${totalHours} hour${totalHours !== 1 ? 's' : ''}</div>
+  </div>
+  <div class="cert-footer">
+    <div style="margin-bottom:20px;">Certified by: <strong>Southmead Surgical Teaching Programme</strong></div>
+    <div>Date of Issue: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</div>
+  </div>
+</div>
+</body></html>`);
+    certWindow.document.close();
+  } catch(e) { console.error('Generate certificate failed:', e); showToast('Failed to generate certificate'); }
+}
+
+// ===================== TAB LABEL LOGIC =====================
+function updateSessionsTabLabel() {
+  const tab = document.querySelector('.nav-tab[data-view="list"]');
+  if (tab) {
+    tab.textContent = (currentLearner || isAdmin) ? 'Sessions' : 'Upcoming Sessions';
+  }
+}
+
+// ===================== LEARNER REGISTRATION AUTO-POPULATE FROM CONTACTS =====================
+function setupRegEmailAutopopulate() {
+  const regEmailField = document.getElementById('regEmail');
+  if (!regEmailField) return;
+  regEmailField.addEventListener('input', async function() {
+    const email = this.value.trim().toLowerCase();
+    const hint = document.getElementById('regContactHint');
+    if (email.length < 5 || !email.includes('@')) {
+      if (hint) hint.style.display = 'none';
+      return;
+    }
+    try {
+      const data = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}`);
+      if (data.length > 0) {
+        const contact = data[0];
+        const nameField = document.getElementById('regName');
+        if (nameField && !nameField.value.trim()) {
+          nameField.value = contact.name || '';
+        }
+        if (!hint) {
+          const hintEl = document.createElement('div');
+          hintEl.id = 'regContactHint';
+          hintEl.style.cssText = 'font-size:12px;color:var(--nhs-green);margin-top:4px;';
+          hintEl.textContent = '✓ Found in contacts directory';
+          this.parentNode.appendChild(hintEl);
+        } else {
+          hint.style.display = '';
+          hint.textContent = '✓ Found in contacts directory';
+        }
+      } else {
+        if (hint) hint.style.display = 'none';
+      }
+    } catch(e) { /* ignore lookup errors */ }
+  });
+}
+
+// ===================== EMAIL ACTION LINKS =====================
+function generateActionToken(sessionId, email) {
+  return btoa(sessionId + ':' + (email || ''));
+}
+
+function validateActionToken(token, sessionId) {
+  try {
+    const decoded = atob(token);
+    return decoded.startsWith(sessionId + ':');
+  } catch(e) { return false; }
+}
+
+function getTeacherEmailFromToken(token) {
+  try {
+    const decoded = atob(token);
+    const parts = decoded.split(':');
+    return parts.length > 1 ? parts.slice(1).join(':') : '';
+  } catch(e) { return ''; }
+}
+
+async function handleActionParams() {
+  const params = new URLSearchParams(window.location.search);
+  const action = params.get('action');
+  const sessionId = params.get('session');
+  const token = params.get('token');
+
+  if (!action || !sessionId || !token) return false;
+
+  // Validate token
+  if (!validateActionToken(token, sessionId)) {
+    showActionLanding('Invalid Link', 'This link appears to be invalid or corrupted. Please contact the teaching team.', 'error');
+    return true;
+  }
+
+  const teacherEmail = getTeacherEmailFromToken(token);
+  const ev = events.find(e => String(e.id) === String(sessionId));
+
+  if (!ev) {
+    showActionLanding('Session Not Found', 'This session could not be found. It may have been removed or rescheduled.', 'error');
+    return true;
+  }
+
+  if (action === 'confirm') {
+    await handleConfirmAction(ev, teacherEmail);
+    return true;
+  } else if (action === 'decline') {
+    await handleDeclineAction(ev, teacherEmail);
+    return true;
+  } else if (action === 'reschedule') {
+    handleRescheduleAction(ev, teacherEmail);
+    return true;
+  }
+
+  return false;
+}
+
+async function handleConfirmAction(ev, teacherEmail) {
+  try {
+    await sbUpdate('schedule', ev.id, { teacher_confirmed: 'confirmed' });
+    showActionLanding(
+      'Attendance Confirmed',
+      `<p>Thank you, <strong>${esc(ev.teacher || 'Colleague')}</strong>!</p>
+       <p>You have confirmed your attendance for:</p>
+       <table style="margin:16px 0;font-size:14px;">
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${esc(ev.topic || 'TBD')}</td></tr>
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</td></tr>
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Time:</td><td>${esc(ev.time || 'TBC')}</td></tr>
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Room:</td><td>${esc(ev.room || 'TBC')}</td></tr>
+       </table>
+       <p style="color:var(--nhs-grey);font-size:13px;">If your plans change, please contact the teaching team.</p>`,
+      'success'
+    );
+  } catch(e) {
+    console.error('Confirm action failed:', e);
+    showActionLanding('Confirmation Saved', 'Thank you for confirming. Your response has been recorded.', 'success');
+  }
+}
+
+async function handleDeclineAction(ev, teacherEmail) {
+  try {
+    await sbUpdate('schedule', ev.id, { teacher_confirmed: 'declined' });
+    showActionLanding(
+      'Response Recorded',
+      `<p>Thank you for letting us know, <strong>${esc(ev.teacher || 'Colleague')}</strong>.</p>
+       <p>We have noted that you are <strong>unable to attend</strong> the session:</p>
+       <table style="margin:16px 0;font-size:14px;">
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${esc(ev.topic || 'TBD')}</td></tr>
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</td></tr>
+       </table>
+       <p>The teaching team will arrange alternative cover. If you would like to reschedule, please contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a>.</p>`,
+      'warning'
+    );
+  } catch(e) {
+    console.error('Decline action failed:', e);
+    showActionLanding('Response Recorded', 'Thank you for letting us know. The teaching team will be in touch.', 'warning');
+  }
+}
+
+function handleRescheduleAction(ev, teacherEmail) {
+  // Generate available slots (reuse logic from showRequestSessionModal)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const DAYNAMES = ['Sun','Mon','Tues','Wed','Thurs','Fri','Sat'];
+  const endDate = new Date(today.getFullYear() + 1, 11, 31);
+  const allSlots = [];
+  const d = new Date(today);
+  while (d <= endDate) {
+    const dow = d.getDay();
+    if (dow === 2 || dow === 3) {
+      const bankHol = getBankHoliday(d.getFullYear(), d.getMonth(), d.getDate());
+      if (bankHol) { d.setDate(d.getDate() + 1); continue; }
+      const dateStr = getOrdinal(d.getDate());
+      const monthStr = MONTHS[d.getMonth()];
+      const yearStr = String(d.getFullYear());
+      const dayName = DAYNAMES[dow];
+      const existing = events.filter(e => {
+        const ed = eventToDate(e);
+        return ed && ed.getTime() === d.getTime();
+      });
+      const fullyBooked = existing.length > 0 && existing.every(e => e.topic && e.teacher && e.status !== 'cancelled');
+      if (!fullyBooked) {
+        const partial = existing.find(e => e.status !== 'cancelled');
+        const time = partial?.time || '';
+        const room = partial?.room || '';
+        allSlots.push({ dayName, dateStr, monthStr, yearStr, time, room, dateObj: new Date(d) });
+      }
+    }
+    d.setDate(d.getDate() + 1);
+  }
+
+  let slotsHtml = '';
+  if (allSlots.length === 0) {
+    slotsHtml = '<p style="color:var(--nhs-grey);text-align:center;padding:20px;">No available slots at this time. Please contact the teaching team.</p>';
+  } else {
+    slotsHtml = `<p style="margin-bottom:12px;">Select a new date for your session <strong>"${esc(ev.topic || 'TBD')}"</strong>:</p>
+      <ul class="slot-list" id="rescheduleSlotList">`;
+    allSlots.slice(0, 20).forEach((s, i) => {
+      const label = `${s.dayName} ${s.dateStr} ${s.monthStr} ${s.yearStr}${s.time ? ' (' + s.time + ')' : ''}${s.room ? ' - ' + s.room : ''}`;
+      slotsHtml += `<li onclick="selectRescheduleSlot(this, ${i})" data-slot="${esc(label)}">${label}</li>`;
+    });
+    slotsHtml += `</ul>
+      <div style="margin-top:12px;">
+        <label style="font-size:13px;font-weight:600;color:var(--nhs-dark-blue);">Additional message (optional)</label>
+        <textarea id="rescheduleMessage" rows="2" style="width:100%;padding:9px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;font-family:inherit;margin-top:4px;" placeholder="Any additional details..."></textarea>
+      </div>
+      <div style="margin-top:16px;text-align:center;">
+        <button class="btn btn-green" style="padding:12px 32px;font-size:14px;" data-sid="${ev.id}" data-teacher="${esc(ev.teacher || '')}" data-topic="${esc(ev.topic || '')}" data-email="${esc(teacherEmail)}" onclick="submitRescheduleRequest(+this.dataset.sid, this.dataset.teacher, this.dataset.topic, this.dataset.email)">Submit Reschedule Request</button>
+      </div>`;
+  }
+
+  showActionLanding(
+    'Reschedule Session',
+    `<p>You are requesting to reschedule your teaching session:</p>
+     <table style="margin:12px 0;font-size:14px;">
+       <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Current Date:</td><td>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</td></tr>
+       <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${esc(ev.topic || 'TBD')}</td></tr>
+     </table>
+     <hr style="border:none;border-top:1px solid var(--nhs-pale-grey);margin:16px 0;">
+     ${slotsHtml}`,
+    'reschedule'
+  );
+}
+
+let selectedRescheduleSlot = null;
+
+function selectRescheduleSlot(el, index) {
+  document.querySelectorAll('#rescheduleSlotList li').forEach(li => li.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedRescheduleSlot = el.dataset.slot;
+}
+
+async function submitRescheduleRequest(sessionId, teacher, topic, teacherEmail) {
+  if (!selectedRescheduleSlot) { showToast('Please select a new slot'); return; }
+  const message = document.getElementById('rescheduleMessage')?.value?.trim() || '';
+  try {
+    await sbInsert('requests', {
+      name: teacher,
+      email: teacherEmail,
+      topic: topic,
+      preferred_date: selectedRescheduleSlot,
+      message: `Reschedule request from ${teacher} for session "${topic}". Preferred new date: ${selectedRescheduleSlot}. ${message}`.trim(),
+      status: 'pending'
+    });
+    // Also update the session to note a reschedule was requested
+    try {
+      await sbUpdate('schedule', sessionId, { teacher_confirmed: 'reschedule_requested' });
+    } catch(e) { /* non-critical */ }
+    showActionLanding(
+      'Reschedule Request Submitted',
+      `<p>Thank you, <strong>${esc(teacher)}</strong>!</p>
+       <p>Your request to reschedule to <strong>${esc(selectedRescheduleSlot)}</strong> has been submitted.</p>
+       <p>The teaching team will review your request and get back to you shortly.</p>
+       <p style="color:var(--nhs-grey);font-size:13px;margin-top:16px;">If you need to reach us urgently, email <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a>.</p>`,
+      'success'
+    );
+    selectedRescheduleSlot = null;
+  } catch(e) {
+    console.error('Reschedule request failed:', e);
+    showToast('Failed to submit reschedule request. Please try again.');
+  }
+}
+
+function showActionLanding(title, bodyHtml, type) {
+  const container = document.getElementById('actionLandingView');
+  const iconMap = { success: '&#9989;', warning: '&#9888;&#65039;', error: '&#10060;', reschedule: '&#128197;' };
+  const colorMap = { success: 'var(--nhs-green)', warning: 'var(--nhs-orange)', error: 'var(--nhs-red)', reschedule: 'var(--nhs-blue)' };
+  container.innerHTML = `
+    <div class="action-landing">
+      <div class="action-landing-header">
+        <div style="font-size:36px;margin-bottom:8px;">${iconMap[type] || ''}</div>
+        <h2>${title}</h2>
+      </div>
+      <div class="action-landing-body">
+        ${bodyHtml}
+      </div>
+    </div>`;
+  switchView('actionLanding');
+  // Hide nav bar for action landing pages
+  document.querySelector('.nav-bar').style.display = 'none';
+}
+
+// ===================== INBOX =====================
+function trackSentEmail(sessionId, to, subject, type, topic, teacher, dateStr) {
+  const log = JSON.parse(localStorage.getItem('sst_email_log') || '[]');
+  log.push({
+    sessionId,
+    to,
+    subject,
+    type,
+    topic: topic || 'Session',
+    teacher: teacher || 'Unknown',
+    dateStr,
+    sentAt: new Date().toISOString(),
+    sentBy: currentUser?.name || 'Admin'
+  });
+  // Keep last 200 entries
+  if (log.length > 200) log.splice(0, log.length - 200);
+  localStorage.setItem('sst_email_log', JSON.stringify(log));
+}
+
+function getEmailLog() {
+  return JSON.parse(localStorage.getItem('sst_email_log') || '[]');
+}
+
+function loadInbox() {
+  const container = document.getElementById('inboxView');
+  const emailLog = getEmailLog();
+
+  // Group emails by session
+  const sessionGroups = {};
+  emailLog.forEach(entry => {
+    const key = entry.sessionId || 'unknown';
+    if (!sessionGroups[key]) {
+      sessionGroups[key] = {
+        sessionId: entry.sessionId,
+        topic: entry.topic,
+        teacher: entry.teacher,
+        dateStr: entry.dateStr,
+        emails: []
+      };
+    }
+    sessionGroups[key].emails.push(entry);
+  });
+
+  const groups = Object.values(sessionGroups).sort((a, b) => {
+    const lastA = a.emails[a.emails.length - 1]?.sentAt || '';
+    const lastB = b.emails[b.emails.length - 1]?.sentAt || '';
+    return lastB.localeCompare(lastA);
+  });
+
+  let sidebarHtml = '<div class="inbox-sidebar-header">Email Threads (' + groups.length + ')</div>';
+  if (groups.length === 0) {
+    sidebarHtml += '<div style="padding:20px;text-align:center;color:var(--nhs-grey);font-size:13px;">No emails sent yet.<br>Send a confirmation or reminder to see threads here.</div>';
+  } else {
+    groups.forEach((g, i) => {
+      const lastEmail = g.emails[g.emails.length - 1];
+      const timeStr = lastEmail ? new Date(lastEmail.sentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+      sidebarHtml += `<div class="inbox-thread-item${i === 0 ? ' active' : ''}" onclick="selectInboxThread(${i})" data-thread="${i}">
+        <div class="thread-subject">${esc(g.topic)}</div>
+        <div class="thread-meta">${esc(g.teacher)} &middot; ${esc(g.dateStr || '')} &middot; ${g.emails.length} email${g.emails.length !== 1 ? 's' : ''} &middot; ${timeStr}</div>
+      </div>`;
+    });
+  }
+
+  container.innerHTML = `
+    <div class="inbox-notice">
+      <strong>Note:</strong> Gmail inbox reading requires additional setup. Replies sent from here will come from teachsurgerysmh@gmail.com. Incoming replies will be visible once Gmail read access is configured.
+    </div>
+    <div class="inbox-container">
+      <div class="inbox-sidebar">${sidebarHtml}</div>
+      <div class="inbox-main" id="inboxMain">
+        ${groups.length > 0 ? '' : '<div class="inbox-empty">Select a thread to view emails</div>'}
+      </div>
+    </div>`;
+
+  // Store groups for thread selection
+  window._inboxGroups = groups;
+
+  // Auto-select first thread
+  if (groups.length > 0) {
+    selectInboxThread(0);
+  }
+}
+
+function selectInboxThread(index) {
+  const groups = window._inboxGroups || [];
+  if (index >= groups.length) return;
+  const g = groups[index];
+
+  // Update sidebar active state
+  document.querySelectorAll('.inbox-thread-item').forEach((el, i) => {
+    el.classList.toggle('active', i === index);
+  });
+
+  const mainEl = document.getElementById('inboxMain');
+
+  let messagesHtml = '';
+  g.emails.forEach(email => {
+    const sentDate = new Date(email.sentAt);
+    const timeStr = sentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' +
+                    sentDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    messagesHtml += `
+      <div class="inbox-message sent">
+        <div class="msg-header">
+          <span class="msg-from">To: ${esc(email.to)} (sent by ${esc(email.sentBy || 'Admin')})</span>
+          <span class="msg-time">${timeStr}</span>
+        </div>
+        <div class="msg-body">
+          <strong>${esc(email.type === 'confirmation' ? 'Confirmation' : 'Reminder')}</strong> for "${esc(email.topic)}" on ${esc(email.dateStr || '')}
+        </div>
+      </div>`;
+  });
+
+  // Check for teacher_confirmed status
+  const ev = events.find(e => String(e.id) === String(g.sessionId));
+  let statusNote = '';
+  if (ev) {
+    // We can check the field via a fresh fetch but for now show what we have
+    statusNote = `<div style="padding:8px 16px;background:#f0f4f5;border-radius:var(--radius);margin-top:8px;font-size:12px;color:var(--nhs-grey);">
+      Session status: <strong>${esc(ev.status)}</strong>
+    </div>`;
+  }
+
+  mainEl.innerHTML = `
+    <div class="inbox-main-header">
+      <h4>${esc(g.topic)}</h4>
+      <div class="inbox-meta">${esc(g.teacher)} &middot; ${esc(g.dateStr || '')}</div>
+      ${statusNote}
+    </div>
+    <div class="inbox-messages">${messagesHtml}</div>
+    <div class="inbox-reply-box">
+      <textarea id="inboxReplyText" placeholder="Type a reply to ${esc(g.teacher)}..."></textarea>
+      <div class="inbox-reply-actions">
+        <span style="font-size:11px;color:var(--nhs-grey);line-height:32px;">Sends from teachsurgerysmh@gmail.com</span>
+        <button class="btn btn-green" data-sid="${g.sessionId}" data-to="${esc(g.emails[0]?.to || '')}" data-topic="${esc(g.topic)}" onclick="sendInboxReply(+this.dataset.sid, this.dataset.to, this.dataset.topic)">Send Reply</button>
+      </div>
+    </div>`;
+}
+
+async function sendInboxReply(sessionId, toEmail, topic) {
+  const replyText = document.getElementById('inboxReplyText')?.value?.trim();
+  if (!replyText) { showToast('Please type a message'); return; }
+  if (!toEmail) { showToast('No recipient email found'); return; }
+
+  const subject = `Re: Teaching Session - ${topic}`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:16px 20px;border-radius:8px 8px 0 0;">
+      <h3 style="color:white;margin:0;font-size:16px;">Southmead Surgical Teaching</h3>
+    </div>
+    <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+      <p>${replyText.replace(/\n/g, '<br>')}</p>
+      <p style="color:#768692;font-size:13px;margin-top:16px;">Best regards,<br>Southmead Surgical Teaching Team</p>
+    </div>
+  </div>`;
+
+  showToast('Sending reply...');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'apikey': SUPABASE_KEY
+      },
+      body: JSON.stringify({ to: [toEmail], subject, html })
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast('Reply sent!');
+      trackSentEmail(sessionId, toEmail, subject, 'reply', topic, '', '');
+      document.getElementById('inboxReplyText').value = '';
+      logAction('Sent reply email', `${topic} → ${toEmail}`);
+      // Reload inbox to show the new message
+      setTimeout(() => loadInbox(), 500);
+    } else {
+      showToast('Send failed: ' + (result.error || 'Unknown error'));
+    }
+  } catch(e) {
+    console.error('Reply send error:', e);
+    showToast('Failed to send reply. Check your connection.');
+  }
+}
+
+// ===================== INIT =====================
+async function init() {
+  checkSession();
+  checkLearnerSession();
+  await Promise.all([loadEvents(), fetchBankHolidays()]);
+  renderAll();
+  updateSessionsTabLabel();
+  setupRegEmailAutopopulate();
+  // Handle action URL params (confirm/decline/reschedule from email links)
+  const params = new URLSearchParams(window.location.search);
+  const hasAction = await handleActionParams();
+  if (hasAction) {
+    // Clean URL without reloading
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return; // Don't switch to default view
+  }
+  // Handle learner URL params
+  if (params.get('attend') || params.get('feedback')) {
+    if (currentLearner) {
+      handleLearnerURLParams();
+    } else {
+      openLearnerLoginModal();
+    }
+  }
+  switchView('list');
+}
+
+init();
+</script>
+</body>
+</html>
