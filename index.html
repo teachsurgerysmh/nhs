@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#005eb8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMH Teaching">
+<link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
 <style>
 :root {
@@ -144,7 +149,16 @@ body.is-admin .stats-bar { display: block; }
 .modal-footer { padding: 14px 20px; border-top: 1px solid var(--nhs-pale-grey); display: flex; gap: 8px; justify-content: flex-end; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .checkbox-row input[type="checkbox"] { width: auto; }
-.detail-modal .modal { max-width: 600px; }
+.detail-modal .modal { max-width: 700px; }
+.detail-modal .modal-footer { flex-wrap: wrap; justify-content: flex-start; gap: 6px; }
+.detail-actions-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.detail-actions-row .btn { font-size: 12px; padding: 6px 12px; }
+.teacher-picker-wrap { background: var(--nhs-bg); border-radius: var(--radius); padding: 12px; margin-top: 12px; }
+.teacher-picker-wrap label { font-size: 12px; font-weight: 600; color: var(--nhs-dark-blue); margin-bottom: 6px; display: block; margin-top: 0; }
+.teacher-picker-wrap select, .teacher-picker-wrap input { width: 100%; padding: 8px 10px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); font-size: 13px; }
+.attendance-summary { background: var(--nhs-bg); border-radius: var(--radius); padding: 12px; margin-top: 14px; }
+.attendance-summary h4 { font-size: 13px; color: var(--nhs-dark-blue); margin-bottom: 8px; }
+.att-name-chip { display: inline-block; background: white; border: 1px solid var(--nhs-pale-grey); border-radius: 12px; padding: 2px 10px; font-size: 11px; margin: 2px; color: var(--nhs-dark-blue); }
 .detail-field { margin-bottom: 10px; }
 .detail-field .detail-label { font-size: 11px; text-transform: uppercase; color: var(--nhs-grey); letter-spacing: 0.5px; font-weight: 700; }
 .detail-field .detail-value { font-size: 14px; color: var(--nhs-black); }
@@ -261,7 +275,7 @@ body.is-learner .learner-only-block { display: block !important; }
   .modal-body { padding: 14px; }
   .inbox-container { grid-template-columns: 1fr; }
   .inbox-sidebar { max-height: 200px; border-right: none; border-bottom: 1px solid var(--nhs-pale-grey); }
-  #siteFeedbackFab { width: 42px; height: 42px; bottom: 16px; right: 16px; font-size: 18px; }
+  #siteFeedbackFab { width: 38px; height: 38px; bottom: 76px; right: 16px; font-size: 16px; }
   .main-content { padding: 12px 10px; }
 }
 
@@ -370,7 +384,7 @@ body.is-learner .learner-only-block { display: block !important; }
 <button class="fab" onclick="openAddModal()" title="Add Session">+</button>
 
 <!-- Login Modal -->
-<div class="modal-overlay" id="loginModal">
+<div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-label="Admin Login">
   <div class="modal">
     <div class="modal-header"><h3>Admin Login</h3><button class="modal-close" onclick="closeModal('loginModal')">&times;</button></div>
     <div class="modal-body">
@@ -387,7 +401,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Add/Edit Modal -->
-<div class="modal-overlay" id="eventModal">
+<div class="modal-overlay" id="eventModal" role="dialog" aria-modal="true" aria-label="Add or Edit Session">
   <div class="modal">
     <div class="modal-header"><h3 id="eventModalTitle">Add Session</h3><button class="modal-close" onclick="closeModal('eventModal')">&times;</button></div>
     <div class="modal-body">
@@ -402,13 +416,16 @@ body.is-learner .learner-only-block { display: block !important; }
       <label>Time</label><input type="text" id="evTime" placeholder="e.g. 0800-0900">
       <label>Room</label><input type="text" id="evRoom" placeholder="e.g. Seacole L2">
       <label>Topic</label><input type="text" id="evTopic" placeholder="Topic title">
-      <label>Teacher</label><input type="text" id="evTeacher" placeholder="e.g. Mr Arvind / Ms Orchard">
-      <label>Teacher Email</label><input type="email" id="evTeacherEmail" placeholder="teacher@nhs.net">
+      <label>Teacher</label>
+      <input type="text" id="evTeacher" placeholder="Start typing or pick from contacts..." list="evTeacherList" oninput="onTeacherPick(this,'evTeacherEmail')" autocomplete="off">
+      <datalist id="evTeacherList"></datalist>
+      <label>Teacher Email</label><input type="email" id="evTeacherEmail" placeholder="Auto-filled from contacts or type manually">
       <div style="background:var(--nhs-bg);border-radius:var(--radius);padding:12px;margin-top:12px;">
         <label style="margin-top:0;color:var(--nhs-grey);font-size:12px;">Backup Teacher (optional)</label>
-        <input type="text" id="evBackupTeacher" placeholder="e.g. Ms Orchard (backup)">
+        <input type="text" id="evBackupTeacher" placeholder="Start typing or pick from contacts..." list="evBackupList" oninput="onTeacherPick(this,'evBackupEmail')" autocomplete="off">
+        <datalist id="evBackupList"></datalist>
         <label style="color:var(--nhs-grey);font-size:12px;">Backup Email</label>
-        <input type="email" id="evBackupEmail" placeholder="backup@nhs.net">
+        <input type="email" id="evBackupEmail" placeholder="Auto-filled from contacts or type manually">
       </div>
       <label>Status</label>
       <select id="evStatus"><option value="upcoming">Upcoming</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="tbd">TBD</option></select>
@@ -427,7 +444,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Detail Modal -->
-<div class="modal-overlay detail-modal" id="detailModal">
+<div class="modal-overlay detail-modal" id="detailModal" role="dialog" aria-modal="true" aria-label="Session Details">
   <div class="modal">
     <div class="modal-header"><h3>Session Details</h3><button class="modal-close" onclick="closeModal('detailModal')">&times;</button></div>
     <div class="modal-body" id="detailBody"></div>
@@ -436,7 +453,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Email Modal -->
-<div class="modal-overlay" id="emailModal">
+<div class="modal-overlay" id="emailModal" role="dialog" aria-modal="true" aria-label="Send Email Reminder">
   <div class="modal">
     <div class="modal-header"><h3>Send Email Reminder</h3><button class="modal-close" onclick="closeModal('emailModal')">&times;</button></div>
     <div class="modal-body" id="emailBody"></div>
@@ -445,7 +462,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Bulk Email Modal -->
-<div class="modal-overlay" id="bulkEmailModal">
+<div class="modal-overlay" id="bulkEmailModal" role="dialog" aria-modal="true" aria-label="Bulk Reminder">
   <div class="modal">
     <div class="modal-header"><h3>Bulk Reminder</h3><button class="modal-close" onclick="closeModal('bulkEmailModal')">&times;</button></div>
     <div class="modal-body" id="bulkEmailBody"></div>
@@ -454,7 +471,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Request Session Modal (public) -->
-<div class="modal-overlay" id="requestSessionModal">
+<div class="modal-overlay" id="requestSessionModal" role="dialog" aria-modal="true" aria-label="Request a Session">
   <div class="modal" style="max-width:480px;">
     <div style="background:linear-gradient(135deg,var(--nhs-blue),var(--nhs-dark-blue));color:white;padding:28px 24px 20px;border-radius:12px 12px 0 0;text-align:center;position:relative;">
       <button class="modal-close" onclick="closeModal('requestSessionModal')" style="position:absolute;top:12px;right:16px;">&times;</button>
@@ -498,7 +515,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Respond to Request Modal -->
-<div class="modal-overlay" id="respondModal">
+<div class="modal-overlay" id="respondModal" role="dialog" aria-modal="true" aria-label="Respond to Request">
   <div class="modal">
     <div class="modal-header"><h3 id="respondTitle">Respond to Request</h3><button class="modal-close" onclick="closeModal('respondModal')">&times;</button></div>
     <div class="modal-body">
@@ -515,7 +532,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Add/Edit Contact Modal -->
-<div class="modal-overlay" id="contactModal">
+<div class="modal-overlay" id="contactModal" role="dialog" aria-modal="true" aria-label="Add or Edit Contact">
   <div class="modal">
     <div class="modal-header"><h3 id="contactModalTitle">Add Contact</h3><button class="modal-close" onclick="closeModal('contactModal')">&times;</button></div>
     <div class="modal-body">
@@ -553,7 +570,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Add Idea Modal -->
-<div class="modal-overlay" id="addIdeaModal">
+<div class="modal-overlay" id="addIdeaModal" role="dialog" aria-modal="true" aria-label="Add Topic Idea">
   <div class="modal">
     <div class="modal-header"><h3>Add Topic Idea</h3><button class="modal-close" onclick="closeModal('addIdeaModal')">&times;</button></div>
     <div class="modal-body">
@@ -579,7 +596,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Learner Login Modal -->
-<div class="modal-overlay" id="learnerLoginModal">
+<div class="modal-overlay" id="learnerLoginModal" role="dialog" aria-modal="true" aria-label="Learner Login">
   <div class="modal">
     <div class="modal-header"><h3 id="learnerModalTitle">Learner Login</h3><button class="modal-close" onclick="closeModal('learnerLoginModal')">&times;</button></div>
     <div class="modal-body" id="learnerModalBody">
@@ -644,7 +661,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Feedback Modal -->
-<div class="modal-overlay" id="feedbackModal">
+<div class="modal-overlay" id="feedbackModal" role="dialog" aria-modal="true" aria-label="Session Feedback">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header"><h3>Session Feedback</h3><button class="modal-close" onclick="closeModal('feedbackModal')">&times;</button></div>
     <div class="modal-body" id="feedbackModalBody">
@@ -689,7 +706,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Attendance Modal (Admin) -->
-<div class="modal-overlay" id="attendanceModal">
+<div class="modal-overlay" id="attendanceModal" role="dialog" aria-modal="true" aria-label="Mark Attendance">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header"><h3>Mark Attendance</h3><button class="modal-close" onclick="closeModal('attendanceModal')">&times;</button></div>
     <div class="modal-body" id="attendanceModalBody"></div>
@@ -701,7 +718,7 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Feedback Request Modal (Admin - Retrospective) -->
-<div class="modal-overlay" id="feedbackRequestModal">
+<div class="modal-overlay" id="feedbackRequestModal" role="dialog" aria-modal="true" aria-label="Send Feedback Request">
   <div class="modal" style="max-width:620px;">
     <div class="modal-header"><h3>Send Feedback Request</h3><button class="modal-close" onclick="closeModal('feedbackRequestModal')">&times;</button></div>
     <div class="modal-body" id="feedbackRequestBody">
@@ -738,7 +755,7 @@ body.is-learner .learner-only-block { display: block !important; }
   </div>
 </div>
 
-<div class="modal-overlay" id="teacherRequestModal">
+<div class="modal-overlay" id="teacherRequestModal" role="dialog" aria-modal="true" aria-label="Request Teacher">
   <div class="modal" style="max-width:620px;">
     <div class="modal-header"><h3>Request Teacher</h3><button class="modal-close" onclick="closeModal('teacherRequestModal')">&times;</button></div>
     <div class="modal-body">
@@ -766,12 +783,12 @@ body.is-learner .learner-only-block { display: block !important; }
 </div>
 
 <!-- Floating Feedback Button -->
-<button id="siteFeedbackFab" onclick="openSiteFeedbackModal()" title="Report a bug or request a feature" style="position:fixed;bottom:24px;right:24px;z-index:99;width:48px;height:48px;border-radius:50%;background:var(--nhs-blue);color:white;border:none;box-shadow:0 4px 12px rgba(0,0,0,0.25);cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center;transition:transform 0.2s;">
+<button id="siteFeedbackFab" onclick="openSiteFeedbackModal()" title="Report a bug or request a feature" style="position:fixed;bottom:90px;right:24px;z-index:49;width:44px;height:44px;border-radius:50%;background:var(--nhs-blue);color:white;border:none;box-shadow:0 4px 12px rgba(0,0,0,0.25);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:transform 0.2s;">
   <span style="line-height:1;">💬</span>
 </button>
 
 <!-- Site Feedback Modal -->
-<div class="modal-overlay" id="siteFeedbackModal">
+<div class="modal-overlay" id="siteFeedbackModal" role="dialog" aria-modal="true" aria-label="Site Feedback">
   <div class="modal" style="max-width:500px;">
     <div class="modal-header"><h3 id="siteFbTitle">Send Us Feedback</h3><button class="modal-close" onclick="closeModal('siteFeedbackModal')">&times;</button></div>
     <div class="modal-body">
@@ -939,16 +956,23 @@ async function loadEvents() {
 }
 
 // ===================== AUTH =====================
+async function hashPassword(pwd) {
+  const data = new TextEncoder().encode(pwd + 'sst_nbt_2026');
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function doLogin() {
   const user = document.getElementById('loginUser').value.trim().toLowerCase();
   const pass = document.getElementById('loginPass').value.trim();
   if (!user || !pass) { showToast('Enter username and password'); return; }
 
   try {
+    const hashed = await hashPassword(pass);
     const data = await sbGet('users', `username=eq.${encodeURIComponent(user)}&select=*`);
     if (data.length === 0) { showToast('User not found'); return; }
     const u = data[0];
-    if (u.password !== pass) { showToast('Incorrect password'); return; }
+    if (u.password !== hashed) { showToast('Incorrect password'); return; }
     currentUser = { id: u.id, username: u.username, name: u.display_name, role: u.role };
     sessionStorage.setItem('sst_user', JSON.stringify(currentUser));
     setAdmin(true);
@@ -1352,7 +1376,7 @@ function getOrdinal(n) {
   return n + (s[(v-20)%10] || s[v] || s[0]);
 }
 
-function openAddModalPrefilled(day, date, month, year) {
+async function openAddModalPrefilled(day, date, month, year) {
   editingEventId = null;
   document.getElementById('eventModalTitle').textContent = 'Add Session';
   document.getElementById('evDeleteBtn').style.display = 'none';
@@ -1364,6 +1388,8 @@ function openAddModalPrefilled(day, date, month, year) {
   document.getElementById('evStatus').value = 'upcoming';
   document.getElementById('evPublished').checked = true;
   openModal('eventModal');
+  await ensureContactsLoaded();
+  populateTeacherDatalist();
 }
 
 function openRequestForSlot(slotLabel) {
@@ -1486,27 +1512,73 @@ function showDetail(id) {
   const body = document.getElementById('detailBody');
   const footer = document.getElementById('detailFooter');
   const topicDisplay = ev.topic || ev.teacher || 'TBD';
-  body.innerHTML = `
+  const isAdminView = isAdmin && !adminViewAsLearner;
+
+  let html = '';
+
+  /* ---- Admin action bar at top ---- */
+  if (isAdminView) {
+    html += `<div class="detail-actions-row">
+      <button class="btn btn-orange" onclick="closeModal('detailModal');openEditModal(${ev.id})">&#9998; Edit</button>
+      <button class="btn btn-outline" style="color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="togglePublish(${ev.id})">${ev.published ? 'Unpublish' : 'Publish'}</button>
+      <button class="btn btn-outline" style="color:var(--nhs-green);border-color:var(--nhs-green);" onclick="closeModal('detailModal');openAttendanceModal(${ev.id})">Attendance</button>
+    </div>`;
+  }
+
+  /* ---- Session info ---- */
+  html += `
     <div class="detail-field"><div class="detail-label">Date &amp; Time</div><div class="detail-value">${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}${ev.time ? ' | ' + esc(ev.time) : ''}</div></div>
     <div class="detail-field"><div class="detail-label">Topic</div><div class="detail-value" style="font-size:18px;font-weight:700;color:var(--nhs-dark-blue);">${esc(topicDisplay)}</div></div>
-    ${ev.teacher ? '<div class="detail-field"><div class="detail-label">Teacher</div><div class="detail-value">' + esc(ev.teacher) + '</div></div>' : ''}
-    ${ev.backupTeacher ? '<div class="detail-field"><div class="detail-label">Backup Teacher</div><div class="detail-value" style="color:var(--nhs-orange);">' + esc(ev.backupTeacher) + '</div></div>' : ''}
-    ${ev.room ? '<div class="detail-field"><div class="detail-label">Room</div><div class="detail-value">' + esc(ev.room) + '</div></div>' : ''}
-    <div class="detail-field"><div class="detail-label">Status</div><div class="detail-value"><span class="card-status status-pill-${ev.status}" style="font-size:12px;">${ev.status}</span>${!ev.published ? ' <span class="card-draft-badge">DRAFT</span>' : ''}</div></div>
-    ${ev.notes ? '<div class="detail-field"><div class="detail-label">Notes</div><div class="detail-value" style="color:var(--nhs-orange);font-style:italic;">' + esc(ev.notes) + '</div></div>' : ''}
-    ${ev.lastEditBy ? '<div class="detail-field"><div class="detail-label">Last Edited</div><div class="detail-value" style="font-size:12px;color:var(--nhs-grey);">By ' + esc(ev.lastEditBy) + (ev.lastEditAt ? ' at ' + new Date(ev.lastEditAt).toLocaleString() : '') + '</div></div>' : ''}
   `;
+  if (ev.teacher) {
+    html += `<div class="detail-field"><div class="detail-label">Teacher</div><div class="detail-value">${esc(ev.teacher)}${ev.teacherEmail ? ' <span style="color:var(--nhs-grey);font-size:12px;">(' + esc(ev.teacherEmail) + ')</span>' : ''}</div></div>`;
+  }
+  if (ev.backupTeacher) {
+    html += `<div class="detail-field"><div class="detail-label">Backup Teacher</div><div class="detail-value" style="color:var(--nhs-orange);">${esc(ev.backupTeacher)}${ev.backupTeacherEmail ? ' <span style="color:var(--nhs-grey);font-size:12px;">(' + esc(ev.backupTeacherEmail) + ')</span>' : ''}</div></div>`;
+  }
+  if (ev.room) {
+    html += `<div class="detail-field"><div class="detail-label">Room</div><div class="detail-value">${esc(ev.room)}</div></div>`;
+  }
+  html += `<div class="detail-field"><div class="detail-label">Status</div><div class="detail-value"><span class="card-status status-pill-${ev.status}" style="font-size:12px;">${ev.status}</span>${!ev.published ? ' <span class="card-draft-badge">DRAFT</span>' : ''}</div></div>`;
+  if (ev.notes) {
+    html += `<div class="detail-field"><div class="detail-label">Notes</div><div class="detail-value" style="color:var(--nhs-orange);font-style:italic;">${esc(ev.notes)}</div></div>`;
+  }
+  if (ev.lastEditBy) {
+    html += `<div class="detail-field"><div class="detail-label">Last Edited</div><div class="detail-value" style="font-size:12px;color:var(--nhs-grey);">By ${esc(ev.lastEditBy)}${ev.lastEditAt ? ' at ' + new Date(ev.lastEditAt).toLocaleString() : ''}</div></div>`;
+  }
+
+  /* ---- Quick-assign teacher from contacts (admin, no teacher yet) ---- */
+  if (isAdminView && (!ev.teacher || ev.status === 'tbd')) {
+    html += `<div class="teacher-picker-wrap">
+      <label>Quick Assign Teacher</label>
+      <select id="quickTeacherPicker" onchange="quickAssignTeacher(${ev.id},this)">
+        <option value="">-- Select from contacts --</option>
+      </select>
+    </div>`;
+  }
+
+  /* ---- Attendance summary (loaded async) ---- */
+  html += `<div id="detailAttendanceSummary"></div>`;
+
+  body.innerHTML = html;
+
+  /* Populate teacher picker */
+  if (isAdminView && (!ev.teacher || ev.status === 'tbd')) {
+    populateTeacherPicker('quickTeacherPicker');
+  }
+
+  /* Load attendance summary */
+  loadDetailAttendance(ev.id);
+
+  /* ---- Footer buttons ---- */
   let footerHtml = '';
-  if (isAdmin) {
-    footerHtml += `<button class="btn btn-orange" onclick="closeModal('detailModal');openEditModal(${ev.id})">Edit</button>`;
-    footerHtml += `<button class="btn btn-outline" style="color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="togglePublish(${ev.id})">${ev.published ? 'Unpublish' : 'Publish'}</button>`;
+  if (isAdminView) {
     if (ev.teacherEmail || ev.teacher) {
-      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-blue);color:var(--nhs-blue);font-size:12px;" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'confirmation')">Send Confirmation</button>`;
-      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-orange);color:var(--nhs-orange);font-size:12px;" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'reminder')">Send Reminder</button>`;
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'confirmation')">Send Confirmation</button>`;
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-orange);color:var(--nhs-orange);" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'reminder')">Send Reminder</button>`;
     }
-    footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-pale-grey);" onclick="closeModal('detailModal');openAttendanceModal(${ev.id})">Attendance</button>`;
     if (!ev.teacher || ev.status === 'tbd') {
-      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-green);color:var(--nhs-green);font-size:12px;" onclick="closeModal('detailModal');requestTeacherForSession(${ev.id})">Request Teacher</button>`;
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-aqua);color:var(--nhs-aqua);" onclick="closeModal('detailModal');requestTeacherForSession(${ev.id})">Request Teacher</button>`;
     }
     const evDateAdmin = eventToDate(ev);
     const isPastAdmin = evDateAdmin && evDateAdmin < new Date();
@@ -1527,8 +1599,95 @@ function showDetail(id) {
   openModal('detailModal');
 }
 
+/* ---- Teacher picker helpers ---- */
+async function populateTeacherPicker(selectId) {
+  try {
+    let contacts = window._contactsData || [];
+    if (!contacts.length) {
+      contacts = await sbGet('contacts', 'order=name.asc&select=*');
+      window._contactsData = contacts;
+    }
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const teachers = contacts.filter(c => c.role && (c.role.includes('Consultant') || c.role.includes('Registrar') || c.role.includes('Fellow') || c.role.includes('ANP')));
+    const others = contacts.filter(c => !teachers.includes(c));
+    if (teachers.length) {
+      const og = document.createElement('optgroup');
+      og.label = 'Consultants / Registrars / Fellows';
+      teachers.forEach(c => { const o = document.createElement('option'); o.value = JSON.stringify({name:c.name,email:c.email}); o.textContent = `${c.name} (${c.role})`; og.appendChild(o); });
+      sel.appendChild(og);
+    }
+    if (others.length) {
+      const og = document.createElement('optgroup');
+      og.label = 'Other Contacts';
+      others.forEach(c => { const o = document.createElement('option'); o.value = JSON.stringify({name:c.name,email:c.email}); o.textContent = `${c.name} (${c.role||''})`; og.appendChild(o); });
+      sel.appendChild(og);
+    }
+  } catch(e) { console.error('Picker load failed:', e); }
+}
+
+async function quickAssignTeacher(sessionId, selectEl) {
+  if (!selectEl.value) return;
+  try {
+    const { name, email } = JSON.parse(selectEl.value);
+    await sbUpdate('schedule', sessionId, {
+      teacher: name, teacher_email: email,
+      last_edit_by: currentUser?.name || 'Unknown',
+      last_edit_at: new Date().toISOString()
+    });
+    showToast('Teacher assigned: ' + name);
+    await loadEvents();
+    closeModal('detailModal');
+    showDetail(sessionId);
+  } catch(e) { console.error('Quick assign failed:', e); showToast('Failed to assign teacher'); }
+}
+
+async function loadDetailAttendance(sessionId) {
+  const container = document.getElementById('detailAttendanceSummary');
+  if (!container) return;
+  try {
+    const att = await sbGet('attendance', `session_id=eq.${sessionId}&select=learner_id`);
+    if (att.length === 0) { container.innerHTML = ''; return; }
+    const ids = att.map(a => a.learner_id);
+    const learners = await sbGet('learners', `id=in.(${ids.join(',')})&select=id,name`);
+    const nameMap = {}; learners.forEach(l => nameMap[l.id] = l.name);
+    const names = ids.map(id => nameMap[id] || 'Unknown').sort();
+    container.innerHTML = `<div class="attendance-summary">
+      <h4>Attendance (${names.length})</h4>
+      <div>${names.map(n => '<span class="att-name-chip">' + esc(n) + '</span>').join('')}</div>
+    </div>`;
+  } catch(e) { container.innerHTML = ''; }
+}
+
 // ===================== ADD/EDIT =====================
-function openAddModal() {
+function populateTeacherDatalist() {
+  const contacts = window._contactsData || [];
+  ['evTeacherList','evBackupList'].forEach(dlId => {
+    const dl = document.getElementById(dlId);
+    if (!dl) return;
+    dl.innerHTML = '';
+    contacts.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      opt.textContent = `${c.name} — ${c.role || ''} (${c.email})`;
+      dl.appendChild(opt);
+    });
+  });
+}
+
+function onTeacherPick(inputEl, emailFieldId) {
+  const contacts = window._contactsData || [];
+  const match = contacts.find(c => c.name === inputEl.value);
+  if (match) document.getElementById(emailFieldId).value = match.email;
+}
+
+async function ensureContactsLoaded() {
+  if (!window._contactsData || !window._contactsData.length) {
+    try { window._contactsData = await sbGet('contacts', 'order=name.asc&select=*'); } catch(e) { window._contactsData = []; }
+  }
+}
+
+async function openAddModal() {
   editingEventId = null;
   document.getElementById('eventModalTitle').textContent = 'Add Session';
   document.getElementById('evDeleteBtn').style.display = 'none';
@@ -1538,9 +1697,11 @@ function openAddModal() {
   document.getElementById('evStatus').value = 'upcoming';
   document.getElementById('evPublished').checked = true;
   openModal('eventModal');
+  await ensureContactsLoaded();
+  populateTeacherDatalist();
 }
 
-function openEditModal(id) {
+async function openEditModal(id) {
   const ev = events.find(e => e.id === id);
   if (!ev) return;
   editingEventId = id;
@@ -1561,6 +1722,8 @@ function openEditModal(id) {
   document.getElementById('evNotes').value = ev.notes || '';
   document.getElementById('evPublished').checked = ev.published !== false;
   openModal('eventModal');
+  await ensureContactsLoaded();
+  populateTeacherDatalist();
 }
 
 async function saveEvent() {
@@ -2245,7 +2408,8 @@ async function doLearnerLogin() {
       showSetupPinForm(learner, pin);
       return;
     }
-    if (learner.pin_code !== pin) { showToast('Incorrect password'); return; }
+    const hashedPin = await hashPassword(pin);
+    if (learner.pin_code !== hashedPin) { showToast('Incorrect password'); return; }
     currentLearner = learner;
     localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
@@ -2310,7 +2474,8 @@ async function completeAccountSetup(learnerId) {
   if (!placement) { showToast('Please select a placement'); return; }
 
   try {
-    const updates = { pin_code: pin1, verified: true, grade, placement, rotation_block: rotation || null };
+    const hashedPin = await hashPassword(pin1);
+    const updates = { pin_code: hashedPin, verified: true, grade, placement, rotation_block: rotation || null };
     if (pStart) updates.placement_start = pStart;
     if (pEnd) updates.placement_end = pEnd;
     await sbUpdate('learners', learnerId, updates);
@@ -2389,7 +2554,8 @@ async function doResetPassword(email, learnerId) {
   if (!p1 || p1.length < 4) { showToast('Password must be at least 4 characters'); return; }
   if (p1 !== p2) { showToast('Passwords do not match'); return; }
   try {
-    await sbUpdate('learners', learnerId, { pin_code: p1 });
+    const hashedP = await hashPassword(p1);
+    await sbUpdate('learners', learnerId, { pin_code: hashedP });
     showToast('Password reset! You can now log in.');
     document.getElementById('forgotPasswordForm').style.display = 'none';
     showLearnerLoginForm();
