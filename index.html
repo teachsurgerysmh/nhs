@@ -802,6 +802,25 @@ function isFutureEvent(ev) {
   return d >= today;
 }
 
+function getCurrentRotationDates() {
+  const now = new Date();
+  const yr = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  const blocks = [
+    { start: new Date(yr, 7, 1), end: new Date(yr, 10, 30, 23, 59, 59) },       // Aug-Nov (aug_dec → adjusted)
+    { start: new Date(yr, 11, 1), end: new Date(yr + 1, 2, 31, 23, 59, 59) },    // Dec-Mar
+    { start: new Date(yr + 1, 3, 1), end: new Date(yr + 1, 6, 31, 23, 59, 59) }  // Apr-Jul
+  ];
+  for (const b of blocks) { if (now >= b.start && now <= b.end) return b; }
+  return { start: new Date(yr, 7, 1), end: new Date(yr + 1, 7, 31, 23, 59, 59) };
+}
+
+function isInCurrentRotation(ev) {
+  const d = eventToDate(ev);
+  if (!d) return false;
+  const rot = getCurrentRotationDates();
+  return d >= rot.start && d <= rot.end;
+}
+
 // ===================== DATA LOADING =====================
 async function loadEvents() {
   try {
@@ -1064,16 +1083,17 @@ function getFilteredEvents() {
   const monthFilter = document.getElementById('monthSelect').value;
   let filtered = [...events];
 
-  // Filter to future events for most views
-  if (currentView === 'list' || currentView === 'all') {
+  // Non-admin: show only current rotation, exclude cancelled & TBD
+  if (!isAdmin) {
+    filtered = filtered.filter(e => e.published && isInCurrentRotation(e) && e.status !== 'cancelled' && e.status !== 'tbd');
+  } else if (currentView === 'list' || currentView === 'all') {
     if (currentFilter === 'all' || currentFilter === 'upcoming' || currentFilter === 'tbd') {
       filtered = filtered.filter(e => isFutureEvent(e));
     }
-    if (!isAdmin) filtered = filtered.filter(e => e.published && e.status !== 'cancelled');
   } else if (currentView === 'drafts') {
     filtered = filtered.filter(e => !e.published && isFutureEvent(e));
   }
-  if (currentFilter !== 'all') filtered = filtered.filter(e => e.status === currentFilter);
+  if (isAdmin && currentFilter !== 'all') filtered = filtered.filter(e => e.status === currentFilter);
   if (search) {
     filtered = filtered.filter(e =>
       (e.topic || '').toLowerCase().includes(search) ||
@@ -1108,10 +1128,11 @@ function getFilteredEvents() {
 function renderAll() { updateStats(); populateMonthSelect(); renderEvents(); }
 
 function updateStats() {
-  document.getElementById('statTotal').textContent = events.length;
-  document.getElementById('statUpcoming').textContent = events.filter(e => e.status === 'upcoming').length;
-  document.getElementById('statCompleted').textContent = events.filter(e => e.status === 'completed').length;
-  document.getElementById('statCancelled').textContent = events.filter(e => e.status === 'cancelled').length;
+  const src = isAdmin ? events : events.filter(e => e.published && isInCurrentRotation(e) && e.status !== 'cancelled' && e.status !== 'tbd');
+  document.getElementById('statTotal').textContent = src.length;
+  document.getElementById('statUpcoming').textContent = src.filter(e => e.status === 'upcoming').length;
+  document.getElementById('statCompleted').textContent = src.filter(e => e.status === 'completed').length;
+  document.getElementById('statCancelled').textContent = src.filter(e => e.status === 'cancelled').length;
   document.getElementById('statTbd').textContent = events.filter(e => e.status === 'tbd').length;
   document.getElementById('statDraft').textContent = events.filter(e => !e.published).length;
 }
@@ -1198,7 +1219,7 @@ function renderCalendar() {
       html += `<div style="font-size:10px;color:#d5281b;font-weight:600;padding:1px 4px;background:#fde8e8;border-radius:3px;margin-bottom:2px;line-height:1.2;">${esc(bankHol)}</div>`;
     }
     dayEvents.forEach(e => {
-      if (!isAdmin && (!e.published || e.status === 'cancelled')) return;
+      if (!isAdmin && (!e.published || e.status === 'cancelled' || e.status === 'tbd')) return;
       const label = e.topic || e.teacher || e.status;
       html += `<div class="cal-event status-${e.status}" onclick="event.stopPropagation();showDetail(${e.id})" title="${esc(label)}">${esc(label)}</div>`;
     });
@@ -3020,21 +3041,8 @@ async function loadAttendanceChart() {
       pendingRecords.forEach(a => pendingAttendance.add(`${a.learner_id}_${a.session_id}`));
     } catch(e) {}
 
-    // Determine current rotation period
-    const now = new Date();
-    const academicYearStart = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
-    const rotationBlocks = {
-      aug_dec: { start: new Date(academicYearStart, 7, 1), end: new Date(academicYearStart, 11, 31, 23, 59, 59) },
-      dec_apr: { start: new Date(academicYearStart, 11, 1), end: new Date(academicYearStart + 1, 3, 30, 23, 59, 59) },
-      apr_aug: { start: new Date(academicYearStart + 1, 3, 1), end: new Date(academicYearStart + 1, 7, 31, 23, 59, 59) }
-    };
-    // Find which rotation we're currently in
-    let currentRotationDates = null;
-    for (const [key, dates] of Object.entries(rotationBlocks)) {
-      if (now >= dates.start && now <= dates.end) { currentRotationDates = dates; break; }
-    }
-    // Fallback: use full academic year if between rotations
-    if (!currentRotationDates) currentRotationDates = { start: new Date(academicYearStart, 7, 1), end: new Date(academicYearStart + 1, 7, 31, 23, 59, 59) };
+    // Use shared rotation helper
+    const currentRotationDates = getCurrentRotationDates();
 
     const allCompletedSessions = events.filter(e => e.status === 'completed' || !isFutureEvent(e));
     // Use custom date range if set, otherwise current rotation
