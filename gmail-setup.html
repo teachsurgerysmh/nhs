@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html><head><title>Gmail API Setup Helper</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f8f9fa; }
+  h1 { color: #003087; font-size: 22px; }
+  .step { background: white; border-radius: 12px; padding: 24px; margin: 16px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .step h2 { color: #005eb8; font-size: 16px; margin-top: 0; }
+  label { display: block; font-weight: 600; font-size: 13px; margin: 12px 0 4px; color: #333; }
+  input { width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+  button { background: #009639; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; }
+  button:hover { background: #007a2e; }
+  .result { background: #e6f4ea; border: 2px solid #009639; border-radius: 8px; padding: 16px; margin-top: 16px; word-break: break-all; }
+  .result h3 { color: #009639; margin-top: 0; }
+  .token { font-family: monospace; font-size: 13px; background: white; padding: 10px; border-radius: 6px; margin: 8px 0; user-select: all; }
+  .copy-btn { background: #005eb8; font-size: 12px; padding: 6px 16px; margin-top: 4px; }
+  .error { background: #fce8e8; border: 2px solid #d93025; border-radius: 8px; padding: 16px; margin-top: 16px; color: #d93025; }
+  .hidden { display: none; }
+  .info { font-size: 12px; color: #666; margin-top: 6px; }
+</style>
+</head><body>
+<h1>Gmail API Setup for Southmead Teaching</h1>
+
+<div class="step" id="step1">
+  <h2>Step 1: Enter your Google OAuth credentials</h2>
+  <p style="font-size:13px;color:#666;">From Google Cloud Console → APIs & Services → Credentials → your OAuth Client ID</p>
+  <label>Client ID</label>
+  <input type="text" id="clientId" placeholder="xxxx.apps.googleusercontent.com">
+  <label>Client Secret</label>
+  <input type="text" id="clientSecret" placeholder="GOCSPX-xxxx">
+  <button onclick="startAuth()">Authorize with Gmail</button>
+  <p class="info">This will open a Google sign-in window. Sign in with <strong>teachsurgerysmh@gmail.com</strong></p>
+</div>
+
+<div class="step hidden" id="step2">
+  <h2>Step 2: Waiting for authorization...</h2>
+  <p>Complete the sign-in in the popup window, then click "Allow".</p>
+</div>
+
+<div class="step hidden" id="step3">
+  <div class="result">
+    <h3>Your tokens are ready!</h3>
+    <label>Refresh Token (add this to Supabase)</label>
+    <div class="token" id="refreshToken"></div>
+    <button class="copy-btn" onclick="copyToken('refreshToken')">Copy Refresh Token</button>
+
+    <label style="margin-top:16px;">Client ID</label>
+    <div class="token" id="showClientId"></div>
+    <button class="copy-btn" onclick="copyToken('showClientId')">Copy Client ID</button>
+
+    <label style="margin-top:16px;">Client Secret</label>
+    <div class="token" id="showClientSecret"></div>
+    <button class="copy-btn" onclick="copyToken('showClientSecret')">Copy Client Secret</button>
+  </div>
+  <p style="font-size:13px;color:#666;margin-top:16px;">
+    <strong>Now add these 3 secrets in Supabase:</strong><br>
+    Dashboard → Project Settings → Edge Functions → Secrets<br>
+    • GMAIL_CLIENT_ID<br>
+    • GMAIL_CLIENT_SECRET<br>
+    • GMAIL_REFRESH_TOKEN
+  </p>
+</div>
+
+<div class="hidden" id="errorDiv"></div>
+
+<script>
+const REDIRECT_URI = location.href.split('?')[0]; // This page's URL
+const SCOPES = 'https://www.googleapis.com/auth/gmail.send';
+
+function startAuth() {
+  const clientId = document.getElementById('clientId').value.trim();
+  const clientSecret = document.getElementById('clientSecret').value.trim();
+  if (!clientId || !clientSecret) { alert('Please enter both Client ID and Client Secret'); return; }
+
+  // Save for later
+  sessionStorage.setItem('gmail_client_id', clientId);
+  sessionStorage.setItem('gmail_client_secret', clientSecret);
+
+  // Build OAuth URL
+  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'code',
+    scope: SCOPES,
+    access_type: 'offline',
+    prompt: 'consent',
+    login_hint: 'teachsurgerysmh@gmail.com'
+  });
+
+  document.getElementById('step1').classList.add('hidden');
+  document.getElementById('step2').classList.remove('hidden');
+
+  // Redirect to Google
+  window.location.href = authUrl;
+}
+
+// Check if we're returning from OAuth
+async function checkCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+
+  if (error) {
+    document.getElementById('errorDiv').classList.remove('hidden');
+    document.getElementById('errorDiv').innerHTML = `<div class="error"><strong>Authorization failed:</strong> ${error}</div>`;
+    return;
+  }
+
+  if (!code) return; // Not a callback
+
+  const clientId = sessionStorage.getItem('gmail_client_id');
+  const clientSecret = sessionStorage.getItem('gmail_client_secret');
+
+  if (!clientId || !clientSecret) {
+    document.getElementById('errorDiv').classList.remove('hidden');
+    document.getElementById('errorDiv').innerHTML = `<div class="error"><strong>Session expired.</strong> Please start over — enter your Client ID and Secret again.</div>`;
+    return;
+  }
+
+  document.getElementById('step1').classList.add('hidden');
+  document.getElementById('step2').classList.remove('hidden');
+  document.getElementById('step2').innerHTML = '<h2>Exchanging code for tokens...</h2><p>Please wait...</p>';
+
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code: code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: REDIRECT_URI,
+        grant_type: 'authorization_code'
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.refresh_token) {
+      document.getElementById('step2').classList.add('hidden');
+      document.getElementById('step3').classList.remove('hidden');
+      document.getElementById('refreshToken').textContent = data.refresh_token;
+      document.getElementById('showClientId').textContent = clientId;
+      document.getElementById('showClientSecret').textContent = clientSecret;
+      // Clear URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else {
+      document.getElementById('errorDiv').classList.remove('hidden');
+      document.getElementById('errorDiv').innerHTML = `<div class="error"><strong>No refresh token received.</strong><br>Error: ${JSON.stringify(data)}<br><br>Try again — make sure "prompt: consent" is working.</div>`;
+      document.getElementById('step2').classList.add('hidden');
+      document.getElementById('step1').classList.remove('hidden');
+    }
+  } catch(e) {
+    document.getElementById('errorDiv').classList.remove('hidden');
+    document.getElementById('errorDiv').innerHTML = `<div class="error"><strong>Token exchange failed:</strong> ${e.message}</div>`;
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step1').classList.remove('hidden');
+  }
+}
+
+function copyToken(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => alert('Copied!')).catch(() => {
+    const range = document.createRange();
+    range.selectNode(document.getElementById(id));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    alert('Copied!');
+  });
+}
+
+// Run on load
+checkCallback();
+</script>
+</body></html>
