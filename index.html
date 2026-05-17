@@ -2400,7 +2400,7 @@ async function openFeedbackRequestModal(sessionId) {
   if (!ev) { showToast('Session not found'); return; }
 
   // Generate feedback link
-  const feedbackUrl = `https://suketubatra-bit.github.io/southmead-surgical-teaching/?feedback=${sessionId}`;
+  const feedbackUrl = `${location.origin}${location.pathname}?feedback=${sessionId}`;
   document.getElementById('fbReqLink').value = feedbackUrl;
   document.getElementById('fbReqSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year} | ${esc(ev.teacher || 'TBD')}`;
 
