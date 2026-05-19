@@ -933,8 +933,9 @@ body.is-learner .learner-only-block { display: block !important; }
 
 <script>
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.0.2';
+const APP_VERSION = 'v3.0.3';
 const APP_BUILD = '2026-05-19';
+const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 document.getElementById('versionTag').textContent = APP_VERSION;
 
 // ===================== DEMO MODE =====================
@@ -2044,7 +2045,7 @@ async function sendSessionEmail(id, type) {
 
   // Generate action token and links
   const actionToken = btoa(ev.id + ':' + (to || ''));
-  const siteUrl = location.origin + location.pathname;
+  const siteUrl = SITE_URL;
   const confirmLink = `${siteUrl}?action=confirm&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
   const declineLink = `${siteUrl}?action=decline&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
   const rescheduleLink = `${siteUrl}?action=reschedule&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
@@ -3320,8 +3321,11 @@ function checkLearnerSession() {
 
 function handleLearnerURLParams() {
   const params = new URLSearchParams(window.location.search);
-  const attendId = params.get('attend');
-  const feedbackId = params.get('feedback');
+  const attendId = params.get('attend') || window._pendingAttend;
+  const feedbackId = params.get('feedback') || window._pendingFeedback;
+  // Clear stored params
+  delete window._pendingAttend;
+  delete window._pendingFeedback;
   if (attendId && currentLearner) {
     markSelfAttendance(parseInt(attendId));
   }
@@ -3399,7 +3403,7 @@ async function openAttendanceModal(sessionId) {
       html += '</div>';
     }
     // QR Code
-    const qrUrl = `${window.location.origin}${window.location.pathname}?attend=${sessionId}`;
+    const qrUrl = `${SITE_URL}?attend=${sessionId}`;
     html += `<div style="margin-top:16px;padding:14px;background:var(--nhs-bg);border-radius:8px;text-align:center;">
       <div style="font-size:13px;font-weight:600;color:var(--nhs-dark-blue);margin-bottom:8px;">QR Code for Self-Registration</div>
       <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}" alt="QR Code" style="border-radius:8px;">
@@ -3530,8 +3534,8 @@ async function openFeedbackRequestModal(sessionId) {
   const ev = events.find(e => e.id === sessionId);
   if (!ev) { showToast('Session not found'); return; }
 
-  // Generate feedback link
-  const feedbackUrl = `${location.origin}${location.pathname}?feedback=${sessionId}`;
+  // Generate feedback link — always use SITE_URL so links work from email
+  const feedbackUrl = `${SITE_URL}?feedback=${sessionId}`;
   document.getElementById('fbReqLink').value = feedbackUrl;
   document.getElementById('fbReqSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year} | ${esc(ev.teacher || 'TBD')}`;
 
@@ -3777,7 +3781,7 @@ async function sendTeacherRequestEmails() {
   const recipients = checked.map(cb => ({ email: cb.value, name: cb.dataset.contactName || '' }));
   const topic = ev.topic || 'TBD';
   const dateStr = `${ev.day} ${ev.date} ${ev.month} ${ev.year}`;
-  const siteUrl = location.origin + location.pathname;
+  const siteUrl = SITE_URL;
 
   const btn = document.querySelector('#teacherRequestModal .btn-green');
   const originalText = btn.textContent;
@@ -5353,7 +5357,14 @@ async function init() {
     return; // Don't switch to default view
   }
   // Handle learner URL params
-  if (params.get('attend') || params.get('feedback')) {
+  const pendingAttend = params.get('attend');
+  const pendingFeedback = params.get('feedback');
+  if (pendingAttend || pendingFeedback) {
+    // Store params so they survive URL cleanup
+    if (pendingAttend) window._pendingAttend = pendingAttend;
+    if (pendingFeedback) window._pendingFeedback = pendingFeedback;
+    // Clean URL without reloading
+    window.history.replaceState({}, document.title, window.location.pathname);
     if (currentLearner) {
       handleLearnerURLParams();
     } else {
