@@ -30,7 +30,7 @@
 body { font-family: 'Arial', 'Helvetica Neue', sans-serif; background: var(--nhs-bg); color: var(--nhs-black); line-height: 1.5; }
 a { color: var(--nhs-blue); text-decoration: none; }
 a:hover { text-decoration: underline; }
-.header { background: var(--nhs-blue); color: white; padding: 12px 20px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+.header { background: var(--nhs-dark-blue); color: white; padding: 10px 20px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
 .header-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .header-left { display: flex; align-items: center; gap: 12px; }
 .header-logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
@@ -55,11 +55,56 @@ body.is-admin .admin-only-block { display: block !important; }
 body.is-admin .admin-badge { display: inline-block; }
 .offline-banner { background: #fff3cd; border-bottom: 2px solid var(--nhs-orange); padding: 10px 20px; text-align: center; font-size: 13px; color: #664d03; display: none; }
 .offline-banner.show { display: block; }
-.nav-bar { background: var(--nhs-dark-blue); padding: 0 20px; position: sticky; top: 56px; z-index: 99; }
-.nav-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 0; overflow-x: auto; }
+.nav-bar { background: var(--nhs-dark-blue); padding: 0 20px; position: sticky; top: 0; z-index: 99; overflow: visible; }
+.nav-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 0; align-items: stretch; overflow: visible; }
 .nav-tab { padding: 11px 18px; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
 .nav-tab:hover { color: white; background: rgba(255,255,255,0.05); }
 .nav-tab.active { color: white; border-bottom-color: var(--nhs-light-blue); }
+.nav-more-wrapper { position: relative; display: none; }
+body.is-admin .nav-more-wrapper { display: flex; }
+.nav-more-btn { padding: 11px 18px; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.nav-more-btn:hover { color: white; background: rgba(255,255,255,0.05); }
+.nav-more-btn.has-active { color: white; border-bottom-color: var(--nhs-light-blue); }
+.nav-dropdown { display: none; position: absolute; top: 100%; left: 0; background: white; border-radius: 0 0 8px 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); min-width: 200px; z-index: 200; overflow: hidden; }
+.nav-dropdown.show { display: block; }
+.nav-dropdown-item { padding: 10px 18px; font-size: 13px; font-weight: 600; color: #4C6272; cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent; }
+.nav-dropdown-item:hover { background: var(--nhs-bg); color: var(--nhs-blue); }
+.nav-dropdown-item.active { background: #e0f5fa; color: var(--nhs-blue); border-left-color: var(--nhs-blue); }
+.admin-dashboard { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.admin-dashboard h2 { font-size: 20px; color: var(--nhs-dark-blue); margin-bottom: 16px; }
+.action-centre { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.action-card { background: white; border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; border-left: 4px solid var(--nhs-grey); text-align: center; }
+.action-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+.action-card .ac-count { font-size: 32px; font-weight: 700; line-height: 1; }
+.action-card .ac-label { font-size: 12px; color: var(--nhs-grey); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.action-card.ac-urgent { border-left-color: var(--nhs-red); }
+.action-card.ac-warning { border-left-color: var(--nhs-orange); }
+.action-card.ac-info { border-left-color: var(--nhs-blue); }
+.action-card.ac-good { border-left-color: var(--nhs-green); }
+.quick-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 24px; }
+.qa-tile { background: white; border-radius: var(--radius); padding: 14px 12px; text-align: center; cursor: pointer; transition: all 0.15s; box-shadow: var(--shadow); border: 1.5px solid transparent; }
+.qa-tile:hover { border-color: var(--nhs-blue); transform: translateY(-1px); }
+.qa-tile .qa-icon { font-size: 24px; margin-bottom: 6px; }
+.qa-tile .qa-text { font-size: 12px; font-weight: 600; color: var(--nhs-dark-blue); }
+.week-overview { background: white; border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 24px; }
+.week-overview h3 { font-size: 15px; color: var(--nhs-dark-blue); margin-bottom: 12px; border-bottom: 2px solid var(--nhs-pale-grey); padding-bottom: 8px; }
+.week-session { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--nhs-pale-grey); cursor: pointer; }
+.week-session:last-child { border-bottom: none; }
+.week-session:hover { background: var(--nhs-bg); margin: 0 -18px; padding: 10px 18px; border-radius: 4px; }
+.week-session .ws-date { min-width: 60px; font-size: 12px; font-weight: 700; color: var(--nhs-blue); text-align: center; }
+.week-session .ws-date .ws-day { font-size: 10px; color: var(--nhs-grey); font-weight: 600; }
+.week-session .ws-info { flex: 1; }
+.week-session .ws-topic { font-size: 14px; font-weight: 600; color: var(--nhs-dark-blue); }
+.week-session .ws-meta { font-size: 12px; color: var(--nhs-grey); }
+.activity-feed { background: white; border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+.activity-feed h3 { font-size: 15px; color: var(--nhs-dark-blue); margin-bottom: 12px; border-bottom: 2px solid var(--nhs-pale-grey); padding-bottom: 8px; }
+.feed-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--nhs-pale-grey); font-size: 13px; }
+.feed-item:last-child { border-bottom: none; }
+.feed-item .feed-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.feed-item .feed-text { flex: 1; color: var(--nhs-black); }
+.feed-item .feed-time { font-size: 11px; color: var(--nhs-grey); white-space: nowrap; }
+.dash-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.dash-section-header h3 { margin-bottom: 0; border: none; padding: 0; }
 .welcome-banner { background: linear-gradient(135deg, var(--nhs-blue), var(--nhs-dark-blue)); color: white; padding: 30px 20px; text-align: center; }
 .welcome-banner h2 { font-size: 22px; margin-bottom: 6px; }
 .welcome-banner p { opacity: 0.85; font-size: 14px; max-width: 600px; margin: 0 auto; }
@@ -246,6 +291,7 @@ body.is-learner .learner-only-block { display: block !important; }
   .header-left { width: 100%; justify-content: space-between; }
   .header-logo { font-size: 18px; }
   .header-logo small { font-size: 11px; }
+  .header-logo-img { height: 36px !important; }
   .header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 4px; }
   .header-actions .btn { padding: 5px 10px; font-size: 11px; }
   .nav-bar { top: auto; position: relative; padding: 0 8px; }
@@ -282,6 +328,7 @@ body.is-learner .learner-only-block { display: block !important; }
 @media (max-width: 400px) {
   .header { padding: 8px 12px; }
   .header-logo { font-size: 16px; }
+  .header-logo-img { height: 30px !important; }
   .header-actions .btn { padding: 4px 8px; font-size: 10px; }
   .nav-tab { padding: 8px 8px; font-size: 10px; }
   .stat-card { min-width: calc(50% - 3px); }
@@ -296,10 +343,7 @@ body.is-learner .learner-only-block { display: block !important; }
 <header class="header">
   <div class="header-inner">
     <div class="header-left">
-      <div class="header-logo">
-        Southmead Surgical Teaching
-        <small>North Bristol NHS Trust</small>
-      </div>
+      <img src="logo_transparent.png" alt="Southmead Surgical Teaching — North Bristol NHS Trust" style="height:72px;width:auto;" class="header-logo-img">
       <span class="admin-badge" id="adminBadge">Admin</span>
       <span class="learner-badge" id="learnerBadge">Learner</span>
     </div>
@@ -307,6 +351,7 @@ body.is-learner .learner-only-block { display: block !important; }
       <button class="btn btn-outline admin-only" id="viewToggleBtn" onclick="toggleAdminLearnerView()" style="border-color:var(--nhs-green);color:white;">Learner View</button>
       <button class="btn btn-outline admin-only" onclick="exportCSV()">Export CSV</button>
       <button class="btn btn-outline admin-only" onclick="openBulkEmailModal()">Bulk Remind</button>
+      <button class="btn btn-outline admin-only" onclick="openBulkWhatsAppModal()" style="border-color:#25D366;color:#25D366;">WhatsApp</button>
       <button class="btn btn-outline" id="learnerLoginBtn" onclick="openLearnerLoginModal()">Learner Login</button>
       <button class="btn btn-white" id="loginBtn" onclick="openLoginModal()">Admin Login</button>
       <button class="btn btn-outline" id="logoutBtn" style="display:none;" onclick="doLogout()">Logout</button>
@@ -317,19 +362,25 @@ body.is-learner .learner-only-block { display: block !important; }
 
 <nav class="nav-bar">
   <div class="nav-inner" id="navInner">
-    <div class="nav-tab active" data-view="list" onclick="switchView('list')">Upcoming Sessions</div>
+    <div class="nav-tab admin-only" data-view="adminDash" onclick="switchView('adminDash')">Dashboard</div>
+    <div class="nav-tab active" data-view="list" onclick="switchView('list')">Sessions</div>
     <div class="nav-tab" data-view="calendar" onclick="switchView('calendar')">Calendar</div>
-    <div class="nav-tab admin-only" data-view="all" onclick="switchView('all')">All Sessions</div>
     <div class="nav-tab admin-only" data-view="drafts" onclick="switchView('drafts')">Drafts</div>
-    <div class="nav-tab admin-only" data-view="ideas" onclick="switchView('ideas')">Topic Ideas</div>
-    <div class="nav-tab admin-only" data-view="log" onclick="switchView('log')" id="logTab" style="display:none !important;">Activity Log</div>
-    <div class="nav-tab admin-only" data-view="requests" onclick="switchView('requests')">Requests</div>
     <div class="nav-tab admin-only" data-view="contacts" onclick="switchView('contacts')">Contacts</div>
-    <div class="nav-tab admin-only" data-view="feedback" onclick="switchView('feedback')">Feedback</div>
     <div class="nav-tab admin-only" data-view="inbox" onclick="switchView('inbox')">Inbox</div>
-    <div class="nav-tab admin-only" data-view="approvals" onclick="switchView('approvals')">Approvals</div>
-    <div class="nav-tab admin-only" data-view="attendanceChart" onclick="switchView('attendanceChart')">Attendance Chart</div>
-    <div class="nav-tab admin-only" data-view="siteFeedback" onclick="switchView('siteFeedback')">Site Feedback</div>
+    <div class="nav-more-wrapper">
+      <button class="nav-more-btn" onclick="toggleNavDropdown(event)">More ▾</button>
+      <div class="nav-dropdown" id="navDropdown">
+        <div class="nav-dropdown-item" data-view="all" onclick="switchViewFromDropdown('all')">All Sessions</div>
+        <div class="nav-dropdown-item" data-view="ideas" onclick="switchViewFromDropdown('ideas')">Topic Ideas</div>
+        <div class="nav-dropdown-item" data-view="requests" onclick="switchViewFromDropdown('requests')">Requests</div>
+        <div class="nav-dropdown-item" data-view="feedback" onclick="switchViewFromDropdown('feedback')">Feedback</div>
+        <div class="nav-dropdown-item" data-view="approvals" onclick="switchViewFromDropdown('approvals')">Approvals</div>
+        <div class="nav-dropdown-item" data-view="attendanceChart" onclick="switchViewFromDropdown('attendanceChart')">Attendance Chart</div>
+        <div class="nav-dropdown-item" data-view="siteFeedback" onclick="switchViewFromDropdown('siteFeedback')">Site Feedback</div>
+        <div class="nav-dropdown-item" data-view="log" onclick="switchViewFromDropdown('log')" id="logTab" style="display:none;">Activity Log</div>
+      </div>
+    </div>
     <div class="nav-tab" data-view="dashboard" id="dashboardTab" style="display:none;" onclick="switchView('dashboard')">My Dashboard</div>
   </div>
 </nav>
@@ -376,6 +427,7 @@ body.is-learner .learner-only-block { display: block !important; }
   <div id="approvalsView" style="display:none;"></div>
   <div id="attendanceChartView" style="display:none;"></div>
   <div id="siteFeedbackView" style="display:none;"></div>
+  <div id="adminDashView" style="display:none;" class="admin-dashboard"></div>
   <div id="dashboardView" style="display:none;"></div>
   <div id="inboxView" style="display:none;"></div>
   <div id="actionLandingView" style="display:none;"></div>
@@ -467,6 +519,34 @@ body.is-learner .learner-only-block { display: block !important; }
     <div class="modal-header"><h3>Bulk Reminder</h3><button class="modal-close" onclick="closeModal('bulkEmailModal')">&times;</button></div>
     <div class="modal-body" id="bulkEmailBody"></div>
     <div class="modal-footer"><button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('bulkEmailModal')">Close</button></div>
+  </div>
+</div>
+
+<!-- WhatsApp Modal -->
+<div class="modal-overlay" id="whatsappModal" role="dialog" aria-modal="true" aria-label="Send WhatsApp Message">
+  <div class="modal">
+    <div class="modal-header" style="background:linear-gradient(135deg,#25D366,#128C7E);color:white;border-radius:12px 12px 0 0;padding:18px 24px;">
+      <h3 style="margin:0;display:flex;align-items:center;gap:8px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp Message</h3>
+      <button class="modal-close" onclick="closeModal('whatsappModal')" style="color:white;">&times;</button>
+    </div>
+    <div class="modal-body" id="whatsappBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('whatsappModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk WhatsApp Modal -->
+<div class="modal-overlay" id="bulkWhatsAppModal" role="dialog" aria-modal="true" aria-label="Bulk WhatsApp">
+  <div class="modal">
+    <div class="modal-header" style="background:linear-gradient(135deg,#25D366,#128C7E);color:white;border-radius:12px 12px 0 0;padding:18px 24px;">
+      <h3 style="margin:0;display:flex;align-items:center;gap:8px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> Bulk WhatsApp</h3>
+      <button class="modal-close" onclick="closeModal('bulkWhatsAppModal')" style="color:white;">&times;</button>
+    </div>
+    <div class="modal-body" id="bulkWhatsAppBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('bulkWhatsAppModal')">Close</button>
+    </div>
   </div>
 </div>
 
@@ -825,9 +905,46 @@ body.is-learner .learner-only-block { display: block !important; }
 
 <div class="toast" id="toast"></div>
 
-<div class="footer">Designed by Dr Suketu Batra</div>
+<div class="footer">Designed by Dr Suketu Batra &middot; <span id="versionTag"></span></div>
+
+<!-- Demo Mode Banner -->
+<div id="demoBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#ed8b00,#da291c);color:white;padding:8px 20px;text-align:center;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+  🧪 DEMO MODE — All changes are simulated. No real data will be modified.
+  <button id="resumeTourBtn" onclick="resumeDemoTour()" style="margin-left:12px;background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);color:white;padding:3px 12px;border-radius:4px;cursor:pointer;font-size:12px;display:none;">Resume Tour</button>
+  <button onclick="endDemoMode()" style="margin-left:8px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:white;padding:3px 12px;border-radius:4px;cursor:pointer;font-size:12px;">Exit Demo</button>
+</div>
+
+<!-- Demo Tour Overlay -->
+<div id="demoTourOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.35);">
+  <div id="demoTourSpotlight" style="position:absolute;border:3px solid #ed8b00;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,0.3);transition:all 0.4s ease;pointer-events:none;"></div>
+  <div id="demoTourCard" style="position:absolute;background:white;border-radius:12px;padding:20px 24px;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.3);font-size:14px;line-height:1.5;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="background:#ed8b00;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;" id="demoTourStep">1</span>
+      <strong id="demoTourTitle" style="font-size:15px;color:#003087;"></strong>
+    </div>
+    <p id="demoTourText" style="color:#4C6272;margin:0 0 16px;"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button id="demoTourSkip" class="btn btn-outline" style="font-size:12px;padding:6px 14px;color:#4C6272;border-color:#ccc;" onclick="endDemoTour()">Skip Tour</button>
+      <button id="demoTourNext" class="btn" style="font-size:12px;padding:6px 18px;background:#003087;color:white;border:none;" onclick="nextDemoTourStep()">Next →</button>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:4px;justify-content:center;" id="demoTourDots"></div>
+  </div>
+</div>
 
 <script>
+// ===================== VERSION =====================
+const APP_VERSION = 'v3.0.2';
+const APP_BUILD = '2026-05-19';
+document.getElementById('versionTag').textContent = APP_VERSION;
+
+// ===================== DEMO MODE =====================
+let isDemoMode = false;
+const DEMO_CREDENTIALS = { username: 'demo', password: 'demo123' };
+
+function showDemoToast(action) {
+  showToast(`🧪 Demo: "${action}" simulated — no data changed`, 3000);
+}
+
 // ===================== SUPABASE CONFIG =====================
 const SUPABASE_URL = 'https://rufihxjquwrluaenmbaa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1ZmloeGpxdXdybHVhZW5tYmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyOTg4NDMsImV4cCI6MjA5Mzg3NDg0M30.6o8GrCPcQ__JjrGLUiqQwdgWcM1Qk_02TvLvTOwUjyg';
@@ -860,6 +977,7 @@ async function sbGet(table, query = '') {
 }
 
 async function sbInsert(table, data) {
+  if (isDemoMode) { showDemoToast(`Add to ${table}`); return [{ id: 99999, ...data }]; }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: 'POST', headers, body: JSON.stringify(data)
   });
@@ -868,6 +986,7 @@ async function sbInsert(table, data) {
 }
 
 async function sbUpdate(table, id, data) {
+  if (isDemoMode) { showDemoToast(`Update ${table} #${id}`); return [{ id, ...data }]; }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
     method: 'PATCH', headers: { ...headers, 'Prefer': 'return=representation' }, body: JSON.stringify(data)
   });
@@ -876,6 +995,7 @@ async function sbUpdate(table, id, data) {
 }
 
 async function sbDelete(table, id) {
+  if (isDemoMode) { showDemoToast(`Delete from ${table}`); return; }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
     method: 'DELETE', headers
   });
@@ -967,6 +1087,26 @@ async function doLogin() {
   const pass = document.getElementById('loginPass').value.trim();
   if (!user || !pass) { showToast('Enter username and password'); return; }
 
+  // Demo mode login
+  if (user === DEMO_CREDENTIALS.username && pass === DEMO_CREDENTIALS.password) {
+    isDemoMode = true;
+    currentUser = { id: 0, username: 'demo', name: 'Demo User', role: 'admin' };
+    sessionStorage.setItem('sst_user', JSON.stringify(currentUser));
+    sessionStorage.setItem('sst_demo', 'true');
+    setAdmin(true);
+    closeModal('loginModal');
+    document.getElementById('demoBanner').style.display = 'block';
+    document.querySelector('.header').style.top = '36px';
+    document.querySelector('.nav-bar').style.top = 'calc(72px + 36px)';
+    showToast('Welcome to Demo Mode! Explore all features safely.');
+    await loadEvents();
+    renderAll();
+    switchView('adminDash');
+    // Start the guided tour after a short delay
+    setTimeout(startDemoTour, 1200);
+    return;
+  }
+
   try {
     const hashed = await hashPassword(pass);
     const data = await sbGet('users', `username=eq.${encodeURIComponent(user)}&select=*`);
@@ -981,18 +1121,40 @@ async function doLogin() {
     await loadEvents();
     renderAll();
     logAction('Logged in');
+    switchView('adminDash');
   } catch(e) {
     console.error('Login error:', e);
     showToast('Login failed - check connection');
   }
 }
 
+function endDemoMode() {
+  isDemoMode = false;
+  sessionStorage.removeItem('sst_demo');
+  document.getElementById('demoBanner').style.display = 'none';
+  document.getElementById('demoTourOverlay').style.display = 'none';
+  document.querySelector('.header').style.top = '';
+  document.querySelector('.nav-bar').style.top = '';
+  demoTourCurrentStep = 0;
+  doLogout();
+}
+
 function doLogout() {
+  // Clean up demo state if active
+  if (isDemoMode) {
+    isDemoMode = false;
+    sessionStorage.removeItem('sst_demo');
+    document.getElementById('demoBanner').style.display = 'none';
+    document.getElementById('demoTourOverlay').style.display = 'none';
+    document.querySelector('.header').style.top = '';
+    document.querySelector('.nav-bar').style.top = '';
+    demoTourCurrentStep = 0;
+  }
   logAction('Logged out');
   currentUser = null;
   currentLearner = null;
   sessionStorage.removeItem('sst_user');
-  localStorage.removeItem('sst_learner');
+  sessionStorage.removeItem('sst_learner');
   document.body.classList.remove('is-learner');
   setAdmin(false);
   switchView('list');
@@ -1043,7 +1205,7 @@ async function linkAdminToLearner() {
       });
       currentLearner = result[0];
     }
-    localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     document.body.classList.add('is-learner');
     // Show My Dashboard tab for admins
     updateHeaderButtons();
@@ -1096,14 +1258,57 @@ function updateHeaderButtons() {
 function checkSession() {
   const stored = sessionStorage.getItem('sst_user');
   if (stored) {
-    try { currentUser = JSON.parse(stored); setAdmin(true); } catch(e) {}
+    try {
+      currentUser = JSON.parse(stored);
+      setAdmin(true);
+      // Restore demo mode if it was active
+      if (sessionStorage.getItem('sst_demo') === 'true') {
+        isDemoMode = true;
+        document.getElementById('demoBanner').style.display = 'block';
+        document.querySelector('.header').style.top = '36px';
+        document.querySelector('.nav-bar').style.top = 'calc(72px + 36px)';
+        // Show resume tour button if tour was in progress
+        if (demoTourCurrentStep > 0) {
+          document.getElementById('resumeTourBtn').style.display = 'inline-block';
+        }
+      }
+    } catch(e) {}
   }
 }
 
 // ===================== VIEW SWITCHING =====================
+function toggleNavDropdown(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const dd = document.getElementById('navDropdown');
+  const isOpen = dd.classList.contains('show');
+  dd.classList.toggle('show', !isOpen);
+}
+function switchViewFromDropdown(view) {
+  document.getElementById('navDropdown').classList.remove('show');
+  switchView(view);
+}
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const wrapper = document.querySelector('.nav-more-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    const dd = document.getElementById('navDropdown');
+    if (dd) dd.classList.remove('show');
+  }
+});
+
 function switchView(view) {
   currentView = view;
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  // Update dropdown items active state
+  document.querySelectorAll('.nav-dropdown-item').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  // Highlight "More" button if a dropdown view is active
+  const moreBtn = document.querySelector('.nav-more-btn');
+  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','siteFeedback','log'];
+  // Close nav dropdown on any view switch
+  const dd = document.getElementById('navDropdown');
+  if (dd) dd.classList.remove('show');
+  if (moreBtn) moreBtn.classList.toggle('has-active', dropdownViews.includes(view));
   // Restore nav bar visibility (may have been hidden by action landing)
   document.querySelector('.nav-bar').style.display = '';
   document.getElementById('listView').style.display = 'none';
@@ -1116,6 +1321,7 @@ function switchView(view) {
   document.getElementById('approvalsView').style.display = 'none';
   document.getElementById('attendanceChartView').style.display = 'none';
   document.getElementById('siteFeedbackView').style.display = 'none';
+  document.getElementById('adminDashView').style.display = 'none';
   document.getElementById('dashboardView').style.display = 'none';
   document.getElementById('inboxView').style.display = 'none';
   document.getElementById('actionLandingView').style.display = 'none';
@@ -1155,6 +1361,10 @@ function switchView(view) {
     document.getElementById('attendanceChartView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     loadAttendanceChart();
+  } else if (view === 'adminDash') {
+    document.getElementById('adminDashView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadAdminDashboard();
   } else if (view === 'dashboard') {
     document.getElementById('dashboardView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
@@ -1576,6 +1786,7 @@ function showDetail(id) {
     if (ev.teacherEmail || ev.teacher) {
       footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'confirmation')">Send Confirmation</button>`;
       footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-orange);color:var(--nhs-orange);" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'reminder')">Send Reminder</button>`;
+      footerHtml += `<button class="btn btn-white" style="border:1px solid #25D366;color:#25D366;" onclick="closeModal('detailModal');openWhatsAppModal(${ev.id})">WhatsApp</button>`;
     }
     if (!ev.teacher || ev.status === 'tbd') {
       footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-aqua);color:var(--nhs-aqua);" onclick="closeModal('detailModal');requestTeacherForSession(${ev.id})">Request Teacher</button>`;
@@ -1915,6 +2126,175 @@ function openBulkEmailModal() {
   openModal('bulkEmailModal');
 }
 
+// ===================== WHATSAPP =====================
+function getTeacherPhone(ev) {
+  // Try to find phone from contacts data
+  const contacts = window._contactsData || [];
+  if (ev.teacher) {
+    const contact = contacts.find(c => c.name && c.name.toLowerCase() === ev.teacher.toLowerCase());
+    if (contact && contact.phone) return contact.phone;
+  }
+  return null;
+}
+
+function openWhatsAppModal(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  const phone = getTeacherPhone(ev);
+  const msg = `Dear ${ev.teacher || 'Colleague'},\n\nThis is a reminder about your teaching session:\n\nTopic: ${ev.topic || 'TBD'}\nDate: ${ev.day} ${ev.date} ${ev.month} ${ev.year}\nTime: ${ev.time || 'TBC'}\nRoom: ${ev.room || 'TBC'}\n\nPlease reply YES to confirm or NO if unavailable.\n\nSouthmead Surgical Teaching Team`;
+
+  const body = document.getElementById('whatsappBody');
+  body.innerHTML = `
+    <div style="background:#ECE5DD;border-radius:8px;padding:16px;margin-bottom:16px;font-size:13px;white-space:pre-wrap;font-family:Arial,sans-serif;line-height:1.5;">${esc(msg)}</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+      <label style="font-size:13px;font-weight:600;white-space:nowrap;">To:</label>
+      <span style="font-size:13px;">${esc(ev.teacher || 'Unknown')} ${phone ? '(' + esc(phone) + ')' : '<span style="color:#da291c;">(no phone on file)</span>'}</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      ${phone ? `<a href="https://wa.me/${normalizePhoneForLink(phone)}?text=${encodeURIComponent(msg)}" target="_blank" class="btn" style="background:#25D366;color:white;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Open in WhatsApp
+      </a>` : '<span style="color:#da291c;font-size:13px;">Add a phone number in Contacts to send WhatsApp messages.</span>'}
+      <button class="btn btn-white" style="border:1px solid var(--nhs-pale-grey);color:var(--nhs-grey);font-size:12px;" onclick="copyWhatsAppMsg(this)" data-msg="${esc(msg.replace(/"/g,'&quot;'))}">Copy Message</button>
+    </div>
+  `;
+  openModal('whatsappModal');
+}
+
+function copyWhatsAppMsg(btn) {
+  const msg = btn.dataset.msg;
+  navigator.clipboard.writeText(msg).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy Message'; }, 1500);
+  });
+}
+
+function normalizePhoneForLink(phone) {
+  let p = phone.replace(/[\s\-\(\)\+]/g, '');
+  if (p.startsWith('07') && p.length === 11) p = '44' + p.substring(1);
+  if (p.length === 10 && p.startsWith('7')) p = '44' + p;
+  return p;
+}
+
+async function sendWhatsAppReminder(id, mode) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) { showToast('Session not found'); return; }
+  const phone = getTeacherPhone(ev);
+  if (!phone) { showToast('No phone number on file for this teacher.'); return; }
+
+  const msg = `Dear ${ev.teacher || 'Colleague'},\n\nThis is a reminder about your teaching session:\n\n*Topic:* ${ev.topic || 'TBD'}\n*Date:* ${ev.day} ${ev.date} ${ev.month} ${ev.year}\n*Time:* ${ev.time || 'TBC'}\n*Room:* ${ev.room || 'TBC'}\n\nPlease reply *YES* to confirm or *NO* if unavailable.\n\nSouthmead Surgical Teaching Team`;
+
+  showToast('Sending WhatsApp message...');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({
+        action: 'send_text',
+        to: phone,
+        text: msg,
+        session_id: ev.id,
+        to_name: ev.teacher,
+        sent_by: currentUser?.name || 'admin'
+      })
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast(`WhatsApp sent to ${ev.teacher}!`);
+      logAction('Sent WhatsApp reminder', `${ev.topic || 'Session'} → ${ev.teacher}`);
+      closeModal('whatsappModal');
+    } else {
+      showToast(`WhatsApp failed: ${result.error || result.wa_response?.error?.message || 'Unknown error'}`);
+    }
+  } catch(e) {
+    console.warn('WhatsApp send error:', e);
+    showToast('WhatsApp send failed. Check console for details.');
+  }
+}
+
+function openBulkWhatsAppModal() {
+  const upcoming = events.filter(e => isFutureEvent(e) && e.status === 'upcoming' && e.teacher && e.published);
+  const body = document.getElementById('bulkWhatsAppBody');
+  if (upcoming.length === 0) {
+    body.innerHTML = '<p style="color:var(--nhs-grey);text-align:center;padding:20px;">No upcoming sessions with teachers to message.</p>';
+    openModal('bulkWhatsAppModal'); return;
+  }
+
+  const contacts = window._contactsData || [];
+  let withPhone = 0, withoutPhone = 0;
+  let html = '<p style="font-size:13px;color:var(--nhs-grey);margin-bottom:12px;">Tap each teacher to open WhatsApp with a pre-filled reminder:</p>';
+
+  upcoming.slice(0, 20).forEach(ev => {
+    const contact = contacts.find(c => c.name && c.name.toLowerCase() === (ev.teacher || '').toLowerCase());
+    const phone = contact?.phone || null;
+    if (phone) withPhone++; else withoutPhone++;
+    const phoneDisplay = phone ? esc(phone) : '<span style="color:#da291c;">no phone</span>';
+    const msg = `Dear ${ev.teacher || 'Colleague'},\n\nReminder about your teaching session:\n\nTopic: ${ev.topic || 'TBD'}\nDate: ${ev.day} ${ev.date} ${ev.month} ${ev.year}${ev.time ? '\nTime: ' + ev.time : ''}${ev.room ? '\nRoom: ' + ev.room : ''}\n\nPlease reply YES to confirm or NO if unavailable.\n\nSouthmead Surgical Teaching Team`;
+
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--nhs-pale-grey);font-size:13px;">
+      <div>
+        <strong>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)}</strong> - ${esc(ev.topic || 'TBD')}
+        <div style="font-size:11px;color:var(--nhs-grey);">${esc(ev.teacher)} &middot; ${phoneDisplay}</div>
+      </div>
+      ${phone ? `<a href="https://wa.me/${normalizePhoneForLink(phone)}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-white" style="font-size:11px;padding:4px 10px;border:1px solid #25D366;color:#25D366;text-decoration:none;">WhatsApp</a>` : '<span style="font-size:11px;color:var(--nhs-pale-grey);">—</span>'}
+    </div>`;
+  });
+
+  html += `<div style="margin-top:16px;padding:12px;background:#f0faf0;border-radius:8px;font-size:12px;">
+    <strong>${withPhone}</strong> teacher${withPhone !== 1 ? 's' : ''} with phone numbers &middot; <strong>${withoutPhone}</strong> without
+    <div style="font-size:11px;color:var(--nhs-grey);margin-top:4px;">Each link opens WhatsApp with a pre-filled message. Tap send in WhatsApp to confirm.</div>
+  </div>`;
+
+  body.innerHTML = html;
+  openModal('bulkWhatsAppModal');
+}
+
+async function sendBulkWhatsApp() {
+  const upcoming = events.filter(e => isFutureEvent(e) && e.status === 'upcoming' && e.teacher && e.published);
+  const contacts = window._contactsData || [];
+  const recipients = [];
+
+  for (const ev of upcoming) {
+    const contact = contacts.find(c => c.name && c.name.toLowerCase() === (ev.teacher || '').toLowerCase());
+    if (contact?.phone) {
+      recipients.push({
+        phone: contact.phone,
+        name: ev.teacher,
+        sessionId: ev.id,
+        topic: ev.topic,
+        dateStr: `${ev.day} ${ev.date} ${ev.month} ${ev.year}`,
+        time: ev.time || 'TBC',
+        room: ev.room || 'TBC'
+      });
+    }
+  }
+
+  if (recipients.length === 0) { showToast('No teachers with phone numbers found.'); return; }
+  showToast(`Sending ${recipients.length} WhatsApp messages...`);
+
+  let sent = 0, failed = 0;
+  for (const r of recipients) {
+    const msg = `Dear ${r.name},\n\nReminder about your teaching session:\n\n*Topic:* ${r.topic || 'TBD'}\n*Date:* ${r.dateStr}\n*Time:* ${r.time}\n*Room:* ${r.room}\n\nPlease reply *YES* to confirm or *NO* if unavailable.\n\nSouthmead Surgical Teaching Team`;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({
+          action: 'send_text', to: r.phone, text: msg,
+          session_id: r.sessionId, to_name: r.name, sent_by: currentUser?.name || 'admin'
+        })
+      });
+      const result = await res.json();
+      if (result.success) sent++; else failed++;
+    } catch(e) { failed++; }
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+
+  showToast(`WhatsApp: ${sent} sent, ${failed} failed`);
+  logAction('Bulk WhatsApp reminders', `${sent} sent, ${failed} failed`);
+  closeModal('bulkWhatsAppModal');
+}
+
 // ===================== SITE FEEDBACK =====================
 function openSiteFeedbackModal() {
   document.getElementById('siteFbForm').style.display = '';
@@ -2230,9 +2610,260 @@ function openLoginModal() {
 }
 
 // ===================== TOAST =====================
-function showToast(msg) {
+function showToast(msg, duration) {
   const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  setTimeout(() => t.classList.remove('show'), duration || 3000);
+}
+
+// ===================== DEMO FETCH INTERCEPTOR =====================
+const _originalFetch = window.fetch;
+window.fetch = function(url, options) {
+  if (isDemoMode && typeof url === 'string' && url.includes('/functions/v1/')) {
+    const fn = url.split('/functions/v1/')[1];
+    showDemoToast(`API call to "${fn}"`);
+    return Promise.resolve(new Response(JSON.stringify({ ok: true, demo: true, message: 'Simulated in demo mode' }), {
+      status: 200, headers: { 'Content-Type': 'application/json' }
+    }));
+  }
+  return _originalFetch.apply(this, arguments);
+};
+
+// ===================== DEMO TOUR =====================
+let demoTourCurrentStep = 0;
+const demoTourSteps = [
+  {
+    title: 'Welcome to Demo Mode!',
+    text: 'This guided tour will walk you through every feature of the admin panel. All actions are simulated — nothing will change your real data. Let\'s explore!',
+    target: null
+  },
+  {
+    title: 'Admin Dashboard',
+    text: 'This is your command centre. The Action Cards show items needing attention — pending requests, sessions without teachers, unreviewed approvals. Click any card to jump straight to that view.',
+    target: '.action-centre'
+  },
+  {
+    title: 'Quick Actions',
+    text: 'One-click access to your most common tasks: add sessions, send reminders, check inbox, export data. Everything you need without navigating through tabs.',
+    target: '.quick-actions'
+  },
+  {
+    title: 'Navigation Tabs',
+    text: 'The main tabs give you quick access to Sessions, Calendar, Drafts, Contacts, and Inbox. Click "More" to find additional views like Feedback, Approvals, Requests, and Attendance.',
+    target: '.nav-bar'
+  },
+  {
+    title: 'Session Cards',
+    text: 'Each card shows a teaching session with its date, topic, teacher, room, and status. The coloured left border indicates status: blue = upcoming, green = completed, orange = TBD, red = cancelled. Click any card to see full details.',
+    target: '.event-card'
+  },
+  {
+    title: 'Create a New Session',
+    text: 'Click the "+ Add Session" button to create a new teaching session. You can set the date, topic, teacher, room, and more. In demo mode, the session won\'t actually be saved.',
+    target: '#addSessionBtn',
+    action: null
+  },
+  {
+    title: 'Search & Filters',
+    text: 'Use the search box to find sessions by topic or teacher name. The filter chips let you quickly show only Upcoming, Completed, TBD, or Cancelled sessions. The month dropdown narrows results by date.',
+    target: '.filters-bar'
+  },
+  {
+    title: 'Export CSV',
+    text: 'Click "Export CSV" to download all session data as a spreadsheet. Useful for reports and record-keeping. In demo mode this still works — try it!',
+    target: null,
+    findButton: 'Export CSV'
+  },
+  {
+    title: 'Bulk Remind',
+    text: 'Send email reminders to all teachers with upcoming sessions in one click. The system composes personalised emails with session details and confirm/decline links.',
+    target: null,
+    findButton: 'Bulk Remind'
+  },
+  {
+    title: 'WhatsApp Messaging',
+    text: 'Send WhatsApp messages to teachers via wa.me links. Click the green "WhatsApp" button to open the bulk messaging panel, or use the WhatsApp button inside any session detail.',
+    target: null,
+    findButton: 'WhatsApp'
+  },
+  {
+    title: 'Calendar View',
+    text: 'Switch to Calendar view to see sessions laid out by month. Click any date to see its sessions. Great for spotting gaps in the schedule!',
+    target: '.nav-tab[data-view="calendar"]',
+    action: () => switchView('calendar')
+  },
+  {
+    title: 'Drafts & Planning',
+    text: 'The Drafts tab shows sessions that aren\'t published yet. Use this to plan ahead — draft sessions are invisible to learners until you publish them.',
+    target: '.nav-tab[data-view="drafts"]',
+    action: () => switchView('drafts')
+  },
+  {
+    title: 'Topic Ideas Bank',
+    text: 'Collect and manage teaching topic suggestions here. Great for planning future sessions based on learner interests and curriculum needs.',
+    target: '.nav-tab[data-view="ideas"]',
+    action: () => switchView('ideas')
+  },
+  {
+    title: 'Session Requests',
+    text: 'Learners and staff can request specific teaching sessions using the public form. Requests appear here for you to review and convert into actual sessions.',
+    target: '.nav-tab[data-view="requests"]',
+    action: () => switchView('requests')
+  },
+  {
+    title: 'Contacts Directory',
+    text: 'Manage your teacher contacts here — add emails, phone numbers, and specialties. These are used for email reminders, WhatsApp messages, and the teacher picker when creating sessions.',
+    target: '.nav-tab[data-view="contacts"]',
+    action: () => switchView('contacts')
+  },
+  {
+    title: 'Feedback Collection',
+    text: 'View feedback submitted by learners after sessions. Each response includes ratings and free-text comments. Use this to track teaching quality and identify areas for improvement.',
+    target: '.nav-tab[data-view="feedback"]',
+    action: () => switchView('feedback')
+  },
+  {
+    title: 'Email Inbox',
+    text: 'Read and reply to emails directly from this panel. Teacher replies to reminder emails appear as threaded conversations. You can also see WhatsApp message threads here.',
+    target: '.nav-tab[data-view="inbox"]',
+    action: () => switchView('inbox')
+  },
+  {
+    title: 'Approvals Queue',
+    text: 'When teachers confirm or decline via email links, their responses show up here. You can quickly approve or reassign sessions from this view.',
+    target: '.nav-tab[data-view="approvals"]',
+    action: () => switchView('approvals')
+  },
+  {
+    title: 'Attendance Chart',
+    text: 'Visual analytics showing attendance trends over time. See which sessions are most popular and track learner engagement across the rotation.',
+    target: '.nav-tab[data-view="attendanceChart"]',
+    action: () => switchView('attendanceChart')
+  },
+  {
+    title: 'Learner View Toggle',
+    text: 'Click "Learner View" to see exactly what learners see — the public-facing version with no admin controls. Useful for checking how things look before publishing.',
+    target: '#viewToggleBtn'
+  },
+  {
+    title: 'Tour Complete!',
+    text: 'You\'ve seen all the main features! Remember: in demo mode, you can click anything and try every feature without affecting real data. Explore at your own pace. Click "Exit Demo" in the orange banner when you\'re done.',
+    target: null,
+    action: () => switchView('list')
+  }
+];
+
+function startDemoTour() {
+  demoTourCurrentStep = 0;
+  document.getElementById('resumeTourBtn').style.display = 'none';
+  showDemoTourStep();
+}
+
+function resumeDemoTour() {
+  // Resume from where user left off
+  document.getElementById('resumeTourBtn').style.display = 'none';
+  showDemoTourStep();
+}
+
+function showDemoTourStep() {
+  const overlay = document.getElementById('demoTourOverlay');
+  const spotlight = document.getElementById('demoTourSpotlight');
+  const card = document.getElementById('demoTourCard');
+  const stepNum = document.getElementById('demoTourStep');
+  const title = document.getElementById('demoTourTitle');
+  const text = document.getElementById('demoTourText');
+  const dotsContainer = document.getElementById('demoTourDots');
+  const nextBtn = document.getElementById('demoTourNext');
+
+  const step = demoTourSteps[demoTourCurrentStep];
+  overlay.style.display = 'block';
+  stepNum.textContent = demoTourCurrentStep + 1;
+  title.textContent = step.title;
+  text.textContent = step.text;
+
+  // Update dots — show groups of 5 around current step for compactness
+  const total = demoTourSteps.length;
+  dotsContainer.innerHTML = `<span style="font-size:11px;color:#768692;">${demoTourCurrentStep + 1} / ${total}</span>`;
+
+  // Last step button text
+  nextBtn.textContent = demoTourCurrentStep === demoTourSteps.length - 1 ? 'Finish' : 'Next →';
+
+  // Find target element
+  let targetEl = null;
+  if (step.target) {
+    targetEl = document.querySelector(step.target);
+  } else if (step.findButton) {
+    document.querySelectorAll('.btn, button').forEach(btn => {
+      if (btn.textContent.trim() === step.findButton || btn.textContent.trim().includes(step.findButton)) {
+        targetEl = btn;
+      }
+    });
+  }
+
+  // Position spotlight and card — use getBoundingClientRect which is viewport-relative
+  if (targetEl) {
+    const rect = targetEl.getBoundingClientRect();
+    const pad = 8;
+    spotlight.style.display = 'block';
+    // Use fixed positioning (overlay is fixed), so use viewport coords directly
+    spotlight.style.left = (rect.left - pad) + 'px';
+    spotlight.style.top = (rect.top - pad) + 'px';
+    spotlight.style.width = (rect.width + pad * 2) + 'px';
+    spotlight.style.height = (rect.height + pad * 2) + 'px';
+
+    // Position card below or above the target
+    const cardWidth = 380;
+    let cardLeft = Math.min(rect.left, window.innerWidth - cardWidth - 20);
+    cardLeft = Math.max(10, cardLeft);
+    let cardTop = rect.bottom + pad + 12;
+    if (rect.bottom + 250 > window.innerHeight) {
+      cardTop = rect.top - 250;
+    }
+    card.style.left = cardLeft + 'px';
+    card.style.top = cardTop + 'px';
+    card.style.transform = 'none';
+  } else {
+    // Center the card, hide spotlight
+    spotlight.style.display = 'none';
+    card.style.left = '50%';
+    card.style.top = '50%';
+    card.style.transform = 'translate(-50%, -50%)';
+  }
+}
+
+function nextDemoTourStep() {
+  const step = demoTourSteps[demoTourCurrentStep];
+  // Execute action if any
+  if (step.action) {
+    try { step.action(); } catch(e) { console.warn('Tour action error:', e); }
+  }
+
+  demoTourCurrentStep++;
+  if (demoTourCurrentStep >= demoTourSteps.length) {
+    endDemoTour(true);
+    return;
+  }
+
+  // Small delay if there's a view switch to let it render
+  const nextStep = demoTourSteps[demoTourCurrentStep];
+  if (nextStep.action || step.action) {
+    setTimeout(showDemoTourStep, 300);
+  } else {
+    showDemoTourStep();
+  }
+}
+
+function endDemoTour(completed) {
+  document.getElementById('demoTourOverlay').style.display = 'none';
+  if (completed) {
+    demoTourCurrentStep = 0;
+    document.getElementById('resumeTourBtn').style.display = 'none';
+    switchView('list');
+    showToast('Tour complete! Explore freely — all changes are simulated.', 4000);
+  } else {
+    // Skipped mid-tour — show resume button
+    document.getElementById('resumeTourBtn').style.display = 'inline-block';
+    showToast('Tour paused. Click "Resume Tour" to continue.', 3000);
+  }
 }
 
 // ===================== KEYBOARD =====================
@@ -2411,7 +3042,7 @@ async function doLearnerLogin() {
     const hashedPin = await hashPassword(pin);
     if (learner.pin_code !== hashedPin) { showToast('Incorrect password'); return; }
     currentLearner = learner;
-    localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
     closeModal('learnerLoginModal');
     showToast('Welcome, ' + learner.name + '!');
@@ -2482,7 +3113,7 @@ async function completeAccountSetup(learnerId) {
 
     const data = await sbGet('learners', `id=eq.${learnerId}&select=*`);
     currentLearner = data[0];
-    localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
 
     // Show success with PIN reminder
@@ -2641,7 +3272,7 @@ async function doLearnerRegister() {
       pin_code: pin, verified: true
     });
     currentLearner = result[0];
-    localStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
 
     // Show PIN
@@ -2662,7 +3293,7 @@ async function doLearnerRegister() {
 
 function doLearnerLogout() {
   currentLearner = null;
-  localStorage.removeItem('sst_learner');
+  sessionStorage.removeItem('sst_learner');
   setLearnerUI(false);
   updateSessionsTabLabel();
   if (currentView === 'dashboard') switchView('list');
@@ -2677,13 +3308,13 @@ function setLearnerUI(loggedIn) {
 }
 
 function checkLearnerSession() {
-  const stored = localStorage.getItem('sst_learner');
+  const stored = sessionStorage.getItem('sst_learner');
   if (stored) {
     try {
       currentLearner = JSON.parse(stored);
       setLearnerUI(true);
       updateSessionsTabLabel();
-    } catch(e) { localStorage.removeItem('sst_learner'); }
+    } catch(e) { sessionStorage.removeItem('sst_learner'); }
   }
 }
 
@@ -3297,6 +3928,202 @@ function filterFeedbackCards() {
   document.querySelectorAll('.feedback-session-group').forEach(g => {
     g.style.display = (!sid || g.dataset.session === sid) ? '' : 'none';
   });
+}
+
+// ===================== ADMIN DASHBOARD =====================
+async function loadAdminDashboard() {
+  const container = document.getElementById('adminDashView');
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading dashboard...</div>';
+
+  try {
+    // Gather counts
+    const now = new Date(); now.setHours(0,0,0,0);
+    const futureEvents = events.filter(e => isFutureEvent(e));
+    const tbdSessions = futureEvents.filter(e => e.status === 'tbd' || (!e.teacher && e.published));
+    const upcomingSessions = futureEvents.filter(e => e.status === 'upcoming' && e.published);
+    const draftSessions = events.filter(e => !e.published && isFutureEvent(e));
+
+    // Requests count
+    let pendingRequests = 0;
+    try {
+      const reqs = await sbGet('session_requests', 'status=eq.pending&select=id');
+      pendingRequests = reqs.length;
+    } catch(e) {}
+
+    // Approvals count
+    let pendingApprovals = 0;
+    try {
+      const approvals = await sbGet('attendance', 'status=eq.pending&select=id');
+      pendingApprovals = approvals.length;
+    } catch(e) {}
+
+    // Feedback count (recent 7 days)
+    let recentFeedback = 0;
+    try {
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      const fb = await sbGet('feedback', `created_at=gte.${weekAgo}&select=id`);
+      recentFeedback = fb.length;
+    } catch(e) {}
+
+    // This week sessions
+    const today = new Date(); today.setHours(0,0,0,0);
+    const endOfWeek = new Date(today);
+    endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
+    const nextWeekEnd = new Date(endOfWeek);
+    nextWeekEnd.setDate(nextWeekEnd.getDate() + 7);
+
+    const thisWeekSessions = futureEvents.filter(e => {
+      const d = eventToDate(e);
+      return d && d >= today && d <= nextWeekEnd && e.published;
+    }).sort((a, b) => (eventToDate(a) || 0) - (eventToDate(b) || 0));
+
+    // Build HTML
+    let html = '';
+
+    // ---- Action Centre ----
+    html += '<div class="dash-section-header"><h3 style="font-size:16px;color:var(--nhs-dark-blue);border:none;padding:0;">Action Centre</h3></div>';
+    html += '<div class="action-centre">';
+    html += `<div class="action-card ${tbdSessions.length > 0 ? 'ac-warning' : 'ac-good'}" onclick="switchView('list');setFilter('tbd')">
+      <div class="ac-count" style="color:${tbdSessions.length > 0 ? 'var(--nhs-orange)' : 'var(--nhs-green)'};">${tbdSessions.length}</div>
+      <div class="ac-label">Needs Teacher</div></div>`;
+    html += `<div class="action-card ${pendingRequests > 0 ? 'ac-urgent' : 'ac-good'}" onclick="switchViewFromDropdown('requests')">
+      <div class="ac-count" style="color:${pendingRequests > 0 ? 'var(--nhs-red)' : 'var(--nhs-green)'};">${pendingRequests}</div>
+      <div class="ac-label">Pending Requests</div></div>`;
+    html += `<div class="action-card ${pendingApprovals > 0 ? 'ac-info' : 'ac-good'}" onclick="switchViewFromDropdown('approvals')">
+      <div class="ac-count" style="color:${pendingApprovals > 0 ? 'var(--nhs-blue)' : 'var(--nhs-green)'};">${pendingApprovals}</div>
+      <div class="ac-label">Pending Approvals</div></div>`;
+    html += `<div class="action-card ac-info" onclick="switchViewFromDropdown('feedback')">
+      <div class="ac-count" style="color:var(--nhs-blue);">${recentFeedback}</div>
+      <div class="ac-label">Feedback (7 days)</div></div>`;
+    html += `<div class="action-card ${draftSessions.length > 0 ? 'ac-warning' : 'ac-good'}" onclick="switchView('drafts')">
+      <div class="ac-count" style="color:${draftSessions.length > 0 ? 'var(--nhs-orange)' : 'var(--nhs-green)'};">${draftSessions.length}</div>
+      <div class="ac-label">Drafts</div></div>`;
+    html += `<div class="action-card ac-good" onclick="switchView('list')">
+      <div class="ac-count" style="color:var(--nhs-green);">${upcomingSessions.length}</div>
+      <div class="ac-label">Upcoming</div></div>`;
+    html += '</div>';
+
+    // ---- Quick Actions ----
+    html += '<div class="dash-section-header"><h3 style="font-size:16px;color:var(--nhs-dark-blue);border:none;padding:0;">Quick Actions</h3></div>';
+    html += '<div class="quick-actions">';
+    const actions = [
+      { icon: '➕', text: 'Add Session', action: "document.getElementById('addSessionBtn')?.click()" },
+      { icon: '📧', text: 'Bulk Remind', action: "openBulkEmailModal()" },
+      { icon: '💬', text: 'WhatsApp', action: "openBulkWhatsAppModal()" },
+      { icon: '📋', text: 'Export CSV', action: "exportCSV()" },
+      { icon: '📥', text: 'Check Inbox', action: "switchView('inbox')" },
+      { icon: '👥', text: 'Contacts', action: "switchView('contacts')" },
+      { icon: '📊', text: 'Attendance', action: "switchViewFromDropdown('attendanceChart')" },
+      { icon: '💡', text: 'Topic Ideas', action: "switchViewFromDropdown('ideas')" },
+    ];
+    actions.forEach(a => {
+      html += `<div class="qa-tile" onclick="${a.action}"><div class="qa-icon">${a.icon}</div><div class="qa-text">${a.text}</div></div>`;
+    });
+    html += '</div>';
+
+    // ---- This Week / Next Week ----
+    html += '<div class="week-overview">';
+    html += '<div class="dash-section-header"><h3>Coming Up</h3></div>';
+    if (thisWeekSessions.length === 0) {
+      html += '<div style="text-align:center;padding:20px;color:var(--nhs-grey);font-size:13px;">No sessions scheduled for the next two weeks.</div>';
+    } else {
+      thisWeekSessions.forEach(s => {
+        const d = eventToDate(s);
+        const dayName = d ? d.toLocaleDateString('en-GB', { weekday: 'short' }) : '';
+        const dateStr = d ? d.getDate() + '/' + (d.getMonth()+1) : '';
+        const isToday = d && d.toDateString() === new Date().toDateString();
+        const statusColor = s.status === 'upcoming' ? 'var(--nhs-aqua)' : s.status === 'tbd' ? 'var(--nhs-orange)' : s.status === 'completed' ? 'var(--nhs-green)' : 'var(--nhs-grey)';
+        html += `<div class="week-session" onclick="showDetail(${s.id})">
+          <div class="ws-date" style="${isToday ? 'background:var(--nhs-blue);color:white;border-radius:8px;padding:4px 8px;' : ''}">
+            <div class="ws-day">${dayName}</div>${dateStr}
+          </div>
+          <div class="ws-info">
+            <div class="ws-topic">${esc(s.topic || 'TBD')}</div>
+            <div class="ws-meta">${esc(s.teacher || 'No teacher')} · ${esc(s.time || '')} · ${esc(s.room || '')}</div>
+          </div>
+          <span class="card-status" style="background:${statusColor}20;color:${statusColor};padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;text-transform:uppercase;">${esc(s.status || 'tbd')}</span>
+        </div>`;
+      });
+    }
+    html += '</div>';
+
+    // ---- Recent Activity Feed ----
+    html += '<div class="activity-feed">';
+    html += '<div class="dash-section-header"><h3>Recent Activity</h3></div>';
+
+    // Build feed from multiple sources
+    let feedItems = [];
+
+    // Recent session changes (last edited)
+    events.filter(e => e.lastEditedAt).sort((a, b) => new Date(b.lastEditedAt) - new Date(a.lastEditedAt)).slice(0, 5).forEach(e => {
+      feedItems.push({
+        icon: '✏️', bg: '#e0f5fa',
+        text: `<strong>${esc(e.topic || 'Session')}</strong> updated${e.lastEditedBy ? ' by ' + esc(e.lastEditedBy) : ''}`,
+        time: e.lastEditedAt ? timeAgo(new Date(e.lastEditedAt)) : '',
+        ts: new Date(e.lastEditedAt || 0)
+      });
+    });
+
+    // Pending requests
+    try {
+      const reqs = await sbGet('session_requests', 'order=created_at.desc&limit=3&select=*');
+      reqs.forEach(r => {
+        feedItems.push({
+          icon: '📩', bg: '#fde8e8',
+          text: `New request: <strong>${esc(r.topic || r.suggested_topic || 'Topic')}</strong> from ${esc(r.name || 'Anonymous')}`,
+          time: r.created_at ? timeAgo(new Date(r.created_at)) : '',
+          ts: new Date(r.created_at || 0)
+        });
+      });
+    } catch(e) {}
+
+    // Recent feedback
+    try {
+      const fb = await sbGet('feedback', 'order=created_at.desc&limit=3&select=*');
+      fb.forEach(f => {
+        feedItems.push({
+          icon: '⭐', bg: '#fff4e0',
+          text: `Feedback received${f.rating ? ' ('+f.rating+'/5)' : ''} for session #${f.session_id}`,
+          time: f.created_at ? timeAgo(new Date(f.created_at)) : '',
+          ts: new Date(f.created_at || 0)
+        });
+      });
+    } catch(e) {}
+
+    // Sort by time, show top 10
+    feedItems.sort((a, b) => b.ts - a.ts);
+    feedItems = feedItems.slice(0, 10);
+
+    if (feedItems.length === 0) {
+      html += '<div style="text-align:center;padding:20px;color:var(--nhs-grey);font-size:13px;">No recent activity.</div>';
+    } else {
+      feedItems.forEach(item => {
+        html += `<div class="feed-item">
+          <div class="feed-icon" style="background:${item.bg};">${item.icon}</div>
+          <div class="feed-text">${item.text}</div>
+          <div class="feed-time">${item.time}</div>
+        </div>`;
+      });
+    }
+    html += '</div>';
+
+    container.innerHTML = html;
+  } catch(e) {
+    console.error('Admin dashboard error:', e);
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">Failed to load dashboard.</div>';
+  }
+}
+
+function timeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  if (seconds < 60) return 'just now';
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return days + 'd ago';
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 // ===================== LEARNER DASHBOARD =====================
@@ -4170,6 +4997,12 @@ async function loadInbox() {
     return;
   }
 
+  // Fetch WhatsApp log for sidebar
+  let waLog = [];
+  try {
+    waLog = await sbGet('whatsapp_log', 'order=created_at.desc&limit=50&select=*');
+  } catch(e) { console.warn('WhatsApp log fetch failed:', e); }
+
   // Gmail threads available — render them
   let sidebarHtml = '<div class="inbox-sidebar-header">Gmail Inbox (' + gmailThreads.length + ' threads)</div>';
   if (gmailThreads.length === 0) {
@@ -4188,6 +5021,27 @@ async function loadInbox() {
     });
   }
 
+  // Add WhatsApp log to sidebar
+  if (waLog.length > 0) {
+    sidebarHtml += '<div class="inbox-sidebar-header" style="background:linear-gradient(135deg,#25D366,#128C7E);color:white;margin-top:4px;">WhatsApp (' + waLog.length + ')</div>';
+    const waGroups = {};
+    waLog.forEach(w => {
+      const key = w.to_phone || 'unknown';
+      if (!waGroups[key]) waGroups[key] = { phone: w.to_phone, name: w.to_name, messages: [] };
+      waGroups[key].messages.push(w);
+    });
+    Object.values(waGroups).forEach((g, i) => {
+      const last = g.messages[0];
+      const hasInbound = g.messages.some(m => m.direction === 'inbound');
+      const timeStr = last?.created_at ? new Date(last.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+      const statusIcon = last?.status === 'read' ? '✓✓' : last?.status === 'delivered' ? '✓✓' : last?.status === 'sent' ? '✓' : last?.status === 'received' ? '↙' : '';
+      sidebarHtml += `<div class="inbox-thread-item" onclick="selectWhatsAppThread('${g.phone}')" data-wa-phone="${g.phone}">
+        <div class="thread-subject" style="display:flex;align-items:center;gap:4px;"><span style="color:#25D366;">●</span> ${esc(g.name || g.phone)}</div>
+        <div class="thread-meta">${statusIcon} ${g.messages.length} msg${g.messages.length !== 1 ? 's' : ''} &middot; ${timeStr}${hasInbound ? ' &middot; replied' : ''}</div>
+      </div>`;
+    });
+  }
+
   container.innerHTML = `
     <div class="inbox-container">
       <div class="inbox-sidebar">${sidebarHtml}</div>
@@ -4195,6 +5049,7 @@ async function loadInbox() {
     </div>`;
 
   window._gmailThreads = gmailThreads;
+  window._waLog = waLog;
   window._inboxMode = 'gmail';
 
   if (gmailThreads.length > 0) selectGmailThread(gmailThreads[0].id, 0);
@@ -4260,6 +5115,76 @@ async function selectGmailThread(threadId, index) {
   } catch(e) {
     console.error('Load thread error:', e);
     mainEl.innerHTML = '<div class="inbox-empty">Failed to load thread. Check your connection.</div>';
+  }
+}
+
+function selectWhatsAppThread(phone) {
+  // Deselect all threads, select this one
+  document.querySelectorAll('.inbox-thread-item').forEach(el => el.classList.remove('active'));
+  const el = document.querySelector(`[data-wa-phone="${phone}"]`);
+  if (el) el.classList.add('active');
+
+  const mainEl = document.getElementById('inboxMain');
+  const waLog = window._waLog || [];
+  const messages = waLog.filter(w => w.to_phone === phone).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const contactName = messages[0]?.to_name || phone;
+
+  let html = `<div style="padding:16px 20px;border-bottom:1px solid var(--nhs-pale-grey);display:flex;align-items:center;gap:10px;">
+    <div style="width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+    <div><strong>${esc(contactName)}</strong><div style="font-size:11px;color:var(--nhs-grey);">${esc(phone)} &middot; WhatsApp</div></div>
+  </div>`;
+
+  html += '<div style="padding:16px 20px;background:#ECE5DD;min-height:300px;max-height:500px;overflow-y:auto;">';
+  messages.forEach(m => {
+    const isOutbound = m.direction === 'outbound';
+    const time = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+    const date = m.created_at ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+    const statusIcon = m.status === 'read' ? '✓✓' : m.status === 'delivered' ? '✓✓' : m.status === 'sent' ? '✓' : '';
+    const statusColor = m.status === 'read' ? '#53bdeb' : '#8696a0';
+
+    html += `<div style="display:flex;justify-content:${isOutbound ? 'flex-end' : 'flex-start'};margin-bottom:6px;">
+      <div style="max-width:75%;padding:8px 12px;border-radius:8px;background:${isOutbound ? '#dcf8c6' : 'white'};font-size:13px;white-space:pre-wrap;box-shadow:0 1px 1px rgba(0,0,0,.1);position:relative;">
+        ${esc(m.message_body || '')}
+        <div style="font-size:10px;color:#8696a0;text-align:right;margin-top:4px;">${date} ${time} ${isOutbound ? '<span style="color:' + statusColor + ';">' + statusIcon + '</span>' : ''}</div>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+
+  // Reply box
+  html += `<div style="padding:12px 20px;border-top:1px solid var(--nhs-pale-grey);display:flex;gap:8px;align-items:center;">
+    <input type="text" id="waReplyText" placeholder="Type a message..." style="flex:1;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:20px;font-size:13px;" onkeydown="if(event.key==='Enter')sendWhatsAppReply('${phone}','${esc(contactName)}')">
+    <button class="btn" style="background:#25D366;color:white;border:none;border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;" onclick="sendWhatsAppReply('${phone}','${esc(contactName)}')">➤</button>
+  </div>`;
+
+  mainEl.innerHTML = html;
+}
+
+async function sendWhatsAppReply(phone, name) {
+  const input = document.getElementById('waReplyText');
+  const text = input?.value?.trim();
+  if (!text) { showToast('Please type a message'); return; }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({
+        action: 'send_text', to: phone, text,
+        to_name: name, sent_by: currentUser?.name || 'admin'
+      })
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast('WhatsApp message sent!');
+      input.value = '';
+      // Refresh inbox to show new message
+      loadInbox();
+    } else {
+      showToast('Send failed: ' + (result.error || 'Unknown error'));
+    }
+  } catch(e) {
+    showToast('WhatsApp send failed');
   }
 }
 
@@ -4402,6 +5327,17 @@ async function sendInboxReply(sessionId, toEmail, topic) {
 
 // ===================== INIT =====================
 async function init() {
+  // Dynamically set nav-bar sticky position based on header height
+  function updateNavBarPosition() {
+    const header = document.querySelector('.header');
+    const navBar = document.querySelector('.nav-bar');
+    if (header && navBar) {
+      navBar.style.top = header.offsetHeight + 'px';
+    }
+  }
+  updateNavBarPosition();
+  window.addEventListener('resize', updateNavBarPosition);
+
   checkSession();
   checkLearnerSession();
   await Promise.all([loadEvents(), fetchBankHolidays()]);
@@ -4424,7 +5360,61 @@ async function init() {
       openLearnerLoginModal();
     }
   }
-  switchView('list');
+  switchView(isAdmin ? 'adminDash' : 'list');
+  // Register push notifications for admins
+  if (isAdmin) {
+    registerPushNotifications();
+    setTimeout(checkTodayReminder, 3000);
+  }
+}
+
+// ===================== PWA NOTIFICATIONS =====================
+async function registerPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+  }
+  if (Notification.permission !== 'granted') return;
+  // Check for new items periodically (every 5 min)
+  setInterval(checkForNotifications, 5 * 60 * 1000);
+}
+
+async function checkForNotifications() {
+  if (!isAdmin || isDemoMode) return;
+  try {
+    const lastCheck = sessionStorage.getItem('sst_last_notify') || new Date(Date.now() - 300000).toISOString();
+    // Check new requests
+    const newReqs = await sbGet('session_requests', `created_at=gte.${lastCheck}&status=eq.pending&select=id,topic,suggested_topic,name`);
+    newReqs.forEach(r => {
+      new Notification('New Session Request', { body: `${r.name || 'Someone'} requested: ${r.topic || r.suggested_topic || 'a session'}`, icon: 'logo_transparent.png', tag: 'req-' + r.id });
+    });
+    // Check new feedback
+    const newFb = await sbGet('feedback', `created_at=gte.${lastCheck}&select=id,session_id,rating`);
+    newFb.forEach(f => {
+      new Notification('New Feedback', { body: `Feedback received for session #${f.session_id}${f.rating ? ' (' + f.rating + '/5)' : ''}`, icon: 'logo_transparent.png', tag: 'fb-' + f.id });
+    });
+    sessionStorage.setItem('sst_last_notify', new Date().toISOString());
+  } catch(e) { console.warn('Notification check failed:', e); }
+}
+
+// Check for today's sessions on load
+async function checkTodayReminder() {
+  if (!isAdmin || isDemoMode) return;
+  if (Notification.permission !== 'granted') return;
+  const shown = sessionStorage.getItem('sst_today_reminded');
+  if (shown === new Date().toDateString()) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todaySessions = events.filter(e => {
+    const d = eventToDate(e); return d && d.toDateString() === today.toDateString() && e.published;
+  });
+  if (todaySessions.length > 0) {
+    const tbd = todaySessions.filter(e => e.status === 'tbd' || !e.teacher);
+    let body = `${todaySessions.length} session${todaySessions.length > 1 ? 's' : ''} today`;
+    if (tbd.length > 0) body += ` (${tbd.length} still need a teacher!)`;
+    new Notification('Today\'s Sessions', { body, icon: 'logo_transparent.png', tag: 'today-reminder' });
+  }
+  sessionStorage.setItem('sst_today_reminded', today.toDateString());
 }
 
 init();
