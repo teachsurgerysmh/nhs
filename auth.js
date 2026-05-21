@@ -313,7 +313,7 @@ function showSetupPinForm(learner, attemptedPin) {
     <label>Confirm password</label>
     <input type="password" id="setupPin2" placeholder="Confirm password">
     <label style="margin-top:12px;">Grade</label>
-    <select id="setupGrade"><option value="F1">F1</option><option value="F2">F2</option><option value="SHO">SHO</option><option value="Registrar">Registrar</option><option value="Other">Other</option></select>
+    <select id="setupGrade"><option value="FY1">FY1</option><option value="FY2">FY2</option><option value="CT1">CT1</option><option value="CT2">CT2</option><option value="ST3">ST3</option><option value="ST4">ST4</option><option value="ST5">ST5</option><option value="ST6">ST6</option><option value="ST7">ST7</option><option value="ST8">ST8</option><option value="Registrar">Registrar</option><option value="Consultant">Consultant</option><option value="Other">Other</option></select>
     <label>Placement / Firm</label>
     <select id="setupPlacement"><option value="">-- Select --</option><option value="UGI">UGI</option><option value="LGI / Colorectal">LGI / Colorectal</option><option value="Transplant">Transplant</option><option value="Vascular">Vascular</option><option value="Other">Other</option></select>
     <label>Rotation Block</label>

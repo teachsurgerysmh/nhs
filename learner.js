@@ -368,7 +368,7 @@ async function loadFeedbackView(filterTeacher) {
     // Export button for teachers
     if (filterTeacher) {
       html += `<div style="margin-bottom:16px;display:flex;gap:8px;">
-        <button class="btn btn-outline" onclick="exportTeacherFeedbackCSV('${filterTeacher}')">Export Feedback CSV</button>
+        <button class="btn" style="background:#003087;color:white;border:none;" onclick="exportTeacherFeedbackCSV('${filterTeacher}')">Export Feedback CSV</button>
         <button class="btn" style="background:#ed8b00;color:white;border:none;" onclick="generateTeacherCertificate()">Generate Teaching Certificate</button>
       </div>`;
     }
@@ -1070,11 +1070,11 @@ const CERT_STYLES = `
   body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background: white; color: #231f20; }
   .cert-container { max-width: 900px; margin: 0 auto; border: 3px solid #005eb8; padding: 50px; position: relative; }
   .cert-container::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 1px solid #41b6e6; pointer-events: none; }
-  .cert-header { text-align: center; margin-bottom: 30px; }
-  .cert-logo { height: 60px; margin-bottom: 12px; }
-  .cert-header h1 { color: #005eb8; font-size: 28px; margin: 0 0 8px; letter-spacing: 1px; }
-  .cert-header h2 { color: #003087; font-size: 16px; margin: 0; font-weight: 400; }
-  .cert-nhs { color: #005eb8; font-size: 13px; margin-top: 8px; }
+  .cert-header { text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #003087, #005eb8); padding: 28px 20px 22px; border-radius: 8px; margin: -50px -50px 30px -50px; border-bottom: 3px solid #41b6e6; }
+  .cert-logo { height: 70px; margin-bottom: 10px; }
+  .cert-header h1 { color: white; font-size: 28px; margin: 0 0 8px; letter-spacing: 1px; }
+  .cert-header h2 { color: rgba(255,255,255,0.9); font-size: 16px; margin: 0; font-weight: 400; }
+  .cert-nhs { color: rgba(255,255,255,0.8); font-size: 13px; margin-top: 8px; }
   .cert-body { margin: 24px 0; }
   .cert-name { text-align: center; font-size: 24px; font-weight: 700; color: #003087; margin: 16px 0; padding: 10px; border-bottom: 2px solid #41b6e6; }
   .cert-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; margin: 16px 0; }
@@ -1092,7 +1092,7 @@ const CERT_STYLES = `
   .cert-date { text-align: center; font-size: 12px; color: #768692; margin-top: 20px; }
   .print-btn { display: block; margin: 20px auto; padding: 12px 30px; background: #005eb8; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
   .print-btn:hover { background: #003087; }`;
-const CERT_LOGO_URL = 'logo_transparent.png';
+const CERT_LOGO_URL = LOGO_URL;
 
 async function generateCertificate() {
   if (!currentLearner) return;
@@ -1262,8 +1262,8 @@ async function loadTeacherDashboard() {
     // Action buttons
     html += `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
       <button class="btn" style="background:#ed8b00;color:white;border:none;" onclick="generateTeacherCertificate()">Generate Teaching Certificate</button>
-      <button class="btn btn-outline" onclick="loadFeedbackView('${teacherEmail}')">View My Feedback</button>
-      <button class="btn btn-outline" onclick="exportTeacherFeedbackCSV('${teacherEmail}')">Export Feedback CSV</button>
+      <button class="btn" style="background:#005eb8;color:white;border:none;" onclick="loadFeedbackView('${teacherEmail}')">View My Feedback</button>
+      <button class="btn" style="background:#003087;color:white;border:none;" onclick="exportTeacherFeedbackCSV('${teacherEmail}')">Export Feedback CSV</button>
     </div>`;
 
     // Feedback summary section
