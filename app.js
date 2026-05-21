@@ -273,6 +273,7 @@ async function init() {
 
   checkSession();
   checkLearnerSession();
+  checkTeacherSession();
   await Promise.all([loadEvents(), fetchBankHolidays()]);
   renderAll();
   updateSessionsTabLabel();
@@ -300,11 +301,15 @@ async function init() {
       openLearnerLoginModal();
     }
   }
-  switchView(isAdmin ? 'adminDash' : 'list');
+  switchView(isAdmin ? 'adminDash' : (currentTeacher ? 'teacherDash' : 'list'));
   // Register push notifications for admins
   if (isAdmin) {
     registerPushNotifications();
     setTimeout(checkTodayReminder, 3000);
+  }
+  // Feedback nudge for learners
+  if (currentLearner) {
+    setTimeout(checkFeedbackNudge, 2000);
   }
 }
 

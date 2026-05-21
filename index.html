@@ -21,6 +21,7 @@
       <img src="logo_transparent.png" alt="Southmead Surgical Teaching — North Bristol NHS Trust" style="height:72px;width:auto;" class="header-logo-img">
       <span class="admin-badge" id="adminBadge">Admin</span>
       <span class="learner-badge" id="learnerBadge">Learner</span>
+      <span class="teacher-badge" id="teacherBadge" style="display:none;">Teacher</span>
     </div>
     <div class="header-actions">
       <button class="btn btn-outline admin-only" id="viewToggleBtn" onclick="toggleAdminLearnerView()" style="border-color:var(--nhs-green);color:white;">Learner View</button>
@@ -28,9 +29,11 @@
       <button class="btn btn-outline admin-only" onclick="openBulkEmailModal()">Bulk Remind</button>
       <button class="btn btn-outline admin-only" onclick="openBulkWhatsAppModal()" style="border-color:#25D366;color:#25D366;">WhatsApp</button>
       <button class="btn btn-outline" id="learnerLoginBtn" onclick="openLearnerLoginModal()">Learner Login</button>
+      <button class="btn btn-outline" id="teacherLoginBtn" onclick="openTeacherLoginModal()" style="border-color:#ed8b00;color:#ed8b00;">Teacher Login</button>
       <button class="btn btn-white" id="loginBtn" onclick="openLoginModal()">Admin Login</button>
       <button class="btn btn-outline" id="logoutBtn" style="display:none;" onclick="doLogout()">Logout</button>
       <button class="btn btn-outline" id="learnerLogoutBtn" style="display:none;" onclick="doLearnerLogout()">Learner Logout</button>
+      <button class="btn btn-outline" id="teacherLogoutBtn" style="display:none;border-color:#ed8b00;color:#ed8b00;" onclick="doTeacherLogout()">Teacher Logout</button>
     </div>
   </div>
 </header>
@@ -57,6 +60,7 @@
       </div>
     </div>
     <div class="nav-tab" data-view="dashboard" id="dashboardTab" style="display:none;" onclick="switchView('dashboard')">My Dashboard</div>
+    <div class="nav-tab" data-view="teacherDash" id="teacherDashTab" style="display:none;" onclick="switchView('teacherDash')">Teacher Dashboard</div>
   </div>
 </nav>
 
@@ -105,6 +109,7 @@
   <div id="adminDashView" style="display:none;" class="admin-dashboard"></div>
   <div id="dashboardView" style="display:none;"></div>
   <div id="inboxView" style="display:none;"></div>
+  <div id="teacherDashView" style="display:none;"></div>
   <div id="actionLandingView" style="display:none;"></div>
 </div>
 
@@ -417,36 +422,39 @@
 
 <!-- Feedback Modal -->
 <div class="modal-overlay" id="feedbackModal" role="dialog" aria-modal="true" aria-label="Session Feedback">
-  <div class="modal" style="max-width:560px;">
-    <div class="modal-header"><h3>Session Feedback</h3><button class="modal-close" onclick="closeModal('feedbackModal')">&times;</button></div>
-    <div class="modal-body" id="feedbackModalBody">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header" style="background:linear-gradient(135deg,var(--nhs-blue),var(--nhs-dark-blue));color:white;border-radius:12px 12px 0 0;padding:18px 24px;">
+      <h3 style="margin:0;">Session Feedback</h3><button class="modal-close" onclick="closeModal('feedbackModal')" style="color:white;">&times;</button>
+    </div>
+    <div class="modal-body" id="feedbackModalBody" style="max-height:70vh;overflow-y:auto;">
       <div id="feedbackSessionInfo" style="background:var(--nhs-bg);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;"></div>
-      <label>Content Quality</label>
-      <div class="star-rating" id="starsContent" data-field="content"></div>
-      <label>Teaching Quality</label>
-      <div class="star-rating" id="starsTeaching" data-field="teaching"></div>
-      <label>Relevance to Training</label>
-      <div class="star-rating" id="starsRelevance" data-field="relevance"></div>
-      <label>Pace</label>
-      <div class="pace-radio">
-        <input type="radio" name="feedbackPace" id="paceSlow" value="too_slow"><label for="paceSlow">Too slow</label>
-        <input type="radio" name="feedbackPace" id="paceRight" value="just_right" checked><label for="paceRight">Just right</label>
-        <input type="radio" name="feedbackPace" id="paceFast" value="too_fast"><label for="paceFast">Too fast</label>
-      </div>
-      <label>Overall Rating</label>
-      <div class="star-rating" id="starsOverall" data-field="overall"></div>
-      <label>One thing you learned today</label>
-      <textarea id="feedbackLearned" rows="2" placeholder="What was your key takeaway?"></textarea>
-      <label>Suggestions for future topics</label>
-      <textarea id="feedbackSuggestions" rows="2" placeholder="Any topics you'd like covered?"></textarea>
-      <label>Additional comments</label>
-      <textarea id="feedbackComments" rows="2" placeholder="Any other feedback..."></textarea>
+      <p style="font-size:12px;color:var(--nhs-grey);margin:0 0 16px;">Please rate each area from 1 (poor) to 10 (excellent). Your feedback helps improve our teaching programme.</p>
+
+      <label>The content of the session was useful and interesting</label>
+      <div class="scale-rating" data-field="content_useful"><div class="scale-buttons" id="scaleContentUseful"></div></div>
+
+      <label>The session was structured and well organized</label>
+      <div class="scale-rating" data-field="structured"><div class="scale-buttons" id="scaleStructured"></div></div>
+
+      <label>What did you think of the session overall?</label>
+      <div class="scale-rating" data-field="overall"><div class="scale-buttons" id="scaleOverall"></div></div>
+
+      <label>What did you think of the presentation?</label>
+      <div class="scale-rating" data-field="presentation"><div class="scale-buttons" id="scalePresentation"></div></div>
+
+      <label>What did you think of the delivery of the presentation?</label>
+      <div class="scale-rating" data-field="delivery"><div class="scale-buttons" id="scaleDelivery"></div></div>
+
+      <label>Do you think you can apply learnt material in the workplace?</label>
+      <div class="scale-rating" data-field="applicable"><div class="scale-buttons" id="scaleApplicable"></div></div>
+
+      <label>What aspects of the teaching/training were particularly good?</label>
+      <textarea id="feedbackGoodAspects" rows="2" placeholder="What worked well..."></textarea>
+
+      <label>What aspects of the teaching/training could be improved?</label>
+      <textarea id="feedbackImproveAspects" rows="2" placeholder="Suggestions for improvement..."></textarea>
+
       <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
-        <span style="font-size:13px;font-weight:600;">Would you recommend this session?</span>
-        <label class="toggle-switch"><input type="checkbox" id="feedbackRecommend" checked><span class="toggle-slider"></span></label>
-        <span style="font-size:12px;color:var(--nhs-grey);">Yes</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
         <span style="font-size:13px;font-weight:600;">Submit anonymously</span>
         <label class="toggle-switch"><input type="checkbox" id="feedbackAnonymous"><span class="toggle-slider"></span></label>
         <span style="font-size:12px;color:var(--nhs-grey);">Your name won't be shown to the presenter</span>
@@ -576,6 +584,51 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- Teacher Login Modal -->
+<div class="modal-overlay" id="teacherLoginModal" role="dialog" aria-modal="true" aria-label="Teacher Login">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header" style="background:linear-gradient(135deg,#ed8b00,#da6900);color:white;border-radius:12px 12px 0 0;padding:18px 24px;">
+      <h3 style="margin:0;" id="teacherModalTitle">Teacher Login</h3>
+      <button class="modal-close" onclick="closeModal('teacherLoginModal')" style="color:white;">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="teacherLoginForm">
+        <label>Email</label>
+        <input type="email" id="teacherEmail" placeholder="name@nhs.net">
+        <label>Password</label>
+        <input type="password" id="teacherPin" placeholder="Enter password">
+        <div style="margin-top:14px;text-align:center;">
+          <button class="btn" style="width:100%;background:#ed8b00;color:white;border:none;" onclick="doTeacherLogin()">Login</button>
+        </div>
+        <div style="margin-top:8px;text-align:center;font-size:13px;color:var(--nhs-grey);">
+          First time? <a href="#" onclick="showTeacherSetup();return false;">Set up your account</a>
+        </div>
+      </div>
+      <div id="teacherSetupForm" style="display:none;">
+        <p style="font-size:13px;color:var(--nhs-grey);margin:0 0 12px;">Enter your email to find your account. You'll set a password to access your dashboard.</p>
+        <label>Email</label>
+        <input type="email" id="teacherSetupEmail" placeholder="name@nhs.net">
+        <label>New Password</label>
+        <input type="password" id="teacherSetupPin" placeholder="Choose a password">
+        <label>Confirm Password</label>
+        <input type="password" id="teacherSetupPinConfirm" placeholder="Confirm password">
+        <div style="margin-top:14px;text-align:center;">
+          <button class="btn" style="width:100%;background:#ed8b00;color:white;border:none;" onclick="doTeacherSetup()">Set Up Account</button>
+        </div>
+        <div style="margin-top:8px;text-align:center;font-size:13px;color:var(--nhs-grey);">
+          Already set up? <a href="#" onclick="showTeacherLoginForm();return false;">Login here</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Nudge Banner -->
+<div id="feedbackNudgeBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9998;background:linear-gradient(135deg,var(--nhs-green),#007a2e);color:white;padding:10px 20px;text-align:center;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer;" onclick="openNudgedFeedback()">
+  <span id="feedbackNudgeText"></span>
+  <button onclick="event.stopPropagation();document.getElementById('feedbackNudgeBanner').style.display='none';" style="margin-left:12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:white;padding:3px 12px;border-radius:4px;cursor:pointer;font-size:12px;">Dismiss</button>
 </div>
 
 <div class="toast" id="toast"></div>
