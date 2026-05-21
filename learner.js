@@ -114,11 +114,26 @@ async function autoSendFeedbackRequests(sessionId, learnerIds) {
   const ev = events.find(e => e.id === sessionId);
   if (!ev) return;
   try {
+    // Build set of emails already sent today for this session (per-learner dedup)
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    let alreadySentEmails = new Set();
+    try {
+      const existingSends = await sbGet('feedback_sends', `session_id=eq.${sessionId}&sent_at=gte.${todayStart.toISOString()}&select=recipients`);
+      existingSends.forEach(s => (s.recipients || []).forEach(e => alreadySentEmails.add(e.toLowerCase())));
+    } catch(e) { /* continue anyway */ }
+
     const learners = await sbGet('learners', 'select=id,name,email');
     const existingFeedback = await sbGet('feedback', `session_id=eq.${sessionId}&select=learner_id`);
     const alreadySubmitted = new Set(existingFeedback.map(f => f.learner_id));
-    const recipients = learners.filter(l => learnerIds.includes(l.id) && l.email && !alreadySubmitted.has(l.id));
-    if (!recipients.length) return;
+    const recipients = learners.filter(l =>
+      learnerIds.includes(l.id) && l.email &&
+      !alreadySubmitted.has(l.id) &&
+      !alreadySentEmails.has(l.email.toLowerCase())
+    );
+    if (!recipients.length) {
+      if (alreadySentEmails.size > 0) showToast('All attendees already received feedback requests today');
+      return;
+    }
     const fbUrl = SITE_URL + '?feedback=' + sessionId;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(fbUrl)}`;
     const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
@@ -153,7 +168,10 @@ async function autoSendFeedbackRequests(sessionId, learnerIds) {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ to: emails, subject: `Feedback Request: ${ev.topic || 'Teaching Session'} - ${ev.day} ${ev.date} ${ev.month}`, html })
     });
-    showToast(`Feedback requests sent to ${emails.length} attendee${emails.length!==1?'s':''}`);
+    // Log the send with per-learner recipients
+    try { await sbInsert('feedback_sends', { session_id: sessionId, method: 'auto', sent_by: currentUser?.username || 'system', recipient_count: emails.length, recipients: emails.map(e => e.toLowerCase()) }); } catch(le) { console.warn('Log send failed:', le); }
+    const skipped = alreadySentEmails.size;
+    showToast(`Feedback sent to ${emails.length} attendee${emails.length!==1?'s':''}${skipped ? ` (${skipped} already sent today)` : ''}`);
   } catch(e) { console.warn('Auto feedback send failed:', e); }
 }
 
@@ -369,7 +387,7 @@ async function loadFeedbackView(filterTeacher) {
     if (filterTeacher) {
       html += `<div style="margin-bottom:16px;display:flex;gap:8px;">
         <button class="btn" style="background:#003087;color:white;border:none;" onclick="exportTeacherFeedbackCSV('${filterTeacher}')">Export Feedback CSV</button>
-        <button class="btn" style="background:#ed8b00;color:white;border:none;" onclick="generateTeacherCertificate()">Generate Teaching Certificate</button>
+        <button class="btn" style="background:#ed8b00;color:white;border:none;" onclick="generateTeacherCertificate()">Certificate (All Sessions)</button>
       </div>`;
     }
 
@@ -1066,31 +1084,31 @@ function exportAttendanceCSV() {
 
 // ===================== CERTIFICATE GENERATION =====================
 const CERT_STYLES = `
-  @media print { body { margin: 0; } .no-print { display: none; } @page { size: A4 landscape; margin: 15mm; } }
-  body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background: white; color: #231f20; }
-  .cert-container { max-width: 900px; margin: 0 auto; border: 3px solid #005eb8; padding: 50px; position: relative; }
-  .cert-container::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 1px solid #41b6e6; pointer-events: none; }
-  .cert-header { text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #003087, #005eb8); padding: 28px 20px 22px; border-radius: 8px; margin: -50px -50px 30px -50px; border-bottom: 3px solid #41b6e6; }
-  .cert-logo { height: 70px; margin-bottom: 10px; }
-  .cert-header h1 { color: white; font-size: 28px; margin: 0 0 8px; letter-spacing: 1px; }
-  .cert-header h2 { color: rgba(255,255,255,0.9); font-size: 16px; margin: 0; font-weight: 400; }
-  .cert-nhs { color: rgba(255,255,255,0.8); font-size: 13px; margin-top: 8px; }
-  .cert-body { margin: 24px 0; }
-  .cert-name { text-align: center; font-size: 24px; font-weight: 700; color: #003087; margin: 16px 0; padding: 10px; border-bottom: 2px solid #41b6e6; }
-  .cert-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; margin: 16px 0; }
+  @media print { body { margin: 0; padding: 0; } .no-print { display: none; } @page { size: A4 landscape; margin: 10mm; } }
+  body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: white; color: #231f20; }
+  .cert-container { max-width: 900px; margin: 0 auto; border: 3px solid #005eb8; padding: 30px 40px; position: relative; }
+  .cert-container::before { content: ''; position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px; border: 1px solid #41b6e6; pointer-events: none; }
+  .cert-header { text-align: center; background: linear-gradient(135deg, #003087, #005eb8); padding: 18px 20px 14px; border-radius: 8px; margin: -30px -40px 20px -40px; border-bottom: 3px solid #41b6e6; }
+  .cert-logo { height: 50px; margin-bottom: 6px; }
+  .cert-header h1 { color: white; font-size: 22px; margin: 0 0 4px; letter-spacing: 1px; }
+  .cert-header h2 { color: rgba(255,255,255,0.9); font-size: 13px; margin: 0; font-weight: 400; }
+  .cert-nhs { color: rgba(255,255,255,0.8); font-size: 11px; margin-top: 4px; }
+  .cert-body { margin: 12px 0; }
+  .cert-name { text-align: center; font-size: 22px; font-weight: 700; color: #003087; margin: 8px 0; padding: 6px; border-bottom: 2px solid #41b6e6; }
+  .cert-details { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; font-size: 12px; margin: 10px 0; }
   .cert-details dt { font-weight: 600; color: #005eb8; }
   .cert-details dd { margin: 0; }
-  .cert-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 11px; }
-  .cert-table th { background: #005eb8; color: white; padding: 6px 8px; text-align: left; }
-  .cert-table td { padding: 5px 8px; border-bottom: 1px solid #e8edee; }
+  .cert-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10px; }
+  .cert-table th { background: #005eb8; color: white; padding: 4px 6px; text-align: left; }
+  .cert-table td { padding: 3px 6px; border-bottom: 1px solid #e8edee; }
   .cert-table tr:nth-child(even) { background: #f0f4f5; }
-  .cert-total { text-align: center; font-size: 16px; font-weight: 700; color: #005eb8; margin: 16px 0; padding: 12px; background: #f0f4f5; border-radius: 8px; }
-  .cert-signature { display: flex; justify-content: center; gap: 80px; margin-top: 40px; text-align: center; }
+  .cert-total { text-align: center; font-size: 14px; font-weight: 700; color: #005eb8; margin: 10px 0; padding: 8px; background: #f0f4f5; border-radius: 6px; }
+  .cert-signature { display: flex; justify-content: center; gap: 80px; margin-top: 20px; text-align: center; }
   .cert-sig-block { min-width: 200px; }
-  .cert-sig-line { border-top: 1px solid #231f20; margin-top: 40px; padding-top: 6px; font-size: 13px; font-weight: 600; }
-  .cert-sig-title { font-size: 11px; color: #768692; white-space: pre-line; }
-  .cert-date { text-align: center; font-size: 12px; color: #768692; margin-top: 20px; }
-  .print-btn { display: block; margin: 20px auto; padding: 12px 30px; background: #005eb8; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .cert-sig-line { border-top: 1px solid #231f20; margin-top: 20px; padding-top: 4px; font-size: 12px; font-weight: 600; }
+  .cert-sig-title { font-size: 10px; color: #768692; white-space: pre-line; }
+  .cert-date { text-align: center; font-size: 11px; color: #768692; margin-top: 10px; }
+  .print-btn { display: block; margin: 10px auto; padding: 10px 24px; background: #005eb8; color: white; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; }
   .print-btn:hover { background: #003087; }`;
 const CERT_LOGO_URL = LOGO_URL;
 
@@ -1117,14 +1135,14 @@ async function generateCertificate() {
     <div class="cert-nhs">North Bristol NHS Trust | Southmead Hospital</div>
   </div>
   <div class="cert-body">
-    <div style="text-align:center;font-size:14px;color:#768692;">This is to certify that</div>
+    <div style="text-align:center;font-size:12px;color:#768692;">This is to certify that</div>
     <div class="cert-name">${esc(currentLearner.name)}</div>
     <div class="cert-details">
       <dt>Grade</dt><dd>${esc(currentLearner.grade)}</dd>
       <dt>Placement</dt><dd>${esc(currentLearner.placement)}</dd>
       ${currentLearner.placement_start ? '<dt>Period</dt><dd>' + new Date(currentLearner.placement_start).toLocaleDateString('en-GB') + ' to ' + (currentLearner.placement_end ? new Date(currentLearner.placement_end).toLocaleDateString('en-GB') : 'present') + '</dd>' : ''}
     </div>
-    <div style="text-align:center;font-size:13px;color:#768692;margin:16px 0;">has attended the following surgical teaching sessions and is awarded <strong>${totalHours} CPD hour${totalHours!==1?'s':''}</strong>:</div>
+    <div style="text-align:center;font-size:11px;color:#768692;margin:8px 0;">has attended the following surgical teaching sessions and is awarded <strong>${totalHours} CPD hour${totalHours!==1?'s':''}</strong>:</div>
     <table class="cert-table">
       <thead><tr><th>#</th><th>Date</th><th>Topic</th><th>Teacher</th></tr></thead>
       <tbody>${attendedSessions.map((s, i) => `<tr><td>${i+1}</td><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td></tr>`).join('')}</tbody>
@@ -1171,7 +1189,7 @@ async function generateTeacherCertificate() {
     <div class="cert-nhs">North Bristol NHS Trust | Southmead Hospital</div>
   </div>
   <div class="cert-body">
-    <div style="text-align:center;font-size:14px;color:#768692;">This is to certify that</div>
+    <div style="text-align:center;font-size:12px;color:#768692;">This is to certify that</div>
     <div class="cert-name">${esc(currentTeacher.name)}</div>
     <div class="cert-details">
       <dt>Role</dt><dd>${esc(currentTeacher.role || 'Teacher')}</dd>
@@ -1179,7 +1197,7 @@ async function generateTeacherCertificate() {
       <dt>Sessions Delivered</dt><dd>${teacherSessions.length}</dd>
       <dt>Average Feedback Score</dt><dd>${avgOverall}/10 (${teacherFeedback.length} responses)</dd>
     </div>
-    <div style="text-align:center;font-size:13px;color:#768692;margin:16px 0;">has delivered the following surgical teaching sessions:</div>
+    <div style="text-align:center;font-size:11px;color:#768692;margin:8px 0;">has delivered the following surgical teaching sessions:</div>
     <table class="cert-table">
       <thead><tr><th>#</th><th>Date</th><th>Topic</th><th>Feedback Score</th></tr></thead>
       <tbody>${teacherSessions.map((s, i) => {
@@ -1201,6 +1219,63 @@ async function generateTeacherCertificate() {
 </body></html>`);
     certWindow.document.close();
   } catch(e) { console.error('Generate teacher certificate failed:', e); showToast('Failed to generate certificate'); }
+}
+
+// ===================== SINGLE SESSION TEACHER CERTIFICATE =====================
+async function generateSessionTeacherCert(sessionId) {
+  if (!currentTeacher) return;
+  const ev = events.find(e => e.id === sessionId);
+  if (!ev) { showToast('Session not found'); return; }
+  try {
+    const feedback = await sbGet('feedback', `session_id=eq.${sessionId}&select=*`);
+    const attendance = await sbGet('attendance', `session_id=eq.${sessionId}&status=eq.approved&select=*`);
+    const avgOverall = feedback.length ? (feedback.reduce((s,f) => s+(f.rating_overall||0), 0) / feedback.length).toFixed(1) : 'N/A';
+    const sessionDate = `${ev.day} ${ev.date} ${ev.month} ${ev.year}`;
+
+    const certWindow = window.open('', '_blank');
+    certWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Teaching Certificate — ${esc(currentTeacher.name)} — ${esc(ev.topic)}</title>
+<style>${CERT_STYLES}</style></head><body>
+<button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+<div class="cert-container">
+  <div class="cert-header">
+    <img src="${CERT_LOGO_URL}" alt="Southmead Surgical Teaching" class="cert-logo">
+    <h1>CERTIFICATE OF TEACHING</h1>
+    <h2>Southmead Surgical Teaching Programme</h2>
+    <div class="cert-nhs">North Bristol NHS Trust | Southmead Hospital</div>
+  </div>
+  <div class="cert-body">
+    <div style="text-align:center;font-size:12px;color:#768692;">This is to certify that</div>
+    <div class="cert-name">${esc(currentTeacher.name)}</div>
+    <div class="cert-details">
+      <dt>Role</dt><dd>${esc(currentTeacher.role || 'Teacher')}</dd>
+      <dt>Specialty</dt><dd>${esc(currentTeacher.specialty || '-')}</dd>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#768692;margin:10px 0;">delivered the following surgical teaching session:</div>
+    <table class="cert-table" style="font-size:12px;">
+      <thead><tr><th>Date</th><th>Topic</th><th>Attendees</th><th>Feedback Score</th></tr></thead>
+      <tbody><tr><td>${esc(sessionDate)}</td><td>${esc(ev.topic || 'TBD')}</td><td>${attendance.length}</td><td>${avgOverall}/10 (${feedback.length} responses)</td></tr></tbody>
+    </table>
+    <div class="cert-total">Teaching Hours: 1 | CPD Hours: 1</div>
+    ${feedback.length > 0 ? '<div style="margin-top:12px;"><div style="font-size:12px;font-weight:600;color:#005eb8;margin-bottom:6px;">Feedback Summary</div><div class="cert-details" style="gap:2px;">' +
+      (feedback.some(f=>f.rating_content_useful) ? '<dt>Content useful</dt><dd>' + (feedback.reduce((s,f)=>s+(f.rating_content_useful||0),0)/feedback.filter(f=>f.rating_content_useful).length).toFixed(1) + '/10</dd>' : '') +
+      (feedback.some(f=>f.rating_structured) ? '<dt>Structured</dt><dd>' + (feedback.reduce((s,f)=>s+(f.rating_structured||0),0)/feedback.filter(f=>f.rating_structured).length).toFixed(1) + '/10</dd>' : '') +
+      (feedback.some(f=>f.rating_presentation) ? '<dt>Presentation</dt><dd>' + (feedback.reduce((s,f)=>s+(f.rating_presentation||0),0)/feedback.filter(f=>f.rating_presentation).length).toFixed(1) + '/10</dd>' : '') +
+      (feedback.some(f=>f.rating_delivery) ? '<dt>Delivery</dt><dd>' + (feedback.reduce((s,f)=>s+(f.rating_delivery||0),0)/feedback.filter(f=>f.rating_delivery).length).toFixed(1) + '/10</dd>' : '') +
+      (feedback.some(f=>f.rating_applicable) ? '<dt>Applicable</dt><dd>' + (feedback.reduce((s,f)=>s+(f.rating_applicable||0),0)/feedback.filter(f=>f.rating_applicable).length).toFixed(1) + '/10</dd>' : '') +
+    '</div></div>' : ''}
+  </div>
+  <div class="cert-signature">
+    <div class="cert-sig-block">
+      <div class="cert-sig-line">${SIGNING_CONSULTANT}</div>
+      <div class="cert-sig-title">${SIGNING_TITLE}</div>
+    </div>
+  </div>
+  <div class="cert-date">Date of Issue: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</div>
+</div>
+</body></html>`);
+    certWindow.document.close();
+  } catch(e) { console.error('Generate session cert failed:', e); showToast('Failed to generate certificate'); }
 }
 
 // ===================== TEACHER DASHBOARD =====================
@@ -1252,6 +1327,7 @@ async function loadTeacherDashboard() {
             <span style="font-size:12px;color:var(--nhs-green);">${att} attended</span>
             <span style="font-size:12px;color:var(--nhs-blue);">${fb} feedback</span>
             ${fb < att ? `<button class="btn btn-outline" style="font-size:11px;padding:3px 10px;color:var(--nhs-orange);border-color:var(--nhs-orange);" onclick="closeModal('detailModal');openFeedbackRequestModal(${s.id})">Chase Feedback</button>` : ''}
+            <button class="btn" style="font-size:11px;padding:3px 10px;background:#ed8b00;color:white;border:none;" onclick="generateSessionTeacherCert(${s.id})">Certificate</button>
             <button class="btn btn-outline" style="font-size:11px;padding:3px 10px;" onclick="showDetail(${s.id})">View</button>
           </div>
         </div>`;
@@ -1261,7 +1337,7 @@ async function loadTeacherDashboard() {
 
     // Action buttons
     html += `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
-      <button class="btn" style="background:#ed8b00;color:white;border:none;" onclick="generateTeacherCertificate()">Generate Teaching Certificate</button>
+      <button class="btn" style="background:#ed8b00;color:white;border:none;" onclick="generateTeacherCertificate()">Certificate (All Sessions)</button>
       <button class="btn" style="background:#005eb8;color:white;border:none;" onclick="loadFeedbackView('${teacherEmail}')">View My Feedback</button>
       <button class="btn" style="background:#003087;color:white;border:none;" onclick="exportTeacherFeedbackCSV('${teacherEmail}')">Export Feedback CSV</button>
     </div>`;

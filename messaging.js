@@ -355,6 +355,30 @@ async function openFeedbackRequestModal(sessionId) {
   document.getElementById('fbReqContactsList').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--nhs-grey);">No contacts or learners found. Add contacts in the Contacts tab.</div>';
   document.getElementById('fbReqSearch').value = '';
   updateFbReqCount();
+
+  // Show last reminder info
+  let lastSendHtml = '';
+  try {
+    const sends = await sbGet('feedback_sends', `session_id=eq.${sessionId}&order=sent_at.desc&limit=3&select=*`);
+    if (sends.length > 0) {
+      const items = sends.map(s => {
+        const t = new Date(s.sent_at);
+        const methodLabel = s.method === 'auto' ? '🔄 Auto (attendance)' : s.method === 'cron' ? '⏰ Daily reminder' : '✉️ Manual';
+        return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;"><span>${methodLabel}</span><span>${t.toLocaleDateString('en-GB',{day:'numeric',month:'short'})} ${t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} — ${s.recipient_count} recipient${s.recipient_count!==1?'s':''}</span></div>`;
+      }).join('');
+      const isToday = new Date(sends[0].sent_at).toDateString() === new Date().toDateString();
+      const borderColor = isToday ? '#ed8b00' : '#005eb8';
+      lastSendHtml = `<div id="fbReqLastSend" style="background:#fff8e8;border-left:4px solid ${borderColor};padding:10px 14px;margin-bottom:12px;border-radius:0 6px 6px 0;">
+        <div style="font-size:12px;font-weight:600;color:#231f20;margin-bottom:4px;">${isToday ? '⚠️ Reminder already sent today' : 'Recent reminders'}</div>
+        ${items}
+      </div>`;
+    }
+  } catch(e) { console.warn('Could not load send history:', e); }
+  const infoEl = document.getElementById('fbReqSessionInfo');
+  const existingBanner = document.getElementById('fbReqLastSend');
+  if (existingBanner) existingBanner.remove();
+  if (lastSendHtml) infoEl.insertAdjacentHTML('afterend', lastSendHtml);
+
   openModal('feedbackRequestModal');
 }
 
@@ -407,6 +431,22 @@ function copyFeedbackEmails() {
 async function sendFeedbackEmails() {
   const emails = getSelectedFbEmails();
   if (!emails.length) { showToast('No recipients selected'); return; }
+
+  // Check if feedback was already sent today for this session
+  try {
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const existingSends = await sbGet('feedback_sends', `session_id=eq.${fbReqSessionId}&sent_at=gte.${todayStart.toISOString()}&select=*&order=sent_at.desc`);
+    if (existingSends.length > 0) {
+      const last = existingSends[0];
+      const lastTime = new Date(last.sent_at).toLocaleString('en-GB', {hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'});
+      const methodLabel = last.method === 'auto' ? 'auto (on attendance)' : last.method === 'cron' ? 'daily reminder (8am)' : 'manual';
+      if (!confirm(`⚠️ A feedback reminder was already sent today at ${lastTime} via ${methodLabel} to ${last.recipient_count} recipient(s).\n\nSend again now anyway?`)) {
+        showToast('Cancelled — no duplicate sent');
+        return;
+      }
+    }
+  } catch(e) { console.warn('Could not check send history:', e); }
+
   const ev = events.find(e => e.id === fbReqSessionId);
   const topic = ev?.topic || 'Teaching Session';
   const date = ev ? `${ev.day} ${ev.date} ${ev.month} ${ev.year}` : '';
@@ -452,6 +492,8 @@ async function sendFeedbackEmails() {
     });
     const result = await res.json();
     if (result.success) {
+      // Log the send with recipients
+      try { await sbInsert('feedback_sends', { session_id: fbReqSessionId, method: 'manual', sent_by: currentUser?.username || currentTeacher?.name || 'unknown', recipient_count: emails.length, recipients: emails.map(e => e.toLowerCase()) }); } catch(le) { console.warn('Log send failed:', le); }
       showToast(`Feedback request sent to ${emails.length} recipient(s)!`);
       closeModal('feedbackRequestModal');
     } else {
