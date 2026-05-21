@@ -41,8 +41,9 @@ async function sendSessionEmail(id, type) {
   const rescheduleLink = `${siteUrl}?action=reschedule&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
 
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;">
-      <h2 style="color:white;margin:0;">Southmead Surgical Teaching</h2>
+    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+      <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
     </div>
     <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
       <p>Dear ${ev.teacher || 'Colleague'},</p>
@@ -58,6 +59,12 @@ async function sendSessionEmail(id, type) {
         <a href="${confirmLink}" style="display:inline-block;padding:12px 24px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">I Can Attend</a>
         <a href="${declineLink}" style="display:inline-block;padding:12px 24px;background:#da291c;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">I Cannot Attend</a>
         <a href="${rescheduleLink}" style="display:inline-block;padding:12px 24px;background:#ed8b00;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">Reschedule</a>
+      </div>
+      <div style="margin:20px 0;text-align:center;padding:16px;background:#f0f4f5;border-radius:8px;">
+        <p style="margin:0 0 8px;font-weight:bold;font-size:14px;">Session Feedback QR Code</p>
+        <p style="margin:0 0 12px;font-size:12px;color:#4c6272;">Display at the end of your session for learners to scan and submit feedback</p>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(SITE_URL + '?feedback=' + ev.id)}" alt="Feedback QR Code" style="width:180px;height:180px;">
+        <p style="margin:8px 0 0;font-size:11px;color:#768692;">You can also log in to your Teacher Dashboard to view feedback and generate certificates</p>
       </div>
       ${isConfirm ? '<p>If you have any questions or need to make changes, please reply to this email.</p>' : '<p>If you can no longer attend, please let us know as soon as possible so we can arrange cover.</p>'}
       <p>Best regards,<br>Southmead Surgical Teaching Team</p>
@@ -406,8 +413,9 @@ async function sendFeedbackEmails() {
   const link = document.getElementById('fbReqLink').value;
   const subject = `Feedback Request: ${topic} (${date})`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;">
-      <h2 style="color:white;margin:0;">Southmead Surgical Teaching</h2>
+    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+      <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
     </div>
     <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
       <p>Hi,</p>
@@ -560,8 +568,9 @@ async function sendTeacherRequestEmails() {
 
     const subject = `Teaching Invitation: ${topic} - ${dateStr}`;
     const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;">
-        <h2 style="color:white;margin:0;">Southmead Surgical Teaching</h2>
+      <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+        <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+        <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
       </div>
       <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
         <p>Dear ${r.name || 'Colleague'},</p>
@@ -919,7 +928,8 @@ async function sendGmailReply(toEmail, subject) {
 
   const reSubject = subject.startsWith('Re:') ? subject : 'Re: ' + subject;
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <div style="background:#003087;padding:16px 20px;border-radius:8px 8px 0 0;">
+    <div style="background:#003087;padding:16px 20px;border-radius:8px 8px 0 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:48px;width:auto;margin-bottom:6px;">
       <h3 style="color:white;margin:0;font-size:16px;">Southmead Surgical Teaching</h3>
     </div>
     <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
@@ -1012,7 +1022,8 @@ async function sendInboxReply(sessionId, toEmail, topic) {
 
   const subject = `Re: Teaching Session - ${topic}`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <div style="background:#003087;padding:16px 20px;border-radius:8px 8px 0 0;">
+    <div style="background:#003087;padding:16px 20px;border-radius:8px 8px 0 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:48px;width:auto;margin-bottom:6px;">
       <h3 style="color:white;margin:0;font-size:16px;">Southmead Surgical Teaching</h3>
     </div>
     <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">

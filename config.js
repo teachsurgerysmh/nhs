@@ -4,9 +4,10 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.0.3';
-const APP_BUILD = '2026-05-19';
+const APP_VERSION = 'v3.1.2';
+const APP_BUILD = '2026-05-21';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
+const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;
 
 // ===================== DEMO MODE =====================
@@ -33,6 +34,10 @@ let events = [];
 let isAdmin = false;
 let currentUser = null;
 let currentLearner = null;
+let currentTeacher = null;
+const MANAGERS = ['suketu.batra@nbt.nhs.uk','ilgin.kilic@nbt.nhs.uk','nitin.arvind@nbt.nhs.uk'];
+const SIGNING_CONSULTANT = 'Mr Nitin Arvind';
+const SIGNING_TITLE = 'Surgical Tutor & Supervisor for Southmead Surgical Teaching Programme\nConsultant UGI Surgeon, North Bristol NHS Trust';
 let currentView = 'list';
 let currentFilter = 'upcoming';
 let calMonth = new Date().getMonth();

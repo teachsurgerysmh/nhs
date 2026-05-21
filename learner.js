@@ -103,42 +103,108 @@ async function saveAttendance() {
       } catch(e) { /* ignore */ }
     }
     closeModal('attendanceModal');
-    showToast('Attendance saved');
+    showToast('Attendance saved — sending feedback requests...');
+    // Auto-trigger feedback emails to all marked attendees
+    autoSendFeedbackRequests(sessionId, checkedIds);
   } catch(e) { console.error('Save attendance failed:', e); showToast('Failed to save attendance'); }
 }
 
-// ===================== FEEDBACK SYSTEM =====================
-let feedbackRatings = { content: 0, teaching: 0, relevance: 0, overall: 0 };
+async function autoSendFeedbackRequests(sessionId, learnerIds) {
+  if (!learnerIds.length) return;
+  const ev = events.find(e => e.id === sessionId);
+  if (!ev) return;
+  try {
+    const learners = await sbGet('learners', 'select=id,name,email');
+    const existingFeedback = await sbGet('feedback', `session_id=eq.${sessionId}&select=learner_id`);
+    const alreadySubmitted = new Set(existingFeedback.map(f => f.learner_id));
+    const recipients = learners.filter(l => learnerIds.includes(l.id) && l.email && !alreadySubmitted.has(l.id));
+    if (!recipients.length) return;
+    const fbUrl = SITE_URL + '?feedback=' + sessionId;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(fbUrl)}`;
+    const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+        <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+        <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
+      </div>
+      <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+        <p>Dear Colleague,</p>
+        <p>Thank you for attending today's teaching session on <strong>${ev.topic || 'Surgery'}</strong>.</p>
+        <p>Your feedback is essential to improving our teaching programme. <strong>${SIGNING_CONSULTANT}</strong> personally reviews all feedback as part of the programme's quality assurance.</p>
+        <p><strong>By submitting feedback you will:</strong></p>
+        <ul>
+          <li>Confirm your attendance record</li>
+          <li>Earn CPD hours for this session</li>
+          <li>Receive a certificate of attendance</li>
+        </ul>
+        <div style="text-align:center;margin:20px 0;">
+          <a href="${fbUrl}" style="display:inline-block;padding:14px 36px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:15px;">Submit Feedback</a>
+        </div>
+        <div style="text-align:center;margin:16px 0;">
+          <img src="${qrUrl}" alt="Feedback QR" style="width:150px;height:150px;">
+          <p style="font-size:11px;color:#768692;margin:4px 0 0;">Or scan this QR code</p>
+        </div>
+        <p style="font-size:12px;color:#4c6272;">This takes less than 2 minutes. Your responses may be shared anonymously with the presenter.</p>
+        <p>Best regards,<br>Southmead Surgical Teaching Team<br><em>Under the supervision of ${SIGNING_CONSULTANT}</em></p>
+      </div>
+    </div>`;
+    const emails = recipients.map(r => r.email);
+    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ to: emails, subject: `Feedback Request: ${ev.topic || 'Teaching Session'} - ${ev.day} ${ev.date} ${ev.month}`, html })
+    });
+    showToast(`Feedback requests sent to ${emails.length} attendee${emails.length!==1?'s':''}`);
+  } catch(e) { console.warn('Auto feedback send failed:', e); }
+}
 
-function initStarRatings() {
-  document.querySelectorAll('.star-rating').forEach(container => {
-    const field = container.dataset.field;
+// ===================== FEEDBACK SYSTEM (10-point scale) =====================
+const FEEDBACK_FIELDS = ['content_useful','structured','overall','presentation','delivery','applicable'];
+const FEEDBACK_LABELS = {
+  content_useful: 'Content useful & interesting',
+  structured: 'Structured & organized',
+  overall: 'Overall session',
+  presentation: 'Presentation',
+  delivery: 'Delivery',
+  applicable: 'Applicable to workplace'
+};
+let feedbackRatings = {};
+
+function initScaleRatings() {
+  FEEDBACK_FIELDS.forEach(field => {
+    feedbackRatings[field] = 0;
+    const container = document.querySelector(`.scale-rating[data-field="${field}"] .scale-buttons`);
+    if (!container) return;
     container.innerHTML = '';
-    for (let i = 1; i <= 5; i++) {
-      const star = document.createElement('span');
-      star.className = 'star';
-      star.textContent = '☆';
-      star.dataset.value = i;
-      star.onclick = () => setStarRating(field, i);
-      star.onmouseenter = () => highlightStars(field, i);
-      star.onmouseleave = () => highlightStars(field, feedbackRatings[field]);
-      container.appendChild(star);
+    for (let i = 1; i <= 10; i++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'scale-btn';
+      btn.textContent = i;
+      btn.dataset.value = i;
+      btn.onclick = () => setScaleRating(field, i);
+      container.appendChild(btn);
     }
+    // Add labels below
+    const labels = document.createElement('div');
+    labels.className = 'scale-labels';
+    labels.innerHTML = '<span>Poor</span><span>Excellent</span>';
+    container.parentNode.appendChild(labels);
   });
 }
 
-function setStarRating(field, value) {
+function setScaleRating(field, value) {
   feedbackRatings[field] = value;
-  highlightStars(field, value);
-}
-
-function highlightStars(field, upTo) {
-  const container = document.querySelector(`.star-rating[data-field="${field}"]`);
+  const container = document.querySelector(`.scale-rating[data-field="${field}"] .scale-buttons`);
   if (!container) return;
-  container.querySelectorAll('.star').forEach(star => {
-    const v = parseInt(star.dataset.value);
-    star.classList.toggle('filled', v <= upTo);
-    star.textContent = v <= upTo ? '★' : '☆';
+  container.querySelectorAll('.scale-btn').forEach(btn => {
+    const v = parseInt(btn.dataset.value);
+    btn.classList.remove('selected','low','mid','high');
+    if (v === value) {
+      btn.classList.add('selected');
+      if (value <= 3) btn.classList.add('low');
+      else if (value <= 6) btn.classList.add('mid');
+      else btn.classList.add('high');
+    }
   });
 }
 
@@ -148,40 +214,51 @@ function openFeedbackModal(sessionId) {
   if (!ev) { showToast('Session not found'); return; }
   document.getElementById('feedbackSessionId').value = sessionId;
   document.getElementById('feedbackSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year} | ${esc(ev.teacher || 'TBD')}`;
-  feedbackRatings = { content: 0, teaching: 0, relevance: 0, overall: 0 };
-  initStarRatings();
-  document.getElementById('feedbackLearned').value = '';
-  document.getElementById('feedbackSuggestions').value = '';
-  document.getElementById('feedbackComments').value = '';
-  document.getElementById('feedbackRecommend').checked = true;
+  feedbackRatings = {};
+  FEEDBACK_FIELDS.forEach(f => feedbackRatings[f] = 0);
+  initScaleRatings();
+  document.getElementById('feedbackGoodAspects').value = '';
+  document.getElementById('feedbackImproveAspects').value = '';
   document.getElementById('feedbackAnonymous').checked = false;
-  document.getElementById('paceRight').checked = true;
   openModal('feedbackModal');
 }
 
 async function submitFeedback() {
   if (!currentLearner) { showToast('Please login first'); return; }
   const sessionId = parseInt(document.getElementById('feedbackSessionId').value);
+  // Block teachers from reviewing their own sessions
+  const ev = events.find(e => e.id === sessionId);
+  if (ev && currentLearner && ev.teacherEmail && ev.teacherEmail.toLowerCase() === currentLearner.email.toLowerCase()) {
+    showToast('You cannot submit feedback for a session you taught'); return;
+  }
+  if (currentTeacher && ev && ev.teacherEmail && ev.teacherEmail.toLowerCase() === currentTeacher.email.toLowerCase()) {
+    showToast('You cannot submit feedback for a session you taught'); return;
+  }
   if (!feedbackRatings.overall) { showToast('Please rate the session overall'); return; }
-  const pace = document.querySelector('input[name="feedbackPace"]:checked')?.value || 'just_right';
   const data = {
     session_id: sessionId,
     learner_id: currentLearner.id,
     anonymous: document.getElementById('feedbackAnonymous').checked,
-    rating_content: feedbackRatings.content || null,
-    rating_teaching: feedbackRatings.teaching || null,
-    rating_relevance: feedbackRatings.relevance || null,
-    rating_pace: pace,
+    rating_content_useful: feedbackRatings.content_useful || null,
+    rating_structured: feedbackRatings.structured || null,
     rating_overall: feedbackRatings.overall,
-    learned_today: document.getElementById('feedbackLearned').value.trim(),
-    suggestions: document.getElementById('feedbackSuggestions').value.trim(),
-    comments: document.getElementById('feedbackComments').value.trim(),
-    would_recommend: document.getElementById('feedbackRecommend').checked
+    rating_presentation: feedbackRatings.presentation || null,
+    rating_delivery: feedbackRatings.delivery || null,
+    rating_applicable: feedbackRatings.applicable || null,
+    good_aspects: document.getElementById('feedbackGoodAspects').value.trim(),
+    improve_aspects: document.getElementById('feedbackImproveAspects').value.trim()
   };
   try {
     await sbInsert('feedback', data);
     closeModal('feedbackModal');
-    showToast('Thank you for your feedback!');
+    showToast('Thank you for your feedback! Your attendance has been recorded.');
+    // Auto-mark attendance if not already marked
+    try {
+      const existing = await sbGet('attendance', `session_id=eq.${sessionId}&learner_id=eq.${currentLearner.id}`);
+      if (existing.length === 0) {
+        await sbInsert('attendance', { session_id: sessionId, learner_id: currentLearner.id, method: 'feedback', status: 'approved' });
+      }
+    } catch(ae) { console.log('Auto-attendance skip:', ae); }
   } catch(e) {
     console.error('Submit feedback failed:', e);
     if (e.message && e.message.includes('409')) {
@@ -192,19 +269,69 @@ async function submitFeedback() {
   }
 }
 
-// ===================== FEEDBACK ADMIN VIEW =====================
-async function loadFeedbackView() {
-  const container = document.getElementById('feedbackView');
+// ===================== FEEDBACK NUDGE =====================
+let _nudgeSessionId = null;
+async function checkFeedbackNudge() {
+  if (!currentLearner) return;
+  try {
+    const [attendance, feedback] = await Promise.all([
+      sbGet('attendance', `learner_id=eq.${currentLearner.id}&status=eq.approved&select=session_id`),
+      sbGet('feedback', `learner_id=eq.${currentLearner.id}&select=session_id`)
+    ]);
+    const feedbackSids = new Set(feedback.map(f => f.session_id));
+    const missing = attendance.filter(a => !feedbackSids.has(a.session_id));
+    if (missing.length > 0) {
+      const sid = missing[0].session_id;
+      const ev = events.find(e => e.id === sid);
+      if (ev) {
+        _nudgeSessionId = sid;
+        const banner = document.getElementById('feedbackNudgeBanner');
+        document.getElementById('feedbackNudgeText').textContent =
+          `📝 You attended "${ev.topic || 'a session'}" — please submit your feedback to receive your CPD certificate!`;
+        banner.style.display = '';
+      }
+    }
+  } catch(e) { console.log('Nudge check skipped:', e); }
+}
+function openNudgedFeedback() {
+  document.getElementById('feedbackNudgeBanner').style.display = 'none';
+  if (_nudgeSessionId) openFeedbackModal(_nudgeSessionId);
+}
+
+// ===================== FEEDBACK ADMIN VIEW (10-point) =====================
+function fbAvg(items, field) {
+  const vals = items.filter(f => f[field]).map(f => f[field]);
+  return vals.length ? (vals.reduce((s,v) => s+v, 0) / vals.length).toFixed(1) : '-';
+}
+function fbScoreColor(score) {
+  if (score <= 3) return '#da291c';
+  if (score <= 6) return '#ed8b00';
+  return 'var(--nhs-green)';
+}
+function fbScoreBar(label, score, max=10) {
+  const pct = score !== '-' ? (parseFloat(score)/max*100) : 0;
+  const color = score !== '-' ? fbScoreColor(parseFloat(score)) : '#ccc';
+  return `<div class="score-bar"><span class="score-bar-label">${label}</span><div class="score-bar-track"><div class="score-bar-fill" style="width:${pct}%;background:${color};"></div></div><span class="score-bar-value" style="color:${color};">${score}/10</span></div>`;
+}
+
+async function loadFeedbackView(filterTeacher) {
+  const container = document.getElementById(filterTeacher ? 'teacherDashView' : 'feedbackView');
   container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading feedback...</div>';
   try {
-    const [feedback, learners] = await Promise.all([
-      sbGet('feedback', 'order=submitted_at.desc&select=*'),
-      sbGet('learners', 'select=id,name')
-    ]);
+    let feedback = await sbGet('feedback', 'order=submitted_at.desc&select=*');
+    const learners = await sbGet('learners', 'select=id,name');
     const learnerMap = {};
     learners.forEach(l => learnerMap[l.id] = l.name);
 
-    let html = '<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Feedback Overview</h3>';
+    // If teacher view, filter to their sessions only
+    if (filterTeacher) {
+      const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === filterTeacher.toLowerCase()).map(e => e.id);
+      feedback = feedback.filter(f => teacherSessions.includes(f.session_id));
+    }
+
+    let html = filterTeacher
+      ? '<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Your Session Feedback</h3>'
+      : '<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Feedback Overview</h3>';
 
     if (feedback.length === 0) {
       html += '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">No feedback submitted yet.</div>';
@@ -212,19 +339,39 @@ async function loadFeedbackView() {
       return;
     }
 
-    // Overall stats
-    const avgOverall = (feedback.reduce((s, f) => s + (f.rating_overall || 0), 0) / feedback.length).toFixed(1);
-    const avgContent = (feedback.filter(f=>f.rating_content).reduce((s,f)=>s+f.rating_content,0) / (feedback.filter(f=>f.rating_content).length || 1)).toFixed(1);
-    const avgTeaching = (feedback.filter(f=>f.rating_teaching).reduce((s,f)=>s+f.rating_teaching,0) / (feedback.filter(f=>f.rating_teaching).length || 1)).toFixed(1);
-    const recommendPct = Math.round(feedback.filter(f => f.would_recommend).length / feedback.length * 100);
+    // Overall stats - 10-point scale
+    const avgOverall = fbAvg(feedback, 'rating_overall');
+    const avgContent = fbAvg(feedback, 'rating_content_useful');
+    const avgStructured = fbAvg(feedback, 'rating_structured');
+    const avgPresentation = fbAvg(feedback, 'rating_presentation');
+    const avgDelivery = fbAvg(feedback, 'rating_delivery');
+    const avgApplicable = fbAvg(feedback, 'rating_applicable');
 
-    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
-      <div class="stat-card"><div class="stat-num">${avgOverall}</div><div class="stat-label">Overall Rating</div></div>
-      <div class="stat-card"><div class="stat-num">${avgContent}</div><div class="stat-label">Content</div></div>
-      <div class="stat-card"><div class="stat-num">${avgTeaching}</div><div class="stat-label">Teaching</div></div>
-      <div class="stat-card"><div class="stat-num">${recommendPct}%</div><div class="stat-label">Would Recommend</div></div>
-      <div class="stat-card"><div class="stat-num">${feedback.length}</div><div class="stat-label">Total Responses</div></div>
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-num" style="color:${fbScoreColor(parseFloat(avgOverall)||5)}">${avgOverall}</div><div class="stat-label">Overall /10</div></div>
+      <div class="stat-card"><div class="stat-num">${avgContent}</div><div class="stat-label">Content /10</div></div>
+      <div class="stat-card"><div class="stat-num">${avgDelivery}</div><div class="stat-label">Delivery /10</div></div>
+      <div class="stat-card"><div class="stat-num">${avgPresentation}</div><div class="stat-label">Presentation /10</div></div>
+      <div class="stat-card"><div class="stat-num">${feedback.length}</div><div class="stat-label">Responses</div></div>
     </div>`;
+
+    // Score bars
+    html += '<div class="dashboard-card" style="margin-bottom:16px;"><h4>Average Scores</h4>';
+    html += fbScoreBar('Content useful & interesting', avgContent);
+    html += fbScoreBar('Structured & organized', avgStructured);
+    html += fbScoreBar('Overall session', avgOverall);
+    html += fbScoreBar('Presentation', avgPresentation);
+    html += fbScoreBar('Delivery', avgDelivery);
+    html += fbScoreBar('Applicable to workplace', avgApplicable);
+    html += '</div>';
+
+    // Export button for teachers
+    if (filterTeacher) {
+      html += `<div style="margin-bottom:16px;display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="exportTeacherFeedbackCSV('${filterTeacher}')">Export Feedback CSV</button>
+        <button class="btn" style="background:#ed8b00;color:white;border:none;" onclick="generateTeacherCertificate()">Generate Teaching Certificate</button>
+      </div>`;
+    }
 
     // Filter controls
     html += `<div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -245,28 +392,36 @@ async function loadFeedbackView() {
     for (const [sid, items] of Object.entries(bySession)) {
       const ev = events.find(e => e.id === parseInt(sid));
       const sessionLabel = ev ? `${ev.topic || 'TBD'} - ${ev.day} ${ev.date} ${ev.month} ${ev.year}` : 'Session #' + sid;
-      const sessionAvg = (items.reduce((s,f) => s + (f.rating_overall||0), 0) / items.length).toFixed(1);
+      const sessionAvg = fbAvg(items, 'rating_overall');
       html += `<div class="feedback-session-group" data-session="${sid}">
         <div style="background:var(--nhs-bg);border-radius:8px;padding:12px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
           <div><strong>${esc(sessionLabel)}</strong><br><span style="font-size:12px;color:var(--nhs-grey);">${items.length} response${items.length!==1?'s':''}</span></div>
-          <div style="font-size:20px;font-weight:700;color:var(--nhs-blue);">${sessionAvg} ★</div>
+          <div style="font-size:20px;font-weight:700;color:${fbScoreColor(parseFloat(sessionAvg)||5)};">${sessionAvg}/10</div>
         </div>`;
+      // Session score bars
+      html += '<div style="padding:0 8px 12px;">';
+      html += fbScoreBar('Content', fbAvg(items,'rating_content_useful'));
+      html += fbScoreBar('Structured', fbAvg(items,'rating_structured'));
+      html += fbScoreBar('Presentation', fbAvg(items,'rating_presentation'));
+      html += fbScoreBar('Delivery', fbAvg(items,'rating_delivery'));
+      html += fbScoreBar('Applicable', fbAvg(items,'rating_applicable'));
+      html += '</div>';
+
       items.forEach(f => {
-        const name = f.anonymous ? 'Anonymous' : (learnerMap[f.learner_id] || 'Unknown');
+        const name = (filterTeacher || f.anonymous) ? 'Anonymous' : (learnerMap[f.learner_id] || 'Unknown');
         html += `<div class="feedback-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <span style="font-weight:600;color:var(--nhs-dark-blue);">${esc(name)}</span>
             <span style="font-size:11px;color:var(--nhs-grey);">${f.submitted_at ? new Date(f.submitted_at).toLocaleDateString() : ''}</span>
           </div>
-          <div style="font-size:13px;margin-bottom:6px;">
-            Overall: ${'★'.repeat(f.rating_overall||0)}${'☆'.repeat(5-(f.rating_overall||0))}
-            ${f.rating_content ? ' | Content: ' + '★'.repeat(f.rating_content) + '☆'.repeat(5-f.rating_content) : ''}
-            ${f.rating_teaching ? ' | Teaching: ' + '★'.repeat(f.rating_teaching) + '☆'.repeat(5-f.rating_teaching) : ''}
+          <div style="font-size:13px;display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+            <span style="background:${fbScoreColor(f.rating_overall||5)};color:white;padding:2px 8px;border-radius:4px;font-weight:600;">Overall: ${f.rating_overall||'-'}/10</span>
+            ${f.rating_content_useful ? `<span style="font-size:12px;color:var(--nhs-grey);">Content: ${f.rating_content_useful}/10</span>` : ''}
+            ${f.rating_delivery ? `<span style="font-size:12px;color:var(--nhs-grey);">Delivery: ${f.rating_delivery}/10</span>` : ''}
+            ${f.rating_presentation ? `<span style="font-size:12px;color:var(--nhs-grey);">Presentation: ${f.rating_presentation}/10</span>` : ''}
           </div>
-          ${f.rating_pace ? '<div style="font-size:12px;color:var(--nhs-grey);">Pace: ' + f.rating_pace.replace('_',' ') + '</div>' : ''}
-          ${f.learned_today ? '<div style="font-size:13px;margin-top:6px;"><strong>Learned:</strong> ' + esc(f.learned_today) + '</div>' : ''}
-          ${f.suggestions ? '<div style="font-size:13px;margin-top:4px;"><strong>Suggestions:</strong> ' + esc(f.suggestions) + '</div>' : ''}
-          ${f.comments ? '<div style="font-size:13px;margin-top:4px;font-style:italic;color:#425563;">' + esc(f.comments) + '</div>' : ''}
+          ${f.good_aspects ? '<div style="font-size:13px;margin-top:6px;"><strong style="color:var(--nhs-green);">Good:</strong> ' + esc(f.good_aspects) + '</div>' : ''}
+          ${f.improve_aspects ? '<div style="font-size:13px;margin-top:4px;"><strong style="color:#ed8b00;">Improve:</strong> ' + esc(f.improve_aspects) + '</div>' : ''}
         </div>`;
       });
       html += '</div>';
@@ -281,6 +436,29 @@ function filterFeedbackCards() {
   document.querySelectorAll('.feedback-session-group').forEach(g => {
     g.style.display = (!sid || g.dataset.session === sid) ? '' : 'none';
   });
+}
+
+// ===================== TEACHER FEEDBACK EXPORT =====================
+async function exportTeacherFeedbackCSV(teacherEmail) {
+  const feedback = await sbGet('feedback', 'order=submitted_at.desc&select=*');
+  const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === teacherEmail.toLowerCase()).map(e => e.id);
+  const filtered = feedback.filter(f => teacherSessions.includes(f.session_id));
+  const rows = [['Session','Date','Overall','Content','Structured','Presentation','Delivery','Applicable','Good Aspects','Areas to Improve','Submitted']];
+  filtered.forEach(f => {
+    const ev = events.find(e => e.id === f.session_id);
+    rows.push([
+      ev ? ev.topic : '', ev ? `${ev.date} ${ev.month} ${ev.year}` : '',
+      f.rating_overall||'', f.rating_content_useful||'', f.rating_structured||'',
+      f.rating_presentation||'', f.rating_delivery||'', f.rating_applicable||'',
+      (f.good_aspects||'').replace(/"/g,'""'), (f.improve_aspects||'').replace(/"/g,'""'),
+      f.submitted_at ? new Date(f.submitted_at).toLocaleDateString() : ''
+    ]);
+  });
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `feedback_${teacherEmail.split('@')[0]}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); showToast('Feedback exported');
 }
 
 // ===================== ADMIN DASHBOARD =====================
@@ -887,44 +1065,53 @@ function exportAttendanceCSV() {
 }
 
 // ===================== CERTIFICATE GENERATION =====================
-async function generateCertificate() {
-  if (!currentLearner) return;
-  try {
-    const attendance = await sbGet('attendance', `learner_id=eq.${currentLearner.id}&select=*`);
-    const attendedSessionIds = attendance.map(a => a.session_id);
-    const attendedSessions = events.filter(e => attendedSessionIds.includes(e.id));
-    attendedSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (da||0)-(db||0); });
-    const totalHours = attendedSessions.length;
-
-    const certWindow = window.open('', '_blank');
-    certWindow.document.write(`<!DOCTYPE html>
-<html><head><title>Certificate of Attendance</title>
-<style>
-  @media print { body { margin: 0; } .no-print { display: none; } }
+const CERT_STYLES = `
+  @media print { body { margin: 0; } .no-print { display: none; } @page { size: A4 landscape; margin: 15mm; } }
   body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background: white; color: #231f20; }
   .cert-container { max-width: 900px; margin: 0 auto; border: 3px solid #005eb8; padding: 50px; position: relative; }
   .cert-container::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 1px solid #41b6e6; pointer-events: none; }
   .cert-header { text-align: center; margin-bottom: 30px; }
-  .cert-header h1 { color: #005eb8; font-size: 32px; margin: 0 0 8px; letter-spacing: 1px; }
-  .cert-header h2 { color: #003087; font-size: 18px; margin: 0; font-weight: 400; }
-  .cert-nhs { color: #005eb8; font-size: 14px; margin-top: 10px; }
-  .cert-body { margin: 30px 0; }
-  .cert-name { text-align: center; font-size: 26px; font-weight: 700; color: #003087; margin: 20px 0; padding: 10px; border-bottom: 2px solid #41b6e6; }
-  .cert-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; margin: 20px 0; }
+  .cert-logo { height: 60px; margin-bottom: 12px; }
+  .cert-header h1 { color: #005eb8; font-size: 28px; margin: 0 0 8px; letter-spacing: 1px; }
+  .cert-header h2 { color: #003087; font-size: 16px; margin: 0; font-weight: 400; }
+  .cert-nhs { color: #005eb8; font-size: 13px; margin-top: 8px; }
+  .cert-body { margin: 24px 0; }
+  .cert-name { text-align: center; font-size: 24px; font-weight: 700; color: #003087; margin: 16px 0; padding: 10px; border-bottom: 2px solid #41b6e6; }
+  .cert-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; margin: 16px 0; }
   .cert-details dt { font-weight: 600; color: #005eb8; }
   .cert-details dd { margin: 0; }
-  .cert-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px; }
-  .cert-table th { background: #005eb8; color: white; padding: 8px 10px; text-align: left; }
-  .cert-table td { padding: 6px 10px; border-bottom: 1px solid #e8edee; }
+  .cert-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 11px; }
+  .cert-table th { background: #005eb8; color: white; padding: 6px 8px; text-align: left; }
+  .cert-table td { padding: 5px 8px; border-bottom: 1px solid #e8edee; }
   .cert-table tr:nth-child(even) { background: #f0f4f5; }
-  .cert-footer { text-align: center; margin-top: 40px; font-size: 13px; color: #768692; }
-  .cert-total { text-align: center; font-size: 18px; font-weight: 700; color: #005eb8; margin: 20px 0; padding: 14px; background: #f0f4f5; border-radius: 8px; }
+  .cert-total { text-align: center; font-size: 16px; font-weight: 700; color: #005eb8; margin: 16px 0; padding: 12px; background: #f0f4f5; border-radius: 8px; }
+  .cert-signature { display: flex; justify-content: center; gap: 80px; margin-top: 40px; text-align: center; }
+  .cert-sig-block { min-width: 200px; }
+  .cert-sig-line { border-top: 1px solid #231f20; margin-top: 40px; padding-top: 6px; font-size: 13px; font-weight: 600; }
+  .cert-sig-title { font-size: 11px; color: #768692; white-space: pre-line; }
+  .cert-date { text-align: center; font-size: 12px; color: #768692; margin-top: 20px; }
   .print-btn { display: block; margin: 20px auto; padding: 12px 30px; background: #005eb8; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
-  .print-btn:hover { background: #003087; }
-</style></head><body>
+  .print-btn:hover { background: #003087; }`;
+const CERT_LOGO_URL = 'logo_transparent.png';
+
+async function generateCertificate() {
+  if (!currentLearner) return;
+  try {
+    const attendance = await sbGet('attendance', `learner_id=eq.${currentLearner.id}&status=eq.approved&select=*`);
+    const attendedSessionIds = attendance.map(a => a.session_id);
+    const attendedSessions = events.filter(e => attendedSessionIds.includes(e.id));
+    attendedSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (da||0)-(db||0); });
+    const totalHours = attendedSessions.length;
+    if (!totalHours) { showToast('No attended sessions to certify'); return; }
+
+    const certWindow = window.open('', '_blank');
+    certWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Certificate of Attendance — ${esc(currentLearner.name)}</title>
+<style>${CERT_STYLES}</style></head><body>
 <button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
 <div class="cert-container">
   <div class="cert-header">
+    <img src="${CERT_LOGO_URL}" alt="Southmead Surgical Teaching" class="cert-logo">
     <h1>CERTIFICATE OF ATTENDANCE</h1>
     <h2>Southmead Surgical Teaching Programme</h2>
     <div class="cert-nhs">North Bristol NHS Trust | Southmead Hospital</div>
@@ -935,23 +1122,192 @@ async function generateCertificate() {
     <div class="cert-details">
       <dt>Grade</dt><dd>${esc(currentLearner.grade)}</dd>
       <dt>Placement</dt><dd>${esc(currentLearner.placement)}</dd>
-      ${currentLearner.placement_start ? '<dt>Period</dt><dd>' + currentLearner.placement_start + ' to ' + (currentLearner.placement_end || 'present') + '</dd>' : ''}
+      ${currentLearner.placement_start ? '<dt>Period</dt><dd>' + new Date(currentLearner.placement_start).toLocaleDateString('en-GB') + ' to ' + (currentLearner.placement_end ? new Date(currentLearner.placement_end).toLocaleDateString('en-GB') : 'present') + '</dd>' : ''}
     </div>
-    <div style="text-align:center;font-size:14px;color:#768692;margin:20px 0;">has attended the following teaching sessions:</div>
+    <div style="text-align:center;font-size:13px;color:#768692;margin:16px 0;">has attended the following surgical teaching sessions and is awarded <strong>${totalHours} CPD hour${totalHours!==1?'s':''}</strong>:</div>
     <table class="cert-table">
       <thead><tr><th>#</th><th>Date</th><th>Topic</th><th>Teacher</th></tr></thead>
       <tbody>${attendedSessions.map((s, i) => `<tr><td>${i+1}</td><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td></tr>`).join('')}</tbody>
     </table>
-    <div class="cert-total">Total CPD Hours: ${totalHours} hour${totalHours !== 1 ? 's' : ''}</div>
+    <div class="cert-total">Total CPD Hours Awarded: ${totalHours}</div>
   </div>
-  <div class="cert-footer">
-    <div style="margin-bottom:20px;">Certified by: <strong>Southmead Surgical Teaching Programme</strong></div>
-    <div>Date of Issue: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</div>
+  <div class="cert-signature">
+    <div class="cert-sig-block">
+      <div class="cert-sig-line">${SIGNING_CONSULTANT}</div>
+      <div class="cert-sig-title">${SIGNING_TITLE}</div>
+    </div>
   </div>
+  <div class="cert-date">Date of Issue: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</div>
 </div>
 </body></html>`);
     certWindow.document.close();
   } catch(e) { console.error('Generate certificate failed:', e); showToast('Failed to generate certificate'); }
+}
+
+// ===================== TEACHER CERTIFICATE =====================
+async function generateTeacherCertificate() {
+  if (!currentTeacher) return;
+  try {
+    const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === currentTeacher.email.toLowerCase() && (e.status === 'completed' || eventToDate(e) < new Date()));
+    teacherSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (da||0)-(db||0); });
+    if (!teacherSessions.length) { showToast('No completed sessions found'); return; }
+
+    // Get feedback summary
+    const feedback = await sbGet('feedback', 'select=*');
+    const sessionIds = new Set(teacherSessions.map(s => s.id));
+    const teacherFeedback = feedback.filter(f => sessionIds.has(f.session_id));
+    const avgOverall = teacherFeedback.length ? (teacherFeedback.reduce((s,f) => s+(f.rating_overall||0), 0) / teacherFeedback.length).toFixed(1) : 'N/A';
+
+    const certWindow = window.open('', '_blank');
+    certWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Teaching Certificate — ${esc(currentTeacher.name)}</title>
+<style>${CERT_STYLES}</style></head><body>
+<button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+<div class="cert-container">
+  <div class="cert-header">
+    <img src="${CERT_LOGO_URL}" alt="Southmead Surgical Teaching" class="cert-logo">
+    <h1>CERTIFICATE OF TEACHING</h1>
+    <h2>Southmead Surgical Teaching Programme</h2>
+    <div class="cert-nhs">North Bristol NHS Trust | Southmead Hospital</div>
+  </div>
+  <div class="cert-body">
+    <div style="text-align:center;font-size:14px;color:#768692;">This is to certify that</div>
+    <div class="cert-name">${esc(currentTeacher.name)}</div>
+    <div class="cert-details">
+      <dt>Role</dt><dd>${esc(currentTeacher.role || 'Teacher')}</dd>
+      <dt>Specialty</dt><dd>${esc(currentTeacher.specialty || '-')}</dd>
+      <dt>Sessions Delivered</dt><dd>${teacherSessions.length}</dd>
+      <dt>Average Feedback Score</dt><dd>${avgOverall}/10 (${teacherFeedback.length} responses)</dd>
+    </div>
+    <div style="text-align:center;font-size:13px;color:#768692;margin:16px 0;">has delivered the following surgical teaching sessions:</div>
+    <table class="cert-table">
+      <thead><tr><th>#</th><th>Date</th><th>Topic</th><th>Feedback Score</th></tr></thead>
+      <tbody>${teacherSessions.map((s, i) => {
+        const sf = teacherFeedback.filter(f => f.session_id === s.id);
+        const sAvg = sf.length ? (sf.reduce((sum,f) => sum+(f.rating_overall||0),0)/sf.length).toFixed(1) : '-';
+        return `<tr><td>${i+1}</td><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${sAvg}/10 (${sf.length})</td></tr>`;
+      }).join('')}</tbody>
+    </table>
+    <div class="cert-total">Total Teaching Sessions: ${teacherSessions.length} | Total Teaching Hours: ${teacherSessions.length}</div>
+  </div>
+  <div class="cert-signature">
+    <div class="cert-sig-block">
+      <div class="cert-sig-line">${SIGNING_CONSULTANT}</div>
+      <div class="cert-sig-title">${SIGNING_TITLE}</div>
+    </div>
+  </div>
+  <div class="cert-date">Date of Issue: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</div>
+</div>
+</body></html>`);
+    certWindow.document.close();
+  } catch(e) { console.error('Generate teacher certificate failed:', e); showToast('Failed to generate certificate'); }
+}
+
+// ===================== TEACHER DASHBOARD =====================
+async function loadTeacherDashboard() {
+  if (!currentTeacher) return;
+  const container = document.getElementById('teacherDashView');
+  container.innerHTML = '<div style="text-align:center;padding:30px;"><div class="loading-spinner"></div> Loading dashboard...</div>';
+  try {
+    const teacherEmail = currentTeacher.email.toLowerCase();
+    const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === teacherEmail);
+    const upcoming = teacherSessions.filter(e => isFutureEvent(e) && e.status !== 'cancelled');
+    const completed = teacherSessions.filter(e => !isFutureEvent(e) || e.status === 'completed');
+
+    let html = `<h3 style="color:var(--nhs-dark-blue);margin-bottom:4px;">Welcome, ${esc(currentTeacher.name)}</h3>
+    <p style="font-size:13px;color:var(--nhs-grey);margin:0 0 20px;">Teacher Dashboard — Southmead Surgical Teaching Programme</p>`;
+
+    // Stats
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-num">${teacherSessions.length}</div><div class="stat-label">Total Sessions</div></div>
+      <div class="stat-card"><div class="stat-num">${upcoming.length}</div><div class="stat-label">Upcoming</div></div>
+      <div class="stat-card"><div class="stat-num">${completed.length}</div><div class="stat-label">Completed</div></div>
+    </div>`;
+
+    // Upcoming sessions
+    if (upcoming.length) {
+      html += '<div class="dashboard-card"><h4>Upcoming Sessions</h4>';
+      upcoming.forEach(s => {
+        html += `<div style="padding:10px 0;border-bottom:1px solid var(--nhs-pale-grey);display:flex;justify-content:space-between;align-items:center;">
+          <div><strong>${esc(s.topic || 'TBD')}</strong><br><span style="font-size:12px;color:var(--nhs-grey);">${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year} | ${esc(s.time || 'TBC')} | ${esc(s.room || 'TBC')}</span></div>
+          <span class="card-status status-pill-${s.status}">${s.status}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Completed sessions with attendance & feedback counts
+    if (completed.length) {
+      html += '<div class="dashboard-card"><h4>Completed Sessions</h4>';
+      const [allAttendance, allFeedback] = await Promise.all([
+        sbGet('attendance', 'select=session_id,status'),
+        sbGet('feedback', 'select=session_id')
+      ]);
+      completed.forEach(s => {
+        const att = allAttendance.filter(a => a.session_id === s.id && a.status === 'approved').length;
+        const fb = allFeedback.filter(f => f.session_id === s.id).length;
+        html += `<div style="padding:10px 0;border-bottom:1px solid var(--nhs-pale-grey);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div><strong>${esc(s.topic || 'TBD')}</strong><br><span style="font-size:12px;color:var(--nhs-grey);">${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</span></div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-size:12px;color:var(--nhs-green);">${att} attended</span>
+            <span style="font-size:12px;color:var(--nhs-blue);">${fb} feedback</span>
+            ${fb < att ? `<button class="btn btn-outline" style="font-size:11px;padding:3px 10px;color:var(--nhs-orange);border-color:var(--nhs-orange);" onclick="closeModal('detailModal');openFeedbackRequestModal(${s.id})">Chase Feedback</button>` : ''}
+            <button class="btn btn-outline" style="font-size:11px;padding:3px 10px;" onclick="showDetail(${s.id})">View</button>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Action buttons
+    html += `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+      <button class="btn" style="background:#ed8b00;color:white;border:none;" onclick="generateTeacherCertificate()">Generate Teaching Certificate</button>
+      <button class="btn btn-outline" onclick="loadFeedbackView('${teacherEmail}')">View My Feedback</button>
+      <button class="btn btn-outline" onclick="exportTeacherFeedbackCSV('${teacherEmail}')">Export Feedback CSV</button>
+    </div>`;
+
+    // Feedback summary section
+    html += '<div id="teacherFeedbackSummary" style="margin-top:24px;"></div>';
+    container.innerHTML = html;
+
+    // Load feedback inline
+    loadTeacherFeedbackSummary(teacherEmail);
+  } catch(e) { console.error('Load teacher dashboard failed:', e); container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--nhs-red);">Failed to load dashboard.</div>'; }
+}
+
+async function loadTeacherFeedbackSummary(teacherEmail) {
+  const container = document.getElementById('teacherFeedbackSummary');
+  if (!container) return;
+  try {
+    const feedback = await sbGet('feedback', 'order=submitted_at.desc&select=*');
+    const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === teacherEmail.toLowerCase()).map(e => e.id);
+    const filtered = feedback.filter(f => teacherSessions.includes(f.session_id));
+    if (!filtered.length) { container.innerHTML = '<div class="dashboard-card"><h4>Feedback Summary</h4><p style="color:var(--nhs-grey);">No feedback received yet.</p></div>'; return; }
+
+    let html = '<div class="dashboard-card"><h4>Anonymous Feedback Summary</h4>';
+    html += fbScoreBar('Content useful & interesting', fbAvg(filtered, 'rating_content_useful'));
+    html += fbScoreBar('Structured & organized', fbAvg(filtered, 'rating_structured'));
+    html += fbScoreBar('Overall session', fbAvg(filtered, 'rating_overall'));
+    html += fbScoreBar('Presentation', fbAvg(filtered, 'rating_presentation'));
+    html += fbScoreBar('Delivery', fbAvg(filtered, 'rating_delivery'));
+    html += fbScoreBar('Applicable to workplace', fbAvg(filtered, 'rating_applicable'));
+
+    // Recent comments (anonymous)
+    const withGood = filtered.filter(f => f.good_aspects);
+    const withImprove = filtered.filter(f => f.improve_aspects);
+    if (withGood.length) {
+      html += '<div style="margin-top:16px;"><strong style="color:var(--nhs-green);">What went well:</strong>';
+      withGood.slice(0, 5).forEach(f => { html += `<div style="font-size:13px;padding:4px 0;border-bottom:1px solid var(--nhs-pale-grey);">"${esc(f.good_aspects)}"</div>`; });
+      html += '</div>';
+    }
+    if (withImprove.length) {
+      html += '<div style="margin-top:12px;"><strong style="color:#ed8b00;">Areas to improve:</strong>';
+      withImprove.slice(0, 5).forEach(f => { html += `<div style="font-size:13px;padding:4px 0;border-bottom:1px solid var(--nhs-pale-grey);">"${esc(f.improve_aspects)}"</div>`; });
+      html += '</div>';
+    }
+    html += '</div>';
+    container.innerHTML = html;
+  } catch(e) { console.log('Feedback summary load failed:', e); }
 }
 
 // ===================== TAB LABEL LOGIC =====================

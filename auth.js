@@ -146,39 +146,51 @@ function updateHeaderButtons() {
   const logoutBtn = document.getElementById('logoutBtn');
   const learnerLoginBtn = document.getElementById('learnerLoginBtn');
   const learnerLogoutBtn = document.getElementById('learnerLogoutBtn');
+  const teacherLoginBtn = document.getElementById('teacherLoginBtn');
+  const teacherLogoutBtn = document.getElementById('teacherLogoutBtn');
   const adminBadge = document.getElementById('adminBadge');
   const learnerBadge = document.getElementById('learnerBadge');
-
+  const teacherBadge = document.getElementById('teacherBadge');
   const dashboardTab = document.getElementById('dashboardTab');
+  const teacherDashTab = document.getElementById('teacherDashTab');
+
+  // Hide all first
+  [loginBtn, logoutBtn, learnerLoginBtn, learnerLogoutBtn, teacherLoginBtn, teacherLogoutBtn].forEach(b => { if(b) b.style.display = 'none'; });
+  [adminBadge, learnerBadge, teacherBadge].forEach(b => { if(b) b.classList.remove('show'); });
+  if (dashboardTab) dashboardTab.style.display = 'none';
+  if (teacherDashTab) teacherDashTab.style.display = 'none';
+
   if (isAdmin) {
-    // Admin logged in: show only admin logout, hide learner buttons
-    loginBtn.style.display = 'none';
     logoutBtn.style.display = '';
     logoutBtn.textContent = 'Admin Logout';
-    learnerLoginBtn.style.display = 'none';
-    learnerLogoutBtn.style.display = 'none';
     adminBadge.classList.add('show');
-    learnerBadge.classList.remove('show');
     if (dashboardTab) dashboardTab.style.display = '';
+  } else if (currentTeacher) {
+    teacherLogoutBtn.style.display = '';
+    teacherBadge.classList.add('show');
+    teacherBadge.textContent = currentTeacher.name.split(' ').pop();
+    if (teacherDashTab) teacherDashTab.style.display = '';
+    // If also a learner, show learner dashboard tab too
+    if (currentLearner && dashboardTab) {
+      dashboardTab.style.display = '';
+      learnerBadge.classList.add('show');
+      learnerBadge.textContent = currentLearner.name.split(' ')[0];
+    }
   } else if (currentLearner) {
-    // Learner (non-admin) logged in
-    loginBtn.style.display = 'none';
-    logoutBtn.style.display = 'none';
-    learnerLoginBtn.style.display = 'none';
     learnerLogoutBtn.style.display = '';
-    adminBadge.classList.remove('show');
     learnerBadge.classList.add('show');
     learnerBadge.textContent = currentLearner.name.split(' ')[0];
     if (dashboardTab) dashboardTab.style.display = '';
+    // If also a teacher, show teacher dashboard tab too
+    if (currentTeacher && teacherDashTab) {
+      teacherDashTab.style.display = '';
+      teacherBadge.classList.add('show');
+      teacherBadge.textContent = currentTeacher.name.split(' ').pop();
+    }
   } else {
-    // Nobody logged in
     loginBtn.style.display = '';
-    logoutBtn.style.display = 'none';
     learnerLoginBtn.style.display = '';
-    learnerLogoutBtn.style.display = 'none';
-    adminBadge.classList.remove('show');
-    learnerBadge.classList.remove('show');
-    if (dashboardTab) dashboardTab.style.display = 'none';
+    teacherLoginBtn.style.display = '';
   }
 }
 
@@ -245,8 +257,11 @@ async function doLearnerLogin() {
     currentLearner = learner;
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
+    // Cross-link: if learner is also a teacher, give them teacher access too
+    await linkLearnerToTeacher();
     closeModal('learnerLoginModal');
     showToast('Welcome, ' + learner.name + '!');
+    updateHeaderButtons();
     // Check URL params for auto-actions
     handleLearnerURLParams();
   } catch(e) { console.error('Learner login error:', e); showToast('Login failed'); }
@@ -535,4 +550,138 @@ function handleLearnerURLParams() {
   if (feedbackId && currentLearner) {
     openFeedbackModal(parseInt(feedbackId));
   }
+}
+
+// ── Teacher Auth ──
+
+function openTeacherLoginModal() {
+  showTeacherLoginForm();
+  openModal('teacherLoginModal');
+}
+
+function showTeacherLoginForm() {
+  document.getElementById('teacherLoginForm').style.display = '';
+  document.getElementById('teacherSetupForm').style.display = 'none';
+  document.getElementById('teacherModalTitle').textContent = 'Teacher Login';
+}
+
+function showTeacherSetup() {
+  document.getElementById('teacherLoginForm').style.display = 'none';
+  document.getElementById('teacherSetupForm').style.display = '';
+  document.getElementById('teacherModalTitle').textContent = 'Set Up Teacher Account';
+}
+
+async function doTeacherLogin() {
+  const email = document.getElementById('teacherEmail').value.trim().toLowerCase();
+  const pin = document.getElementById('teacherPin').value.trim();
+  if (!email || !pin) { showToast('Please enter email and password'); return; }
+  try {
+    const contacts = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
+    if (contacts.length === 0) { showToast('No teacher account found with this email. Use "Set up your account" if this is your first time.'); return; }
+    const teacher = contacts[0];
+    if (!teacher.pin_code) { showToast('Account not set up yet. Please use "Set up your account" first.'); return; }
+    const hashed = await hashPassword(pin);
+    if (hashed !== teacher.pin_code) { showToast('Incorrect password'); return; }
+    currentTeacher = teacher;
+    sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
+    closeModal('teacherLoginModal');
+    // Cross-link: if teacher is also a learner, log them in as learner too
+    await linkTeacherToLearner();
+    updateHeaderButtons();
+    showToast(`Welcome, ${teacher.name}!`);
+    switchView('teacherDash');
+  } catch(e) { console.error('Teacher login failed:', e); showToast('Login failed'); }
+}
+
+async function doTeacherSetup() {
+  const email = document.getElementById('teacherSetupEmail').value.trim().toLowerCase();
+  const pin = document.getElementById('teacherSetupPin').value.trim();
+  const pinConfirm = document.getElementById('teacherSetupPinConfirm').value.trim();
+  if (!email || !pin) { showToast('Please fill all fields'); return; }
+  if (pin !== pinConfirm) { showToast('Passwords do not match'); return; }
+  if (pin.length < 4) { showToast('Password must be at least 4 characters'); return; }
+  try {
+    const contacts = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
+    if (contacts.length === 0) { showToast('No teacher record found with this email. Please contact the admin to be added.'); return; }
+    const teacher = contacts[0];
+    if (teacher.pin_code) { showToast('Account already set up. Please login instead.'); return; }
+    const hashed = await hashPassword(pin);
+    await sbUpdate('contacts', teacher.id, { pin_code: hashed });
+    teacher.pin_code = hashed;
+    currentTeacher = teacher;
+    sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
+    closeModal('teacherLoginModal');
+    // Cross-link: if teacher is also a learner, log them in as learner too
+    await linkTeacherToLearner();
+    updateHeaderButtons();
+    showToast(`Account set up! Welcome, ${teacher.name}!`);
+    switchView('teacherDash');
+  } catch(e) { console.error('Teacher setup failed:', e); showToast('Setup failed'); }
+}
+
+async function linkTeacherToLearner() {
+  if (!currentTeacher) return;
+  const email = currentTeacher.email.toLowerCase();
+  try {
+    const data = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
+    if (data.length > 0) {
+      currentLearner = data[0];
+      sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+      document.body.classList.add('is-learner');
+    }
+  } catch(e) { console.warn('Could not link teacher to learner:', e); }
+}
+
+async function linkLearnerToTeacher() {
+  if (!currentLearner) return;
+  const email = currentLearner.email.toLowerCase();
+  try {
+    const data = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
+    if (data.length > 0 && data[0].pin_code) {
+      currentTeacher = data[0];
+      sessionStorage.setItem('sst_teacher', JSON.stringify(data[0]));
+    }
+  } catch(e) { console.warn('Could not link learner to teacher:', e); }
+}
+
+function doTeacherLogout() {
+  currentTeacher = null;
+  currentLearner = null;
+  sessionStorage.removeItem('sst_teacher');
+  sessionStorage.removeItem('sst_learner');
+  document.body.classList.remove('is-learner');
+  updateHeaderButtons();
+  if (currentView === 'teacherDash') switchView('list');
+  showToast('Logged out');
+}
+
+function checkTeacherSession() {
+  const stored = sessionStorage.getItem('sst_teacher');
+  if (stored) {
+    try {
+      currentTeacher = JSON.parse(stored);
+      updateHeaderButtons();
+    } catch(e) { sessionStorage.removeItem('sst_teacher'); }
+  }
+}
+
+function isManager() {
+  if (isAdmin) return true;
+  if (currentTeacher && currentTeacher.is_manager) return true;
+  if (currentTeacher && MANAGERS.includes(currentTeacher.email.toLowerCase())) return true;
+  return false;
+}
+
+function isTeacherForSession(sessionId) {
+  if (!currentTeacher) return false;
+  const ev = events.find(e => e.id === sessionId);
+  if (!ev) return false;
+  return ev.teacherEmail && ev.teacherEmail.toLowerCase() === currentTeacher.email.toLowerCase();
+}
+
+function canMarkAttendance(sessionId) {
+  if (isAdmin) return true;
+  if (isManager()) return true;
+  if (isTeacherForSession(sessionId)) return true;
+  return false;
 }
