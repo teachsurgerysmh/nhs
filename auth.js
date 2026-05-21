@@ -80,8 +80,10 @@ function doLogout() {
   logAction('Logged out');
   currentUser = null;
   currentLearner = null;
+  currentTeacher = null;
   sessionStorage.removeItem('sst_user');
   sessionStorage.removeItem('sst_learner');
+  sessionStorage.removeItem('sst_teacher');
   document.body.classList.remove('is-learner');
   setAdmin(false);
   switchView('list');
@@ -100,9 +102,10 @@ function setAdmin(val) {
   } else {
     logTab.style.cssText = 'display:none !important;';
   }
-  // Auto-link admin to learner record
+  // Auto-link admin to learner + teacher records
   if (val && currentUser) {
     linkAdminToLearner();
+    linkAdminToTeacher();
   }
 }
 
@@ -141,6 +144,25 @@ async function linkAdminToLearner() {
   }
 }
 
+async function linkAdminToTeacher() {
+  if (!currentUser) return;
+  const adminEmails = {
+    suketu: 'Suketu.Batra@nbt.nhs.uk',
+    ilgin: 'Ilgin.Kilic@nbt.nhs.uk',
+    nitin: 'Nitin.Arvind@nbt.nhs.uk'
+  };
+  const email = (adminEmails[currentUser.username] || '').toLowerCase();
+  if (!email) return;
+  try {
+    const data = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
+    if (data.length > 0) {
+      currentTeacher = data[0];
+      sessionStorage.setItem('sst_teacher', JSON.stringify(data[0]));
+      updateHeaderButtons();
+    }
+  } catch(e) { console.warn('Could not link admin to teacher:', e); }
+}
+
 function updateHeaderButtons() {
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
@@ -165,6 +187,17 @@ function updateHeaderButtons() {
     logoutBtn.textContent = 'Admin Logout';
     adminBadge.classList.add('show');
     if (dashboardTab) dashboardTab.style.display = '';
+    // Show teacher dashboard tab if admin is also a teacher
+    if (currentTeacher && teacherDashTab) {
+      teacherDashTab.style.display = '';
+      teacherBadge.classList.add('show');
+      teacherBadge.textContent = currentTeacher.name.split(' ').pop();
+    }
+    // Show learner badge if admin is also a learner
+    if (currentLearner) {
+      learnerBadge.classList.add('show');
+      learnerBadge.textContent = currentLearner.name.split(' ')[0];
+    }
   } else if (currentTeacher) {
     teacherLogoutBtn.style.display = '';
     teacherBadge.classList.add('show');

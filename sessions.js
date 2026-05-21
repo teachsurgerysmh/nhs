@@ -51,6 +51,7 @@ function switchView(view) {
   document.getElementById('adminDashView').style.display = 'none';
   document.getElementById('dashboardView').style.display = 'none';
   document.getElementById('inboxView').style.display = 'none';
+  document.getElementById('teacherDashView').style.display = 'none';
   document.getElementById('actionLandingView').style.display = 'none';
   const filtersBar = document.getElementById('filtersBar');
   const statsBar = document.getElementById('statsBar');
@@ -104,6 +105,10 @@ function switchView(view) {
     document.getElementById('siteFeedbackView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     loadSiteFeedbackView();
+  } else if (view === 'teacherDash') {
+    document.getElementById('teacherDashView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    if (currentTeacher) loadTeacherDashboard();
   } else if (view === 'actionLanding') {
     document.getElementById('actionLandingView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
@@ -243,7 +248,7 @@ function renderEvents() {
           <span class="card-status status-pill-${e.status}">${e.status}</span>
         </div>
         ${(isAdmin && e.lastEditBy) ? '<div class="last-edit-info">Last edited by ' + esc(e.lastEditBy) + (e.lastEditAt ? ' at ' + new Date(e.lastEditAt).toLocaleString() : '') + '</div>' : ''}
-        ${currentLearner && e.status !== 'cancelled' && (e.status === 'completed' || (eventToDate(e) && eventToDate(e) < new Date())) ? '<div style="margin-top:8px;display:flex;gap:6px;"><button class="btn btn-green" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();markSelfAttendance(' + e.id + ')">I Attended</button><button class="btn btn-white" style="font-size:11px;padding:4px 10px;border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="event.stopPropagation();openFeedbackModal(' + e.id + ')">Give Feedback</button></div>' : ''}
+        ${e.status !== 'cancelled' && (e.status === 'completed' || (eventToDate(e) && eventToDate(e) < new Date())) ? '<div style="margin-top:8px;display:flex;gap:6px;">' + (currentLearner ? '<button class="btn btn-green" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();markSelfAttendance(' + e.id + ')">I Attended</button>' : '') + '<button class="btn btn-white" style="font-size:11px;padding:4px 10px;border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="event.stopPropagation();openFeedbackModal(' + e.id + ')">Give Feedback</button></div>' : ''}
       </div>`;
     });
     html += '</div>';
@@ -463,12 +468,29 @@ function showDetail(id) {
 
   let html = '';
 
-  /* ---- Admin action bar at top ---- */
+  /* ---- Admin/Teacher action bar at top ---- */
+  const canAttend = typeof canMarkAttendance === 'function' && canMarkAttendance(ev.id);
   if (isAdminView) {
     html += `<div class="detail-actions-row">
       <button class="btn btn-orange" onclick="closeModal('detailModal');openEditModal(${ev.id})">&#9998; Edit</button>
       <button class="btn btn-outline" style="color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="togglePublish(${ev.id})">${ev.published ? 'Unpublish' : 'Publish'}</button>
       <button class="btn btn-outline" style="color:var(--nhs-green);border-color:var(--nhs-green);" onclick="closeModal('detailModal');openAttendanceModal(${ev.id})">Attendance</button>
+    </div>`;
+  } else if (canAttend) {
+    html += `<div class="detail-actions-row">
+      <button class="btn btn-outline" style="color:var(--nhs-green);border-color:var(--nhs-green);" onclick="closeModal('detailModal');openAttendanceModal(${ev.id})">Mark Attendance</button>
+    </div>`;
+  }
+
+  /* ---- QR Code for feedback (visible to admin/teacher for past sessions) ---- */
+  const evDateQR = eventToDate(ev);
+  const isPastQR = evDateQR && evDateQR < new Date();
+  if ((isAdminView || canAttend) && (isPastQR || ev.status === 'completed')) {
+    const fbUrl = encodeURIComponent(SITE_URL + '?feedback=' + ev.id);
+    html += `<div style="text-align:center;margin:12px 0;padding:16px;background:var(--nhs-bg);border-radius:8px;">
+      <div style="font-size:13px;font-weight:600;color:var(--nhs-dark-blue);margin-bottom:8px;">Feedback QR Code — display at end of session</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${fbUrl}" alt="Feedback QR" style="width:180px;height:180px;border-radius:4px;">
+      <div style="font-size:11px;color:var(--nhs-grey);margin-top:6px;">Scan to submit feedback</div>
     </div>`;
   }
 
@@ -531,6 +553,14 @@ function showDetail(id) {
     const evDateAdmin = eventToDate(ev);
     const isPastAdmin = evDateAdmin && evDateAdmin < new Date();
     if (isPastAdmin || ev.status === 'completed') {
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-green);color:var(--nhs-green);" onclick="closeModal('detailModal');openFeedbackRequestModal(${ev.id})">Request Feedback</button>`;
+    }
+  }
+  // Teacher actions for past sessions
+  if (canAttend && !isAdminView) {
+    const evDateT = eventToDate(ev);
+    const isPastT = evDateT && evDateT < new Date();
+    if (isPastT || ev.status === 'completed') {
       footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-green);color:var(--nhs-green);" onclick="closeModal('detailModal');openFeedbackRequestModal(${ev.id})">Request Feedback</button>`;
     }
   }
