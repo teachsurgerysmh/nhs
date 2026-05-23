@@ -1488,6 +1488,45 @@ async function loadRosterView() {
     const learners = await sbGet('learners', 'order=placement.asc,grade.asc,name.asc&select=*');
     const today = new Date().toISOString().split('T')[0];
 
+    // Fetch attendance counts per learner (approved only)
+    const attendanceData = await sbGet('attendance', 'status=eq.approved&select=learner_id,session_id');
+    const attendanceCounts = {};
+    attendanceData.forEach(a => {
+      attendanceCounts[a.learner_id] = (attendanceCounts[a.learner_id] || 0) + 1;
+    });
+
+    // Count sessions during each learner's placement (for F1/F2 percentage)
+    const allSessions = events.filter(e => e.published && e.status !== 'cancelled');
+
+    function countSessionsDuringPlacement(learner) {
+      if (!learner.placement_start || !learner.placement_end) return 0;
+      const start = new Date(learner.placement_start);
+      const end = new Date(learner.placement_end);
+      const todayD = new Date(); todayD.setHours(0,0,0,0);
+      return allSessions.filter(e => {
+        const d = eventToDate(e);
+        return d && d >= start && d <= end && d <= todayD;
+      }).length;
+    }
+
+    function isF1F2(grade) {
+      return grade && (grade === 'FY1' || grade === 'FY2' || grade === 'F1' || grade === 'F2');
+    }
+
+    function attendanceCell(learner) {
+      const attended = attendanceCounts[learner.id] || 0;
+      const total = countSessionsDuringPlacement(learner);
+      const missed = Math.max(0, total - attended);
+      if (total === 0) return '<span style="color:var(--nhs-grey);font-size:12px;">No sessions yet</span>';
+      if (isF1F2(learner.grade)) {
+        const pct = Math.round((attended / total) * 100);
+        const color = pct >= 75 ? 'var(--nhs-green)' : pct >= 50 ? 'var(--nhs-orange)' : 'var(--nhs-red)';
+        return `<span style="font-weight:700;color:${color};font-size:13px;">${pct}%</span> <span style="font-size:11px;color:var(--nhs-grey);">(${attended}/${total})</span>`;
+      } else {
+        return `<span style="font-size:12px;"><span style="color:var(--nhs-green);font-weight:600;">${attended}</span> attended, <span style="color:${missed>0?'var(--nhs-red)':'var(--nhs-grey)'};font-weight:600;">${missed}</span> missed</span>`;
+      }
+    }
+
     // Group by placement
     const currentRotation = learners.filter(l => l.placement_end && l.placement_end >= today && l.followup_eligible);
     const pastRotation = learners.filter(l => l.placement_end && l.placement_end < today && l.followup_eligible);
@@ -1508,14 +1547,15 @@ async function loadRosterView() {
         <button class="btn" style="background:var(--nhs-dark-blue);color:white;border:none;" onclick="openRotationSetupModal()">New Rotation Setup</button>
         <button class="btn" style="background:var(--nhs-green);color:white;border:none;" onclick="openAddLearnerToRosterModal()">Add Learner</button>
         <button class="btn" style="background:var(--nhs-orange);color:white;border:none;" onclick="endCurrentRotation()">End Current Rotation</button>
+        <button class="btn" style="background:var(--nhs-pale-grey);border:none;font-size:12px;" onclick="findDuplicateLearners()">Find Duplicates</button>
       </div>`;
 
     // Current rotation stats
     html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;">
       <div class="stat-card"><div class="stat-num">${currentRotation.length}</div><div class="stat-label">Current Roster</div></div>
-      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&l.grade.includes('1')).length}</div><div class="stat-label">FY1s</div></div>
-      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&l.grade.includes('2')).length}</div><div class="stat-label">FY2s</div></div>
-      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&(l.grade.startsWith('CT')||l.grade==='SHO')).length}</div><div class="stat-label">CT/SHO</div></div>
+      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>isF1F2(l.grade)).length}</div><div class="stat-label">FY1/FY2</div></div>
+      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&(l.grade.startsWith('CT')||l.grade==='SHO'||l.grade==='CF')).length}</div><div class="stat-label">CT/CF/SHO</div></div>
+      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&!isF1F2(l.grade)&&!l.grade.startsWith('CT')&&l.grade!=='SHO'&&l.grade!=='CF').length}</div><div class="stat-label">Other</div></div>
     </div>`;
 
     // Current rotation by placement
@@ -1526,14 +1566,14 @@ async function loadRosterView() {
         html += `<div class="dashboard-card" style="margin-bottom:12px;">
           <h4 style="color:var(--nhs-dark-blue);margin-bottom:10px;">${esc(placement)} <span style="font-weight:400;color:var(--nhs-grey);font-size:13px;">(${members.length})</span></h4>
           <div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">
-            <tr style="background:var(--nhs-bg);"><th style="padding:8px;text-align:left;">Name</th><th style="padding:8px;text-align:left;">Grade</th><th style="padding:8px;text-align:left;">Dates</th><th style="padding:8px;text-align:left;">Email</th><th style="padding:8px;">Actions</th></tr>`;
+            <tr style="background:var(--nhs-bg);"><th style="padding:8px;text-align:left;">Name</th><th style="padding:8px;text-align:left;">Grade</th><th style="padding:8px;text-align:left;">Attendance</th><th style="padding:8px;text-align:left;">Dates</th><th style="padding:8px;">Actions</th></tr>`;
         members.forEach(l => {
           const dates = l.placement_start && l.placement_end ? `${l.placement_start} → ${l.placement_end}` : 'Not set';
           html += `<tr style="border-bottom:1px solid var(--nhs-pale-grey);">
             <td style="padding:8px;font-weight:600;">${esc(l.name)}</td>
             <td style="padding:8px;"><span style="background:#e0e7f5;color:#003087;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${esc(l.grade)}</span></td>
+            <td style="padding:8px;">${attendanceCell(l)}</td>
             <td style="padding:8px;font-size:12px;">${dates}</td>
-            <td style="padding:8px;font-size:12px;">${esc(l.email)}</td>
             <td style="padding:8px;text-align:center;">
               <button class="btn" style="padding:3px 10px;font-size:11px;background:var(--nhs-pale-grey);border:none;" onclick="editLearnerPlacement(${l.id})">Edit</button>
             </td>
@@ -1729,6 +1769,92 @@ async function endCurrentRotation() {
 
 function openAddLearnerToRosterModal() {
   openRotationSetupModal(); // Same modal, just pre-fill dates from current rotation
+}
+
+async function findDuplicateLearners() {
+  try {
+    const learners = await sbGet('learners', 'select=id,name,email,grade,pin_code,contact_id');
+    // Group by lowercase email
+    const byEmail = {};
+    learners.forEach(l => {
+      if (!l.email) return;
+      const key = l.email.toLowerCase();
+      if (!byEmail[key]) byEmail[key] = [];
+      byEmail[key].push(l);
+    });
+    const dupes = Object.entries(byEmail).filter(([,v]) => v.length > 1);
+    if (dupes.length === 0) {
+      showToast('No duplicates found!');
+      return;
+    }
+    let html = `<h3 style="color:var(--nhs-dark-blue);margin-bottom:12px;">Duplicate Learners Found</h3>
+      <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">These learners share the same email. Click "Merge" to keep the one with the most data and reassign records from the other.</p>`;
+    dupes.forEach(([email, records]) => {
+      html += `<div style="background:var(--nhs-bg);padding:12px;border-radius:8px;margin-bottom:10px;">
+        <p style="font-weight:600;margin-bottom:6px;">${esc(email)}</p>`;
+      records.forEach(r => {
+        html += `<div style="font-size:12px;margin:4px 0;display:flex;justify-content:space-between;align-items:center;">
+          <span>ID ${r.id}: ${esc(r.name)} (${esc(r.grade||'—')}) ${r.pin_code?'🔑':''} ${r.contact_id?'🔗':''}</span>
+        </div>`;
+      });
+      // Auto-pick: prefer the one with pin_code, or highest id
+      const keep = records.find(r => r.pin_code) || records[records.length - 1];
+      const remove = records.filter(r => r.id !== keep.id);
+      html += `<button class="btn btn-green" style="padding:4px 12px;font-size:11px;margin-top:6px;" onclick="mergeLearners(${keep.id}, [${remove.map(r=>r.id).join(',')}])">Merge → Keep #${keep.id} (${esc(keep.name)})</button>`;
+      html += '</div>';
+    });
+    let modal = document.getElementById('duplicatesModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'duplicatesModal';
+      modal.setAttribute('role', 'dialog');
+      modal.innerHTML = '<div class="modal"><div class="modal-header"><h3>Duplicates</h3><button class="modal-close" onclick="closeModal(\'duplicatesModal\')">&times;</button></div><div class="modal-body" id="duplicatesModalBody"></div></div>';
+      document.body.appendChild(modal);
+    }
+    document.getElementById('duplicatesModalBody').innerHTML = html;
+    openModal('duplicatesModal');
+  } catch(e) { showToast('Failed to scan for duplicates'); console.error(e); }
+}
+
+async function mergeLearners(keepId, removeIds) {
+  if (!confirm(`Merge ${removeIds.length} duplicate(s) into learner #${keepId}? Attendance, feedback, and absence records will be reassigned.`)) return;
+  try {
+    for (const removeId of removeIds) {
+      // Reassign attendance
+      const att = await sbGet('attendance', `learner_id=eq.${removeId}&select=id,session_id`);
+      for (const a of att) {
+        const exists = await sbGet('attendance', `learner_id=eq.${keepId}&session_id=eq.${a.session_id}&select=id`);
+        if (exists.length === 0) {
+          await sbUpdate('attendance', a.id, { learner_id: keepId });
+        }
+      }
+      // Reassign feedback
+      const fb = await sbGet('feedback', `learner_id=eq.${removeId}&select=id,session_id`);
+      for (const f of fb) {
+        const exists = await sbGet('feedback', `learner_id=eq.${keepId}&session_id=eq.${f.session_id}&select=id`);
+        if (exists.length === 0) {
+          await sbUpdate('feedback', f.id, { learner_id: keepId });
+        }
+      }
+      // Reassign absence_reasons
+      const ar = await sbGet('absence_reasons', `learner_id=eq.${removeId}&select=id,session_id`);
+      for (const a of ar) {
+        const exists = await sbGet('absence_reasons', `learner_id=eq.${keepId}&session_id=eq.${a.session_id}&select=id`);
+        if (exists.length === 0) {
+          await sbUpdate('absence_reasons', a.id, { learner_id: keepId });
+        }
+      }
+      // Delete leftover records and the duplicate learner
+      await _originalFetch(`${SB_URL}/rest/v1/attendance?learner_id=eq.${removeId}`, { method: 'DELETE', headers: SB_HEADERS });
+      await _originalFetch(`${SB_URL}/rest/v1/feedback?learner_id=eq.${removeId}`, { method: 'DELETE', headers: SB_HEADERS });
+      await _originalFetch(`${SB_URL}/rest/v1/absence_reasons?learner_id=eq.${removeId}`, { method: 'DELETE', headers: SB_HEADERS });
+      await _originalFetch(`${SB_URL}/rest/v1/learners?id=eq.${removeId}`, { method: 'DELETE', headers: SB_HEADERS });
+    }
+    showToast(`Merged ${removeIds.length} duplicate(s) into #${keepId}`);
+    closeModal('duplicatesModal');
+    loadRosterView();
+  } catch(e) { showToast('Merge failed'); console.error(e); }
 }
 
 // ===================== EXPECTED ATTENDANCE (auto from placement dates) =====================

@@ -286,7 +286,7 @@ async function doLearnerLogin() {
   const pin = document.getElementById('learnerPin').value.trim();
   if (!email || !pin) { showToast('Enter email and password'); return; }
   try {
-    const data = await sbGet('learners', `email=eq.${encodeURIComponent(email)}&select=*`);
+    const data = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
     if (data.length === 0) { showToast('Account not found. Please register.'); return; }
     const learner = data[0];
     // Pre-created account with no PIN — prompt to set up
@@ -520,6 +520,13 @@ async function doLearnerRegister() {
 
   if (!name || !email || !grade || !placement) { showToast('Please fill in all required fields'); return; }
   if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) { showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return; }
+
+  // Check for existing learner with same email (case-insensitive)
+  const existing = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
+  if (existing.length > 0) {
+    showToast('An account with this email already exists. Please log in instead.', 4000);
+    return;
+  }
 
   // Generate 6-digit PIN and hash it before storing
   const pin = String(Math.floor(100000 + Math.random() * 900000));
