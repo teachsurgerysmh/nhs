@@ -840,8 +840,8 @@ async function loadApprovals() {
   container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div>';
   try {
     const [pending, recent] = await Promise.all([
-      sbGet('attendance', 'status=eq.pending&select=*&order=created_at.desc'),
-      sbGet('attendance', 'status=not.in.(pending,removed)&order=approved_at.desc&limit=20&select=*')
+      sbGet('attendance', 'status=eq.pending&select=*&order=marked_at.desc'),
+      sbGet('attendance', 'status=in.(approved,rejected)&order=approved_at.desc.nullslast&limit=20&select=*')
     ]);
     const allLearnerIds = [...new Set([...pending, ...recent].map(a => a.learner_id))];
     let learnersMap = {};
@@ -861,7 +861,7 @@ async function loadApprovals() {
         const learner = learnersMap[a.learner_id] || {};
         const ev = events.find(e => e.id === a.session_id);
         const sessionLabel = ev ? `${esc(ev.topic || 'TBD')} - ${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}` : `Session #${a.session_id}`;
-        const requestedDate = a.created_at ? new Date(a.created_at).toLocaleDateString('en-GB') : '';
+        const requestedDate = a.marked_at ? new Date(a.marked_at).toLocaleDateString('en-GB') : '';
         html += `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--nhs-pale-grey);flex-wrap:wrap;">
           <div style="flex:1;min-width:200px;">
             <strong>${esc(learner.name || 'Unknown')}</strong> <span style="color:var(--nhs-grey);font-size:12px;">(${esc(learner.grade || '')} - ${esc(learner.placement || '')})</span>
@@ -1796,21 +1796,39 @@ function openAddLearnerToRosterModal() {
 async function findDuplicateLearners() {
   try {
     const learners = await sbGet('learners', 'select=id,name,email,grade,pin_code,contact_id');
-    // Group by lowercase email
-    const byEmail = {};
+    // Group by lowercase email OR same contact_id
+    const byKey = {};
     learners.forEach(l => {
-      if (!l.email) return;
-      const key = l.email.toLowerCase();
-      if (!byEmail[key]) byEmail[key] = [];
-      byEmail[key].push(l);
+      // Group by email
+      if (l.email) {
+        const emailKey = 'email:' + l.email.toLowerCase();
+        if (!byKey[emailKey]) byKey[emailKey] = [];
+        if (!byKey[emailKey].find(x => x.id === l.id)) byKey[emailKey].push(l);
+      }
+      // Group by contact_id
+      if (l.contact_id) {
+        const cidKey = 'contact:' + l.contact_id;
+        if (!byKey[cidKey]) byKey[cidKey] = [];
+        if (!byKey[cidKey].find(x => x.id === l.id)) byKey[cidKey].push(l);
+      }
     });
-    const dupes = Object.entries(byEmail).filter(([,v]) => v.length > 1);
+    // Deduplicate: merge groups that share any learner id
+    const seen = new Set();
+    const dupeGroups = [];
+    for (const [, group] of Object.entries(byKey)) {
+      if (group.length <= 1) continue;
+      const ids = group.map(l => l.id).sort().join(',');
+      if (seen.has(ids)) continue;
+      seen.add(ids);
+      dupeGroups.push([group[0].email || 'contact_id:' + group[0].contact_id, group]);
+    }
+    const dupes = dupeGroups;
     if (dupes.length === 0) {
       showToast('No duplicates found!');
       return;
     }
     let html = `<h3 style="color:var(--nhs-dark-blue);margin-bottom:12px;">Duplicate Learners Found</h3>
-      <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">These learners share the same email. Click "Merge" to keep the one with the most data and reassign records from the other.</p>`;
+      <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">These learners share the same email or contact link. Click "Merge" to keep the one with the most data and reassign records from the other.</p>`;
     dupes.forEach(([email, records]) => {
       html += `<div style="background:var(--nhs-bg);padding:12px;border-radius:8px;margin-bottom:10px;">
         <p style="font-weight:600;margin-bottom:6px;">${esc(email)}</p>`;
