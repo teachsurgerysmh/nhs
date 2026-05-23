@@ -1473,7 +1473,7 @@ function setupRegEmailAutopopulate() {
 
 // ===================== ROSTER MANAGEMENT =====================
 
-const JUNIOR_GRADES = ['FY1','FY2','F1','F2','CT1','CT2','SHO','CF','Clinical Fellow'];
+const JUNIOR_GRADES = ['FY1','FY2','F1','F2','CT1','CT2','SHO','JCF','SCF','Clinical Fellow'];
 
 function isJuniorGrade(grade) {
   if (!grade) return false;
@@ -1556,8 +1556,8 @@ async function loadRosterView() {
     html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;">
       <div class="stat-card"><div class="stat-num">${currentRotation.length}</div><div class="stat-label">Current Roster</div></div>
       <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>isF1F2(l.grade)).length}</div><div class="stat-label">FY1/FY2</div></div>
-      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&(l.grade.startsWith('CT')||l.grade==='SHO'||l.grade==='CF')).length}</div><div class="stat-label">CT/CF/SHO</div></div>
-      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&!isF1F2(l.grade)&&!l.grade.startsWith('CT')&&l.grade!=='SHO'&&l.grade!=='CF').length}</div><div class="stat-label">Other</div></div>
+      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&(l.grade.startsWith('CT')||l.grade==='SHO'||l.grade==='JCF'||l.grade==='SCF')).length}</div><div class="stat-label">CT/CF/SHO</div></div>
+      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&!isF1F2(l.grade)&&!l.grade.startsWith('CT')&&l.grade!=='SHO'&&l.grade!=='JCF'&&l.grade!=='SCF').length}</div><div class="stat-label">Other</div></div>
     </div>`;
 
     // Current rotation by placement
@@ -1612,7 +1612,7 @@ async function editLearnerPlacement(learnerId) {
       <h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Edit Placement: ${esc(l.name)}</h3>
       <label>Grade</label>
       <select id="editGrade">
-        ${['FY1','FY2','CT1','CT2','SHO','CF','ST3','ST4','ST5','ST6','ST7','ST8','SpR','Registrar','Consultant','ANP','Other'].map(g => `<option ${l.grade===g?'selected':''}>${g}</option>`).join('')}
+        ${['FY1','FY2','CT1','CT2','SHO','JCF','SCF','ST3','ST4','ST5','ST6','ST7','ST8','SpR','Registrar','Consultant','ANP','Other'].map(g => `<option ${l.grade===g?'selected':''}>${g}</option>`).join('')}
       </select>
       <label>Placement</label>
       <select id="editPlacement">

@@ -31,7 +31,7 @@ function switchView(view) {
   document.querySelectorAll('.nav-dropdown-item').forEach(t => t.classList.toggle('active', t.dataset.view === view));
   // Highlight "More" button if a dropdown view is active
   const moreBtn = document.querySelector('.nav-more-btn');
-  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','roster','absences','siteFeedback','log'];
+  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','roster','absences','siteFeedback','surveyResults','log'];
   // Close nav dropdown on any view switch
   const dd = document.getElementById('navDropdown');
   if (dd) dd.classList.remove('show');
@@ -56,6 +56,8 @@ function switchView(view) {
   document.getElementById('rosterView').style.display = 'none';
   document.getElementById('absencesView').style.display = 'none';
   document.getElementById('absenceLandingView').style.display = 'none';
+  document.getElementById('surveyView').style.display = 'none';
+  document.getElementById('surveyResultsView').style.display = 'none';
   const filtersBar = document.getElementById('filtersBar');
   const statsBar = document.getElementById('statsBar');
   const welcomeBanner = document.getElementById('welcomeBanner');
@@ -127,6 +129,13 @@ function switchView(view) {
     document.getElementById('absenceLandingView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     document.querySelector('.nav-bar').style.display = 'none';
+  } else if (view === 'survey') {
+    document.getElementById('surveyView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+  } else if (view === 'surveyResults') {
+    document.getElementById('surveyResultsView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    renderSurveyResults();
   } else {
     document.getElementById('listView').style.display = 'block';
     filtersBar.style.display = '';

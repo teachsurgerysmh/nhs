@@ -58,6 +58,7 @@
         <div class="nav-dropdown-item" data-view="roster" onclick="switchViewFromDropdown('roster')">Roster</div>
         <div class="nav-dropdown-item" data-view="absences" onclick="switchViewFromDropdown('absences')">Absences</div>
         <div class="nav-dropdown-item" data-view="siteFeedback" onclick="switchViewFromDropdown('siteFeedback')">Site Feedback</div>
+        <div class="nav-dropdown-item admin-only" data-view="surveyResults" onclick="switchViewFromDropdown('surveyResults')">QI Surveys</div>
         <div class="nav-dropdown-item" data-view="log" onclick="switchViewFromDropdown('log')" id="logTab" style="display:none;">Activity Log</div>
       </div>
     </div>
@@ -71,6 +72,8 @@
   <p>Weekly teaching sessions for foundation doctors and trainees on the General Surgery rotation at North Bristol NHS Trust.</p>
   <button onclick="showRequestSessionModal()" style="margin-top:18px;padding:14px 36px;font-size:1.1rem;font-weight:700;background:#009639;color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 15px rgba(0,150,57,0.4);letter-spacing:0.3px;transition:all 0.2s;" onmouseover="this.style.background='#007a2e';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#009639';this.style.transform='translateY(0)'">Request a Teaching Session</button>
 </div>
+
+<div id="surveyCardContainer"></div>
 
 <div class="stats-bar" id="statsBar">
   <div class="stats-inner">
@@ -116,6 +119,8 @@
   <div id="teacherDashView" style="display:none;"></div>
   <div id="actionLandingView" style="display:none;"></div>
   <div id="absenceLandingView" style="display:none;"></div>
+  <div id="surveyView" style="display:none;"></div>
+  <div id="surveyResultsView" style="display:none;"></div>
 </div>
 
 <button class="fab" onclick="openAddModal()" title="Add Session">+</button>
@@ -670,6 +675,7 @@
 <script src="messaging.js"></script>
 <script src="learner.js"></script>
 <script src="actions.js"></script>
+<script src="surveys.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -293,6 +293,43 @@ body.is-learner .learner-only-block { display: block !important; }
 .action-landing .slot-list li { padding: 10px 14px; margin-bottom: 6px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); cursor: pointer; font-size: 14px; transition: all 0.15s; }
 .action-landing .slot-list li:hover { border-color: var(--nhs-blue); background: #e0f5fa; }
 .action-landing .slot-list li.selected { border-color: var(--nhs-green); background: #e6f4ea; }
+
+/* ===================== SURVEY STYLES ===================== */
+.survey-container { max-width: 640px; margin: 0 auto; padding: 20px; }
+.survey-header { background: linear-gradient(135deg, var(--nhs-blue), var(--nhs-dark-blue)); color: white; border-radius: 12px 12px 0 0; padding: 28px 24px 20px; text-align: center; }
+.survey-header h2 { font-size: 18px; margin-bottom: 4px; }
+.survey-header p { opacity: 0.85; font-size: 13px; margin: 0; }
+.survey-progress { background: rgba(255,255,255,0.2); border-radius: 6px; height: 8px; margin-top: 16px; overflow: hidden; }
+.survey-progress-bar { height: 100%; background: var(--nhs-green); border-radius: 6px; transition: width 0.4s ease; }
+.survey-progress-label { font-size: 11px; opacity: 0.7; margin-top: 6px; }
+.survey-body { background: white; border-radius: 0 0 12px 12px; box-shadow: var(--shadow); padding: 24px; }
+.survey-section-header { background: var(--nhs-dark-blue); color: white; font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: var(--radius); margin-bottom: 16px; }
+.survey-question { margin-bottom: 20px; }
+.survey-q-label { display: block; font-size: 14px; font-weight: 600; color: var(--nhs-black); margin-bottom: 8px; line-height: 1.4; }
+.survey-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.survey-opt-btn { padding: 8px 14px; border: 1.5px solid var(--nhs-pale-grey); border-radius: 20px; background: white; font-size: 13px; cursor: pointer; transition: all 0.15s; color: var(--nhs-black); text-align: left; }
+.survey-opt-btn:hover { border-color: var(--nhs-blue); background: #e0f5fa; }
+.survey-opt-btn.selected { border-color: var(--nhs-blue); background: var(--nhs-blue); color: white; }
+.survey-other-wrap { width: 100%; display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.survey-other-input { flex: 1; min-width: 200px; padding: 8px 12px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); font-size: 13px; margin-top: 4px; }
+.survey-scale { display: flex; align-items: center; gap: 8px; }
+.survey-scale-label { font-size: 11px; color: var(--nhs-grey); min-width: 60px; text-align: center; }
+.survey-scale-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.survey-text-input { width: 100%; padding: 9px 12px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); font-size: 13px; font-family: inherit; }
+.survey-text-area { width: 100%; padding: 9px 12px; border: 1.5px solid var(--nhs-pale-grey); border-radius: var(--radius); font-size: 13px; font-family: inherit; resize: vertical; }
+.survey-nav { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--nhs-pale-grey); }
+.survey-next-btn { padding: 10px 24px; font-size: 14px; }
+.survey-complete { text-align: center; padding: 40px 20px; }
+.survey-complete h3 { color: var(--nhs-green); font-size: 22px; margin-bottom: 8px; }
+.survey-complete p { color: var(--nhs-grey); font-size: 14px; max-width: 400px; margin: 0 auto; }
+.survey-home-card { background: white; border-radius: 12px; box-shadow: var(--shadow); margin: 0 20px 16px; max-width: 1200px; overflow: hidden; border-left: 4px solid var(--nhs-blue); }
+.survey-home-card-inner { display: flex; align-items: center; gap: 14px; padding: 16px 20px 8px; }
+.survey-home-links { display: flex; gap: 8px; padding: 8px 20px 16px; flex-wrap: wrap; }
+.survey-results-form { background: var(--nhs-bg); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+.survey-required { color: var(--nhs-red); font-weight: 700; }
+.survey-question.error { border: 2px solid var(--nhs-red); border-radius: var(--radius); padding: 10px; margin: -2px; animation: surveyShake 0.4s ease; }
+@keyframes surveyShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+@media (min-width: 1201px) { .survey-home-card { margin: 0 auto 16px; } }
 @media (max-width: 768px) {
   .header-inner { flex-direction: column; align-items: flex-start; gap: 6px; }
   .header-left { width: 100%; justify-content: space-between; }

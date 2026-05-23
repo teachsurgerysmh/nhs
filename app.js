@@ -278,8 +278,25 @@ async function init() {
   renderAll();
   updateSessionsTabLabel();
   setupRegEmailAutopopulate();
-  // Handle action URL params (confirm/decline/reschedule from email links)
+  // Render survey homepage card
+  const surveyCardContainer = document.getElementById('surveyCardContainer');
+  if (surveyCardContainer) surveyCardContainer.innerHTML = renderSurveyCard();
+  // Handle survey URL params (public survey or email one-click)
   const params = new URLSearchParams(window.location.search);
+  // Email one-click survey answer: ?survey_answer=1&form=X&q=Y&a=Z&token=T
+  const hasSurveyEmail = await handleSurveyEmailClick();
+  if (hasSurveyEmail) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return;
+  }
+  // Direct survey link: ?view=survey&type=X
+  if (params.get('view') === 'survey' && params.get('type')) {
+    const surveyToken = params.get('token') || null;
+    window.history.replaceState({}, document.title, window.location.pathname);
+    openSurvey(params.get('type'), surveyToken);
+    return;
+  }
+  // Handle action URL params (confirm/decline/reschedule from email links)
   const hasAction = await handleActionParams();
   if (hasAction) {
     // Clean URL without reloading
