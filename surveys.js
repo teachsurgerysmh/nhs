@@ -865,8 +865,9 @@ function openSurveyEmailGenerator() {
         <button class="btn btn-outline" style="color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyEmailPlain()">Copy Plain Text</button>
       </div>
     </div>`;
-  modal.querySelector('.modal-body').innerHTML = html;
-  modal.querySelector('.modal-title').textContent = '📧 Survey Email Generator';
+  document.getElementById('detailBody').innerHTML = html;
+  modal.querySelector('.modal-header h3').textContent = '📧 Survey Email Generator';
+  document.getElementById('detailFooter').innerHTML = '';
   openModal('detailModal');
 }
 
