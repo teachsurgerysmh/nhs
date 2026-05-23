@@ -1496,11 +1496,13 @@ async function loadRosterView() {
     });
 
     // Count sessions during each learner's placement (for F1/F2 percentage)
+    // Only count from 18 May 2026 onwards (site go-live date)
+    const SITE_LIVE_DATE = new Date('2026-05-18');
     const allSessions = events.filter(e => e.published && e.status !== 'cancelled');
 
     function countSessionsDuringPlacement(learner) {
       if (!learner.placement_start || !learner.placement_end) return 0;
-      const start = new Date(learner.placement_start);
+      const start = new Date(Math.max(new Date(learner.placement_start), SITE_LIVE_DATE));
       const end = new Date(learner.placement_end);
       const todayD = new Date(); todayD.setHours(0,0,0,0);
       return allSessions.filter(e => {
@@ -1654,6 +1656,14 @@ async function saveLearnerPlacement(learnerId) {
       placement_end: end || null,
       followup_eligible: followup
     });
+    // Sync to linked contact if exists
+    const learner = await sbGet('learners', `id=eq.${learnerId}&select=contact_id`);
+    if (learner.length > 0 && learner[0].contact_id) {
+      await sbUpdate('contacts', learner[0].contact_id, {
+        role: grade,
+        specialty: placement
+      });
+    }
     closeModal('editPlacementModal');
     showToast('Placement updated');
     loadRosterView();
@@ -1735,16 +1745,28 @@ async function applyNewRotation() {
           grade, placement, placement_start: start, placement_end: end,
           rotation_block: block || null, followup_eligible: true
         });
+        // Sync to linked contact
+        if (existing[0].contact_id) {
+          try { await sbUpdate('contacts', existing[0].contact_id, { role: grade, specialty: placement }); } catch(ce) {}
+        }
       } else {
-        // Create new learner
+        // Create new learner and auto-link to contact
         const pin = String(Math.floor(100000 + Math.random() * 900000));
         const hashedPin = await hashPassword(pin);
-        await sbInsert('learners', {
+        const result = await sbInsert('learners', {
           name, email, grade, placement,
           placement_start: start, placement_end: end,
           rotation_block: block || null,
           pin_code: hashedPin, verified: true, followup_eligible: true
         });
+        // Auto-link contact
+        try {
+          const contactMatch = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=id`);
+          if (contactMatch.length > 0 && result.length > 0) {
+            await sbUpdate('learners', result[0].id, { contact_id: contactMatch[0].id });
+            await sbUpdate('contacts', contactMatch[0].id, { role: grade, specialty: placement });
+          }
+        } catch(ce) {}
       }
       count++;
     } catch(e) { console.warn('Failed to process:', name, e); }
@@ -1846,10 +1868,10 @@ async function mergeLearners(keepId, removeIds) {
         }
       }
       // Delete leftover records and the duplicate learner
-      await _originalFetch(`${SB_URL}/rest/v1/attendance?learner_id=eq.${removeId}`, { method: 'DELETE', headers: SB_HEADERS });
-      await _originalFetch(`${SB_URL}/rest/v1/feedback?learner_id=eq.${removeId}`, { method: 'DELETE', headers: SB_HEADERS });
-      await _originalFetch(`${SB_URL}/rest/v1/absence_reasons?learner_id=eq.${removeId}`, { method: 'DELETE', headers: SB_HEADERS });
-      await _originalFetch(`${SB_URL}/rest/v1/learners?id=eq.${removeId}`, { method: 'DELETE', headers: SB_HEADERS });
+      await _originalFetch(`${SUPABASE_URL}/rest/v1/attendance?learner_id=eq.${removeId}`, { method: 'DELETE', headers });
+      await _originalFetch(`${SUPABASE_URL}/rest/v1/feedback?learner_id=eq.${removeId}`, { method: 'DELETE', headers });
+      await _originalFetch(`${SUPABASE_URL}/rest/v1/absence_reasons?learner_id=eq.${removeId}`, { method: 'DELETE', headers });
+      await _originalFetch(`${SUPABASE_URL}/rest/v1/learners?id=eq.${removeId}`, { method: 'DELETE', headers });
     }
     showToast(`Merged ${removeIds.length} duplicate(s) into #${keepId}`);
     closeModal('duplicatesModal');
