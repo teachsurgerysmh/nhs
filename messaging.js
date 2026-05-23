@@ -710,6 +710,60 @@ function fixMojibake(s) {
   }
 }
 
+// Gmail-style thread row helpers
+function _inboxAvatarColor(seed) {
+  const colors = ['#005eb8','#009639','#ed8b00','#7C2855','#330072','#00a9ce','#003087','#41b6e6','#da291c','#005c8a'];
+  const s = String(seed || '');
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
+  return colors[Math.abs(hash) % colors.length];
+}
+function _inboxInitials(name) {
+  const parts = String(name || '').replace(/[<>"'@.]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+function _inboxDateLabel(d) {
+  if (!d) return '';
+  const date = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(date)) return '';
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+function _renderInboxRow(opts) {
+  const { onclick, active, unread, name, subject, snippet, date, color } = opts;
+  const initials = _inboxInitials(name);
+  const bg = color || _inboxAvatarColor(name);
+  return `<div class="inbox-thread-item${active?' active':''}${unread?' unread':''}" onclick="${onclick}">
+    <div class="inbox-thread-avatar" style="background:${bg};">${esc(initials)}</div>
+    <div class="inbox-thread-body">
+      <div class="inbox-thread-row1">
+        <div class="inbox-thread-from">${esc(name || 'Unknown')}</div>
+        <div class="inbox-thread-date">${esc(date || '')}</div>
+      </div>
+      <div class="inbox-thread-subject">${esc(subject || '(No subject)')}</div>
+      ${snippet ? `<div class="inbox-thread-snippet">${esc(snippet)}</div>` : ''}
+    </div>
+  </div>`;
+}
+// Show detail pane (mobile single-pane switch)
+function _showInboxDetail() {
+  const c = document.querySelector('.inbox-container');
+  if (c) c.classList.add('show-detail');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+function backToInboxList() {
+  const c = document.querySelector('.inbox-container');
+  if (c) c.classList.remove('show-detail');
+}
+
 async function loadInbox() {
   const container = document.getElementById('inboxView');
   container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading inbox...</div>';
@@ -770,11 +824,16 @@ async function loadInbox() {
     } else {
       groups.forEach((g, i) => {
         const lastEmail = g.emails[g.emails.length - 1];
-        const timeStr = lastEmail ? new Date(lastEmail.sentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-        sidebarHtml += `<div class="inbox-thread-item${i === 0 ? ' active' : ''}" onclick="selectInboxThread(${i})" data-thread="${i}">
-          <div class="thread-subject">${esc(g.topic)}</div>
-          <div class="thread-meta">${esc(g.teacher)} &middot; ${g.emails.length} email${g.emails.length !== 1 ? 's' : ''} &middot; ${timeStr}</div>
-        </div>`;
+        const timeStr = _inboxDateLabel(lastEmail?.sentAt);
+        const countTag = g.emails.length > 1 ? ` (${g.emails.length})` : '';
+        sidebarHtml += _renderInboxRow({
+          onclick: `selectInboxThread(${i})`,
+          active: i === 0,
+          name: (g.teacher || 'Unknown') + countTag,
+          subject: g.topic || '(No subject)',
+          snippet: lastEmail?.subject || '',
+          date: timeStr
+        });
       });
     }
     container.innerHTML = `
@@ -799,14 +858,22 @@ async function loadInbox() {
   } else {
     gmailThreads.forEach((t, i) => {
       const firstMsg = t.messages?.[0] || {};
+      const lastMsg = t.messages?.[t.messages.length - 1] || firstMsg;
       const subject = fixMojibake(firstMsg.subject) || '(No subject)';
-      const from = fixMojibake((firstMsg.from || '').replace(/<.*>/, '').trim());
-      const dateStr = firstMsg.date ? new Date(firstMsg.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+      const from = fixMojibake((lastMsg.from || firstMsg.from || '').replace(/<.*>/, '').trim()) || 'Unknown';
+      const snippet = fixMojibake(lastMsg.snippet || firstMsg.snippet || '').slice(0, 110);
+      const dateStr = _inboxDateLabel(lastMsg.date || firstMsg.date);
       const unread = t.messages?.some(m => m.labelIds?.includes('UNREAD'));
-      sidebarHtml += `<div class="inbox-thread-item${i === 0 ? ' active' : ''}${unread ? ' unread' : ''}" onclick="selectGmailThread('${t.id}', ${i})" data-thread="${i}">
-        <div class="thread-subject">${esc(subject)}</div>
-        <div class="thread-meta">${esc(from)} &middot; ${t.messagesCount} msg${t.messagesCount !== 1 ? 's' : ''} &middot; ${dateStr}</div>
-      </div>`;
+      const countTag = t.messagesCount > 1 ? ` (${t.messagesCount})` : '';
+      sidebarHtml += _renderInboxRow({
+        onclick: `selectGmailThread('${t.id}', ${i})`,
+        active: i === 0,
+        unread,
+        name: from + countTag,
+        subject,
+        snippet,
+        date: dateStr
+      });
     });
   }
 
@@ -822,11 +889,19 @@ async function loadInbox() {
     Object.values(waGroups).forEach((g, i) => {
       const last = g.messages[0];
       const hasInbound = g.messages.some(m => m.direction === 'inbound');
-      const timeStr = last?.created_at ? new Date(last.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+      const timeStr = _inboxDateLabel(last?.created_at);
       const statusIcon = last?.status === 'read' ? '✓✓' : last?.status === 'delivered' ? '✓✓' : last?.status === 'sent' ? '✓' : last?.status === 'received' ? '↙' : '';
+      const countTag = g.messages.length > 1 ? ` (${g.messages.length})` : '';
       sidebarHtml += `<div class="inbox-thread-item" onclick="selectWhatsAppThread('${g.phone}')" data-wa-phone="${g.phone}">
-        <div class="thread-subject" style="display:flex;align-items:center;gap:4px;"><span style="color:#25D366;">●</span> ${esc(g.name || g.phone)}</div>
-        <div class="thread-meta">${statusIcon} ${g.messages.length} msg${g.messages.length !== 1 ? 's' : ''} &middot; ${timeStr}${hasInbound ? ' &middot; replied' : ''}</div>
+        <div class="inbox-thread-avatar" style="background:#25D366;">${esc(_inboxInitials(g.name || g.phone))}</div>
+        <div class="inbox-thread-body">
+          <div class="inbox-thread-row1">
+            <div class="inbox-thread-from">${esc(g.name || g.phone)}${esc(countTag)}</div>
+            <div class="inbox-thread-date">${esc(timeStr)}</div>
+          </div>
+          <div class="inbox-thread-subject">${statusIcon} ${esc(last?.message_body || g.phone)}</div>
+          ${hasInbound ? '<div class="inbox-thread-snippet" style="color:var(--nhs-green);">↙ Replied</div>' : ''}
+        </div>
       </div>`;
     });
   }
@@ -847,6 +922,7 @@ async function loadInbox() {
 async function selectGmailThread(threadId, index) {
   // Update sidebar active state
   document.querySelectorAll('.inbox-thread-item').forEach((el, i) => el.classList.toggle('active', i === index));
+  _showInboxDetail();
 
   const mainEl = document.getElementById('inboxMain');
   mainEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading thread...</div>';
@@ -891,14 +967,17 @@ async function selectGmailThread(threadId, index) {
 
     mainEl.innerHTML = `
       <div class="inbox-main-header">
-        <h4>${esc(subject)}</h4>
-        <div class="inbox-meta">${messages.length} message${messages.length !== 1 ? 's' : ''} in thread</div>
+        <button class="inbox-back-btn" onclick="backToInboxList()" aria-label="Back to inbox">←</button>
+        <div class="inbox-main-header-text">
+          <h4>${esc(subject)}</h4>
+          <div class="inbox-meta">${messages.length} message${messages.length !== 1 ? 's' : ''} in thread</div>
+        </div>
       </div>
       <div class="inbox-messages">${messagesHtml}</div>
       <div class="inbox-reply-box">
         <textarea id="inboxReplyText" placeholder="Type a reply..."></textarea>
         <div class="inbox-reply-actions">
-          <span style="font-size:11px;color:var(--nhs-grey);line-height:32px;">Sends from teachsurgerysmh@gmail.com</span>
+          <span class="reply-from-label">From: teachsurgerysmh@gmail.com</span>
           <button class="btn btn-green" onclick="sendGmailReply('${esc(replyTo)}', '${esc(subject)}')">Send Reply</button>
         </div>
       </div>`;
@@ -911,6 +990,7 @@ async function selectGmailThread(threadId, index) {
 function selectWhatsAppThread(phone) {
   // Deselect all threads, select this one
   document.querySelectorAll('.inbox-thread-item').forEach(el => el.classList.remove('active'));
+  _showInboxDetail();
   const el = document.querySelector(`[data-wa-phone="${phone}"]`);
   if (el) el.classList.add('active');
 
@@ -919,9 +999,10 @@ function selectWhatsAppThread(phone) {
   const messages = waLog.filter(w => w.to_phone === phone).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   const contactName = messages[0]?.to_name || phone;
 
-  let html = `<div style="padding:16px 20px;border-bottom:1px solid var(--nhs-pale-grey);display:flex;align-items:center;gap:10px;">
-    <div style="width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
-    <div><strong>${esc(contactName)}</strong><div style="font-size:11px;color:var(--nhs-grey);">${esc(phone)} &middot; WhatsApp</div></div>
+  let html = `<div class="inbox-main-header">
+    <button class="inbox-back-btn" onclick="backToInboxList()" aria-label="Back to inbox">←</button>
+    <div style="width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+    <div class="inbox-main-header-text"><strong>${esc(contactName)}</strong><div style="font-size:11px;color:var(--nhs-grey);">${esc(phone)} &middot; WhatsApp</div></div>
   </div>`;
 
   html += '<div style="padding:16px 20px;background:#ECE5DD;min-height:300px;max-height:500px;overflow-y:auto;">';
@@ -1026,6 +1107,7 @@ function selectInboxThread(index) {
   document.querySelectorAll('.inbox-thread-item').forEach((el, i) => {
     el.classList.toggle('active', i === index);
   });
+  _showInboxDetail();
 
   const mainEl = document.getElementById('inboxMain');
 
@@ -1058,15 +1140,18 @@ function selectInboxThread(index) {
 
   mainEl.innerHTML = `
     <div class="inbox-main-header">
-      <h4>${esc(g.topic)}</h4>
-      <div class="inbox-meta">${esc(g.teacher)} &middot; ${esc(g.dateStr || '')}</div>
-      ${statusNote}
+      <button class="inbox-back-btn" onclick="backToInboxList()" aria-label="Back to inbox">←</button>
+      <div class="inbox-main-header-text">
+        <h4>${esc(g.topic)}</h4>
+        <div class="inbox-meta">${esc(g.teacher)} &middot; ${esc(g.dateStr || '')}</div>
+        ${statusNote}
+      </div>
     </div>
     <div class="inbox-messages">${messagesHtml}</div>
     <div class="inbox-reply-box">
       <textarea id="inboxReplyText" placeholder="Type a reply to ${esc(g.teacher)}..."></textarea>
       <div class="inbox-reply-actions">
-        <span style="font-size:11px;color:var(--nhs-grey);line-height:32px;">Sends from teachsurgerysmh@gmail.com</span>
+        <span class="reply-from-label">From: teachsurgerysmh@gmail.com</span>
         <button class="btn btn-green" data-sid="${g.sessionId}" data-to="${esc(g.emails[0]?.to || '')}" data-topic="${esc(g.topic)}" onclick="sendInboxReply(+this.dataset.sid, this.dataset.to, this.dataset.topic)">Send Reply</button>
       </div>
     </div>`;

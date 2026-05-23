@@ -321,7 +321,11 @@ async function init() {
       openLearnerLoginModal();
     }
   }
-  switchView(isAdmin ? 'adminDash' : (currentTeacher ? 'teacherDash' : 'list'));
+  // Restore view from ?view= if present, otherwise default
+  const initialView = params.get('view') || (isAdmin ? 'adminDash' : (currentTeacher ? 'teacherDash' : 'list'));
+  switchView(initialView);
+  // Seed history with the initial view so back-swipe has something to pop
+  history.replaceState({ view: initialView }, '', `?view=${encodeURIComponent(initialView)}`);
   // Register push notifications for admins
   if (isAdmin) {
     registerPushNotifications();
@@ -332,6 +336,70 @@ async function init() {
     setTimeout(checkFeedbackNudge, 2000);
   }
 }
+
+// ===================== BROWSER HISTORY / SWIPE-BACK =====================
+// Make iOS swipe-from-left-edge (and Android back button) navigate between
+// in-app views instead of leaving the site. Wraps switchView to push history;
+// popstate restores the view. Also handles modal & drawer back-closing.
+(function installHistoryNav() {
+  const NO_PUSH_VIEWS = new Set(['actionLanding','absenceLanding','survey']);
+  const _origSwitchView = window.switchView;
+  let _navFromPop = false;
+
+  window.switchView = function (view) {
+    _origSwitchView(view);
+    if (_navFromPop) return;
+    if (NO_PUSH_VIEWS.has(view)) return;
+    const currentURLView = (new URLSearchParams(location.search)).get('view');
+    if (currentURLView === view) return; // avoid duplicate entries
+    try {
+      history.pushState({ view }, '', `?view=${encodeURIComponent(view)}`);
+    } catch (e) { /* ignore (Safari private-mode etc.) */ }
+  };
+
+  window.addEventListener('popstate', function (e) {
+    // 1. If mobile drawer is open, close it first and consume the back gesture
+    const actions = document.getElementById('headerActions');
+    if (actions && actions.classList.contains('drawer-open')) {
+      toggleMobileMenu(false);
+      // Re-push so the next back still works
+      try { history.pushState(e.state || {}, '', location.href); } catch (e2) {}
+      return;
+    }
+    // 2. If any modal is open, close it first and consume the back gesture
+    const openModal = document.querySelector('.modal-overlay.show');
+    if (openModal) {
+      openModal.classList.remove('show');
+      try { history.pushState(e.state || {}, '', location.href); } catch (e2) {}
+      return;
+    }
+    // 3. Otherwise switch to whatever view the popped state names
+    const view = (e.state && e.state.view) ||
+                 (new URLSearchParams(location.search)).get('view') ||
+                 (isAdmin ? 'adminDash' : (currentTeacher ? 'teacherDash' : 'list'));
+    _navFromPop = true;
+    try { _origSwitchView(view); } finally { _navFromPop = false; }
+  });
+
+  // Push a history entry whenever a modal is opened, so back-swipe closes it
+  const _origOpenModal = window.openModal;
+  window.openModal = function (id) {
+    _origOpenModal(id);
+    try { history.pushState({ modal: id, view: currentView }, '', location.href); } catch (e) {}
+  };
+  // Push a history entry when the mobile drawer opens so back-swipe closes it
+  const _origToggleMobileMenu = window.toggleMobileMenu;
+  if (typeof _origToggleMobileMenu === 'function') {
+    window.toggleMobileMenu = function (open) {
+      const wasOpen = document.getElementById('headerActions')?.classList.contains('drawer-open');
+      _origToggleMobileMenu(open);
+      const isOpenNow = document.getElementById('headerActions')?.classList.contains('drawer-open');
+      if (!wasOpen && isOpenNow) {
+        try { history.pushState({ drawer: true, view: currentView }, '', location.href); } catch (e) {}
+      }
+    };
+  }
+})();
 
 // ===================== PWA NOTIFICATIONS =====================
 async function registerPushNotifications() {
