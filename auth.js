@@ -125,12 +125,21 @@ async function linkAdminToLearner() {
       currentLearner = data[0];
     } else {
       // Create a learner record for this admin
+      const adminPin = String(Math.floor(100000 + Math.random() * 900000));
+      const hashedAdminPin = await hashPassword(adminPin);
+      // Find matching contact for auto-link
+      let adminContactId = null;
+      try {
+        const contactMatch = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=id`);
+        if (contactMatch.length > 0) adminContactId = contactMatch[0].id;
+      } catch(e) {}
       const result = await sbInsert('learners', {
         name: currentUser.name,
         email: email,
         grade: 'Consultant',
         placement: 'Admin',
-        pin_code: String(Math.floor(100000 + Math.random() * 900000)),
+        pin_code: hashedAdminPin,
+        contact_id: adminContactId,
         verified: true
       });
       currentLearner = result[0];
@@ -512,8 +521,9 @@ async function doLearnerRegister() {
   if (!name || !email || !grade || !placement) { showToast('Please fill in all required fields'); return; }
   if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) { showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return; }
 
-  // Generate 6-digit PIN
+  // Generate 6-digit PIN and hash it before storing
   const pin = String(Math.floor(100000 + Math.random() * 900000));
+  const hashedPin = await hashPassword(pin);
 
   try {
     const result = await sbInsert('learners', {
@@ -521,11 +531,21 @@ async function doLearnerRegister() {
       placement_start: placementStart || null,
       placement_end: placementEnd || null,
       rotation_block: rotationBlock || null,
-      pin_code: pin, verified: true
+      pin_code: hashedPin, verified: true
     });
     currentLearner = result[0];
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
+
+    // Auto-link to contact if email matches
+    try {
+      const contactMatch = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
+      if (contactMatch.length > 0) {
+        await sbUpdate('learners', currentLearner.id, { contact_id: contactMatch[0].id });
+        currentLearner.contact_id = contactMatch[0].id;
+        sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+      }
+    } catch(linkErr) { console.warn('Contact link skipped:', linkErr); }
 
     // Show PIN
     document.getElementById('learnerLoginForm').style.display = 'none';

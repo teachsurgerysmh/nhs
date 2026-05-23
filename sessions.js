@@ -31,7 +31,7 @@ function switchView(view) {
   document.querySelectorAll('.nav-dropdown-item').forEach(t => t.classList.toggle('active', t.dataset.view === view));
   // Highlight "More" button if a dropdown view is active
   const moreBtn = document.querySelector('.nav-more-btn');
-  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','siteFeedback','log'];
+  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','roster','absences','siteFeedback','log'];
   // Close nav dropdown on any view switch
   const dd = document.getElementById('navDropdown');
   if (dd) dd.classList.remove('show');
@@ -53,6 +53,9 @@ function switchView(view) {
   document.getElementById('inboxView').style.display = 'none';
   document.getElementById('teacherDashView').style.display = 'none';
   document.getElementById('actionLandingView').style.display = 'none';
+  document.getElementById('rosterView').style.display = 'none';
+  document.getElementById('absencesView').style.display = 'none';
+  document.getElementById('absenceLandingView').style.display = 'none';
   const filtersBar = document.getElementById('filtersBar');
   const statsBar = document.getElementById('statsBar');
   const welcomeBanner = document.getElementById('welcomeBanner');
@@ -109,9 +112,21 @@ function switchView(view) {
     document.getElementById('teacherDashView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     if (currentTeacher) loadTeacherDashboard();
+  } else if (view === 'roster') {
+    document.getElementById('rosterView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadRosterView();
+  } else if (view === 'absences') {
+    document.getElementById('absencesView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadAbsencesView();
   } else if (view === 'actionLanding') {
     document.getElementById('actionLandingView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+  } else if (view === 'absenceLanding') {
+    document.getElementById('absenceLandingView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    document.querySelector('.nav-bar').style.display = 'none';
   } else {
     document.getElementById('listView').style.display = 'block';
     filtersBar.style.display = '';
@@ -624,7 +639,7 @@ async function loadDetailAttendance(sessionId) {
   const container = document.getElementById('detailAttendanceSummary');
   if (!container) return;
   try {
-    const att = await sbGet('attendance', `session_id=eq.${sessionId}&select=learner_id`);
+    const att = await sbGet('attendance', `session_id=eq.${sessionId}&status=neq.removed&select=learner_id`);
     if (att.length === 0) { container.innerHTML = ''; return; }
     const ids = att.map(a => a.learner_id);
     const learners = await sbGet('learners', `id=in.(${ids.join(',')})&select=id,name`);

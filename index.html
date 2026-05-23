@@ -55,6 +55,8 @@
         <div class="nav-dropdown-item" data-view="feedback" onclick="switchViewFromDropdown('feedback')">Feedback</div>
         <div class="nav-dropdown-item" data-view="approvals" onclick="switchViewFromDropdown('approvals')">Approvals</div>
         <div class="nav-dropdown-item" data-view="attendanceChart" onclick="switchViewFromDropdown('attendanceChart')">Attendance Chart</div>
+        <div class="nav-dropdown-item" data-view="roster" onclick="switchViewFromDropdown('roster')">Roster</div>
+        <div class="nav-dropdown-item" data-view="absences" onclick="switchViewFromDropdown('absences')">Absences</div>
         <div class="nav-dropdown-item" data-view="siteFeedback" onclick="switchViewFromDropdown('siteFeedback')">Site Feedback</div>
         <div class="nav-dropdown-item" data-view="log" onclick="switchViewFromDropdown('log')" id="logTab" style="display:none;">Activity Log</div>
       </div>
@@ -105,12 +107,15 @@
   <div id="feedbackView" style="display:none;"></div>
   <div id="approvalsView" style="display:none;"></div>
   <div id="attendanceChartView" style="display:none;"></div>
+  <div id="rosterView" style="display:none;"></div>
+  <div id="absencesView" style="display:none;"></div>
   <div id="siteFeedbackView" style="display:none;"></div>
   <div id="adminDashView" style="display:none;" class="admin-dashboard"></div>
   <div id="dashboardView" style="display:none;"></div>
   <div id="inboxView" style="display:none;"></div>
   <div id="teacherDashView" style="display:none;"></div>
   <div id="actionLandingView" style="display:none;"></div>
+  <div id="absenceLandingView" style="display:none;"></div>
 </div>
 
 <button class="fab" onclick="openAddModal()" title="Add Session">+</button>

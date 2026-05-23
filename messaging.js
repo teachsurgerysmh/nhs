@@ -315,7 +315,7 @@ async function openFeedbackRequestModal(sessionId) {
     try { contacts = await sbGet('contacts', 'order=name.asc&select=*'); } catch(e) { contacts = []; }
   }
   try {
-    const att = await sbGet('attendance', `session_id=eq.${sessionId}&select=learner_id`);
+    const att = await sbGet('attendance', `session_id=eq.${sessionId}&status=neq.removed&select=learner_id`);
     fbReqAttendees = att.map(a => a.learner_id);
   } catch(e) { fbReqAttendees = []; }
 

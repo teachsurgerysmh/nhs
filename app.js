@@ -286,6 +286,9 @@ async function init() {
     window.history.replaceState({}, document.title, window.location.pathname);
     return; // Don't switch to default view
   }
+  // Handle absence reason URL params (one-click from email)
+  const hasAbsence = await handleAbsenceURLParams();
+  if (hasAbsence) return;
   // Handle learner URL params
   const pendingAttend = params.get('attend');
   const pendingFeedback = params.get('feedback');

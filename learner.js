@@ -8,16 +8,19 @@ async function markSelfAttendance(sessionId) {
     const ev = events.find(e => e.id === sessionId);
     const sessionDate = ev ? eventToDate(ev) : null;
     const today = new Date(); today.setHours(0,0,0,0);
+    const isToday = sessionDate && sessionDate.getTime() === today.getTime();
     const isPast = sessionDate && sessionDate < today;
+    // Auto-approve only on session day; past and future both need approval
+    const autoApprove = isToday;
     const attData = {
       session_id: sessionId,
       learner_id: currentLearner.id,
       method: 'self',
-      status: isPast ? 'pending' : 'approved',
+      status: autoApprove ? 'approved' : 'pending',
       retrospective: isPast ? true : false
     };
     await sbInsert('attendance', attData);
-    showToast(isPast ? 'Attendance submitted for approval' : 'Attendance marked!');
+    showToast(autoApprove ? 'Attendance marked!' : 'Attendance submitted for approval');
   } catch(e) {
     if (e.message && e.message.includes('409')) {
       showToast('Already marked as attended');
@@ -33,40 +36,60 @@ async function openAttendanceModal(sessionId) {
   body.innerHTML = '<div style="text-align:center;padding:20px;"><div class="loading-spinner"></div></div>';
   openModal('attendanceModal');
   try {
-    const [learners, existing] = await Promise.all([
+    const [learners, contacts, existing] = await Promise.all([
       sbGet('learners', 'order=name.asc&select=*'),
-      sbGet('attendance', `session_id=eq.${sessionId}&select=*`)
+      sbGet('contacts', 'order=name.asc&select=*'),
+      sbGet('attendance', `session_id=eq.${sessionId}&status=neq.removed&select=*`)
     ]);
     const attendanceMap = {};
     existing.forEach(a => { attendanceMap[a.learner_id] = a; });
     const attendedIds = new Set(existing.map(a => a.learner_id));
+
+    // Build set of contact emails that already have learner records
+    const learnerEmails = new Set(learners.map(l => l.email.toLowerCase()));
+    // Contacts without learner records (regs/cons/fellows who haven't registered)
+    const unlinkedContacts = contacts.filter(c => c.email && !learnerEmails.has(c.email.toLowerCase()));
+
     let html = `<input type="hidden" id="attendanceSessionId" value="${sessionId}">`;
-    html += `<div style="margin-bottom:12px;font-size:13px;color:var(--nhs-grey);">${learners.length} registered learners</div>`;
-    if (learners.length === 0) {
-      html += '<div style="text-align:center;padding:20px;color:var(--nhs-grey);">No learners registered yet.</div>';
+    html += `<div style="margin-bottom:12px;font-size:13px;color:var(--nhs-grey);">${learners.length} learners${unlinkedContacts.length ? ` + ${unlinkedContacts.length} contacts` : ''}</div>`;
+
+    // Render attendance list
+    const renderAttRow = (l, isContact) => {
+      const att = attendanceMap[l.id];
+      const status = att ? (att.status || 'approved') : '';
+      let statusBadge = '';
+      if (status === 'pending') statusBadge = '<span style="background:#fff4e0;color:var(--nhs-orange);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;">PENDING</span>';
+      else if (status === 'approved') statusBadge = '<span style="background:#e6f4ea;color:var(--nhs-green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;">APPROVED</span>';
+      else if (status === 'rejected') statusBadge = '<span style="background:#fde8e8;color:var(--nhs-red);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;">REJECTED</span>';
+      const retroBadge = att && att.retrospective ? '<span style="background:#e0f5fa;color:var(--nhs-aqua);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px;">RETRO</span>' : '';
+      const approveButtons = (status === 'pending') ? `<div style="display:flex;gap:4px;margin-left:auto;">
+        <button class="btn btn-green" style="padding:3px 10px;font-size:11px;" onclick="approveAttendance(${att.id}, true, ${sessionId})">Approve</button>
+        <button class="btn btn-red" style="padding:3px 10px;font-size:11px;" onclick="approveAttendance(${att.id}, false, ${sessionId})">Reject</button>
+      </div>` : '';
+      const prefix = isContact ? 'attc' : 'att';
+      const gradeInfo = isContact ? (l.role || 'Contact') : `${l.grade} - ${l.placement}`;
+      const contactBadge = isContact ? '<span style="background:#e0e7f5;color:#003087;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px;">CONTACT</span>' : '';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--nhs-pale-grey);">
+        <input type="checkbox" id="${prefix}_${l.id}" value="${l.id}" data-type="${isContact ? 'contact' : 'learner'}" ${attendedIds.has(l.id) ? 'checked' : ''} style="width:18px;height:18px;">
+        <label for="${prefix}_${l.id}" style="margin:0;font-size:13px;cursor:pointer;flex:1;">
+          <strong>${esc(l.name)}</strong> <span style="color:var(--nhs-grey);">(${esc(gradeInfo)})</span>
+          ${contactBadge}${statusBadge}${retroBadge}
+        </label>
+        ${approveButtons}
+      </div>`;
+    };
+
+    if (learners.length === 0 && unlinkedContacts.length === 0) {
+      html += '<div style="text-align:center;padding:20px;color:var(--nhs-grey);">No learners or contacts found.</div>';
     } else {
       html += '<div style="max-height:400px;overflow-y:auto;">';
-      learners.forEach(l => {
-        const att = attendanceMap[l.id];
-        const status = att ? (att.status || 'approved') : '';
-        let statusBadge = '';
-        if (status === 'pending') statusBadge = '<span style="background:#fff4e0;color:var(--nhs-orange);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;">PENDING</span>';
-        else if (status === 'approved') statusBadge = '<span style="background:#e6f4ea;color:var(--nhs-green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;">APPROVED</span>';
-        else if (status === 'rejected') statusBadge = '<span style="background:#fde8e8;color:var(--nhs-red);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;">REJECTED</span>';
-        const retroBadge = att && att.retrospective ? '<span style="background:#e0f5fa;color:var(--nhs-aqua);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px;">RETRO</span>' : '';
-        const approveButtons = (status === 'pending') ? `<div style="display:flex;gap:4px;margin-left:auto;">
-          <button class="btn btn-green" style="padding:3px 10px;font-size:11px;" onclick="approveAttendance(${att.id}, true, ${sessionId})">Approve</button>
-          <button class="btn btn-red" style="padding:3px 10px;font-size:11px;" onclick="approveAttendance(${att.id}, false, ${sessionId})">Reject</button>
-        </div>` : '';
-        html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--nhs-pale-grey);">
-          <input type="checkbox" id="att_${l.id}" value="${l.id}" ${attendedIds.has(l.id) ? 'checked' : ''} style="width:18px;height:18px;">
-          <label for="att_${l.id}" style="margin:0;font-size:13px;cursor:pointer;flex:1;">
-            <strong>${esc(l.name)}</strong> <span style="color:var(--nhs-grey);">(${esc(l.grade)} - ${esc(l.placement)})</span>
-            ${statusBadge}${retroBadge}
-          </label>
-          ${approveButtons}
-        </div>`;
-      });
+      // Learners first
+      learners.forEach(l => { html += renderAttRow(l, false); });
+      // Then unlinked contacts
+      if (unlinkedContacts.length > 0) {
+        html += `<div style="padding:10px 0 6px;font-size:12px;font-weight:700;color:var(--nhs-dark-blue);border-top:2px solid var(--nhs-pale-grey);margin-top:4px;">Other Contacts (Regs / Consultants / Fellows)</div>`;
+        unlinkedContacts.forEach(c => { html += renderAttRow(c, true); });
+      }
       html += '</div>';
     }
     // QR Code
@@ -82,30 +105,68 @@ async function openAttendanceModal(sessionId) {
 
 async function saveAttendance() {
   const sessionId = parseInt(document.getElementById('attendanceSessionId').value);
-  const checkboxes = document.querySelectorAll('#attendanceModalBody input[type="checkbox"][id^="att_"]');
-  const checkedIds = [];
-  const uncheckedIds = [];
+  const checkboxes = document.querySelectorAll('#attendanceModalBody input[type="checkbox"]');
+  const checkedLearnerIds = [];
+  const uncheckedLearnerIds = [];
+  const checkedContactIds = [];
   checkboxes.forEach(cb => {
-    if (cb.checked) checkedIds.push(parseInt(cb.value));
-    else uncheckedIds.push(parseInt(cb.value));
+    const type = cb.dataset.type;
+    const id = parseInt(cb.value);
+    if (type === 'contact') {
+      if (cb.checked) checkedContactIds.push(id);
+    } else {
+      if (cb.checked) checkedLearnerIds.push(id);
+      else uncheckedLearnerIds.push(id);
+    }
   });
   try {
+    // Auto-create learner records for checked contacts who don't have one yet
+    for (const contactId of checkedContactIds) {
+      try {
+        const contact = await sbGet('contacts', `id=eq.${contactId}&select=*`);
+        if (contact.length === 0) continue;
+        const c = contact[0];
+        // Check if learner already exists for this contact email
+        const existingLearner = await sbGet('learners', `email=ilike.${encodeURIComponent(c.email)}&select=id`);
+        let learnerId;
+        if (existingLearner.length > 0) {
+          learnerId = existingLearner[0].id;
+        } else {
+          // Create learner record linked to this contact
+          const result = await sbInsert('learners', {
+            name: c.name,
+            email: c.email.toLowerCase(),
+            grade: c.role || 'Consultant',
+            placement: c.specialty || 'Surgery',
+            contact_id: contactId,
+            verified: true
+          });
+          learnerId = result[0].id;
+        }
+        checkedLearnerIds.push(learnerId);
+      } catch(e) { console.warn('Contact->learner creation failed:', e); }
+    }
+
     // Insert new attendance records
-    for (const learnerId of checkedIds) {
+    for (const learnerId of checkedLearnerIds) {
       try {
         await sbInsert('attendance', { session_id: sessionId, learner_id: learnerId, method: 'admin', status: 'approved' });
       } catch(e) { /* ignore duplicates */ }
     }
-    // Remove unchecked (delete where session+learner match)
-    for (const learnerId of uncheckedIds) {
+    // Soft-delete unchecked (set status to 'removed' instead of hard DELETE)
+    for (const learnerId of uncheckedLearnerIds) {
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/attendance?session_id=eq.${sessionId}&learner_id=eq.${learnerId}`, { method: 'DELETE', headers });
+        if (isDemoMode) { console.log('[DEMO] Would remove attendance for learner', learnerId); continue; }
+        const existing = await sbGet('attendance', `session_id=eq.${sessionId}&learner_id=eq.${learnerId}&select=id`);
+        for (const att of existing) {
+          await sbUpdate('attendance', att.id, { status: 'removed', approved_by: currentUser?.name || 'admin', approved_at: new Date().toISOString() });
+        }
       } catch(e) { /* ignore */ }
     }
     closeModal('attendanceModal');
     showToast('Attendance saved — sending feedback requests...');
     // Auto-trigger feedback emails to all marked attendees
-    autoSendFeedbackRequests(sessionId, checkedIds);
+    autoSendFeedbackRequests(sessionId, checkedLearnerIds);
   } catch(e) { console.error('Save attendance failed:', e); showToast('Failed to save attendance'); }
 }
 
@@ -684,7 +745,7 @@ async function loadDashboard() {
   }
   container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading dashboard...</div>';
   try {
-    const attendance = await sbGet('attendance', `learner_id=eq.${currentLearner.id}&select=*`);
+    const attendance = await sbGet('attendance', `learner_id=eq.${currentLearner.id}&status=neq.removed&select=*`);
     const attendedSessionIds = attendance.map(a => a.session_id);
     const attendedSessions = events.filter(e => attendedSessionIds.includes(e.id));
     const totalHours = attendedSessions.length; // 1 hour per session default
@@ -763,27 +824,7 @@ async function approveAttendance(attendanceId, approve, sessionId) {
       approved_by: currentUser ? currentUser.name : 'admin',
       approved_at: new Date().toISOString()
     });
-    // Send email notification to learner
-    try {
-      const attRecords = await sbGet('attendance', `id=eq.${attendanceId}&select=*`);
-      if (attRecords.length > 0) {
-        const learnerRecords = await sbGet('learners', `id=eq.${attRecords[0].learner_id}&select=*`);
-        if (learnerRecords.length > 0) {
-          const learner = learnerRecords[0];
-          const ev = events.find(e => e.id === attRecords[0].session_id);
-          const sessionLabel = ev ? `${ev.topic || 'Session'} (${ev.day} ${ev.date} ${ev.month} ${ev.year})` : 'a teaching session';
-          await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: learner.email,
-              subject: `Attendance ${approve ? 'Approved' : 'Rejected'} - ${sessionLabel}`,
-              body: `Dear ${learner.name},\n\nYour retrospective attendance for ${sessionLabel} has been ${approve ? 'approved' : 'rejected'}.\n\nRegards,\nSouthmead Surgical Teaching`
-            })
-          });
-        }
-      }
-    } catch(emailErr) { console.warn('Email notification failed:', emailErr); }
+    // No email — just update the record silently
     showToast(approve ? 'Attendance approved' : 'Attendance rejected');
     if (sessionId) openAttendanceModal(sessionId);
     if (currentView === 'approvals') loadApprovals();
@@ -800,7 +841,7 @@ async function loadApprovals() {
   try {
     const [pending, recent] = await Promise.all([
       sbGet('attendance', 'status=eq.pending&select=*&order=created_at.desc'),
-      sbGet('attendance', 'status=neq.pending&order=approved_at.desc&limit=20&select=*')
+      sbGet('attendance', 'status=not.in.(pending,removed)&order=approved_at.desc&limit=20&select=*')
     ]);
     const allLearnerIds = [...new Set([...pending, ...recent].map(a => a.learner_id))];
     let learnersMap = {};
@@ -1428,4 +1469,461 @@ function setupRegEmailAutopopulate() {
       }
     } catch(e) { /* ignore lookup errors */ }
   });
+}
+
+// ===================== ROSTER MANAGEMENT =====================
+
+const JUNIOR_GRADES = ['FY1','FY2','F1','F2','CT1','CT2','SHO','CF','Clinical Fellow'];
+
+function isJuniorGrade(grade) {
+  if (!grade) return false;
+  const g = grade.toUpperCase();
+  return JUNIOR_GRADES.some(j => g.includes(j.toUpperCase()));
+}
+
+async function loadRosterView() {
+  const container = document.getElementById('rosterView');
+  container.innerHTML = '<div style="text-align:center;padding:30px;"><div class="loading-spinner"></div> Loading roster...</div>';
+  try {
+    const learners = await sbGet('learners', 'order=placement.asc,grade.asc,name.asc&select=*');
+    const today = new Date().toISOString().split('T')[0];
+
+    // Group by placement
+    const currentRotation = learners.filter(l => l.placement_end && l.placement_end >= today && l.followup_eligible);
+    const pastRotation = learners.filter(l => l.placement_end && l.placement_end < today && l.followup_eligible);
+    const noDates = learners.filter(l => !l.placement_end && l.followup_eligible);
+    const nonEligible = learners.filter(l => !l.followup_eligible);
+
+    // Group current by placement
+    const placements = {};
+    currentRotation.forEach(l => {
+      const p = l.placement || 'Unassigned';
+      if (!placements[p]) placements[p] = [];
+      placements[p].push(l);
+    });
+
+    let html = `<h3 style="color:var(--nhs-dark-blue);margin-bottom:6px;">Roster Management</h3>
+      <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">Manage who is on the current rotation. Expected attendees for each session are auto-generated from placement dates.</p>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="btn" style="background:var(--nhs-dark-blue);color:white;border:none;" onclick="openRotationSetupModal()">New Rotation Setup</button>
+        <button class="btn" style="background:var(--nhs-green);color:white;border:none;" onclick="openAddLearnerToRosterModal()">Add Learner</button>
+        <button class="btn" style="background:var(--nhs-orange);color:white;border:none;" onclick="endCurrentRotation()">End Current Rotation</button>
+      </div>`;
+
+    // Current rotation stats
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-num">${currentRotation.length}</div><div class="stat-label">Current Roster</div></div>
+      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&l.grade.includes('1')).length}</div><div class="stat-label">FY1s</div></div>
+      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&l.grade.includes('2')).length}</div><div class="stat-label">FY2s</div></div>
+      <div class="stat-card"><div class="stat-num">${currentRotation.filter(l=>l.grade&&(l.grade.startsWith('CT')||l.grade==='SHO')).length}</div><div class="stat-label">CT/SHO</div></div>
+    </div>`;
+
+    // Current rotation by placement
+    if (Object.keys(placements).length === 0) {
+      html += '<div class="dashboard-card"><p style="color:var(--nhs-grey);text-align:center;padding:20px;">No learners on current rotation. Use "New Rotation Setup" to add them.</p></div>';
+    } else {
+      for (const [placement, members] of Object.entries(placements)) {
+        html += `<div class="dashboard-card" style="margin-bottom:12px;">
+          <h4 style="color:var(--nhs-dark-blue);margin-bottom:10px;">${esc(placement)} <span style="font-weight:400;color:var(--nhs-grey);font-size:13px;">(${members.length})</span></h4>
+          <div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">
+            <tr style="background:var(--nhs-bg);"><th style="padding:8px;text-align:left;">Name</th><th style="padding:8px;text-align:left;">Grade</th><th style="padding:8px;text-align:left;">Dates</th><th style="padding:8px;text-align:left;">Email</th><th style="padding:8px;">Actions</th></tr>`;
+        members.forEach(l => {
+          const dates = l.placement_start && l.placement_end ? `${l.placement_start} → ${l.placement_end}` : 'Not set';
+          html += `<tr style="border-bottom:1px solid var(--nhs-pale-grey);">
+            <td style="padding:8px;font-weight:600;">${esc(l.name)}</td>
+            <td style="padding:8px;"><span style="background:#e0e7f5;color:#003087;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${esc(l.grade)}</span></td>
+            <td style="padding:8px;font-size:12px;">${dates}</td>
+            <td style="padding:8px;font-size:12px;">${esc(l.email)}</td>
+            <td style="padding:8px;text-align:center;">
+              <button class="btn" style="padding:3px 10px;font-size:11px;background:var(--nhs-pale-grey);border:none;" onclick="editLearnerPlacement(${l.id})">Edit</button>
+            </td>
+          </tr>`;
+        });
+        html += '</table></div></div>';
+      }
+    }
+
+    // Learners without dates
+    if (noDates.length > 0) {
+      html += `<details style="margin-top:16px;"><summary style="cursor:pointer;font-weight:600;color:var(--nhs-grey);font-size:14px;">Unassigned Learners (${noDates.length})</summary>
+        <div class="dashboard-card" style="margin-top:8px;"><table style="width:100%;font-size:13px;border-collapse:collapse;">
+          <tr style="background:var(--nhs-bg);"><th style="padding:8px;text-align:left;">Name</th><th style="padding:8px;text-align:left;">Grade</th><th style="padding:8px;text-align:left;">Email</th><th style="padding:8px;">Actions</th></tr>`;
+      noDates.forEach(l => {
+        html += `<tr style="border-bottom:1px solid var(--nhs-pale-grey);">
+          <td style="padding:8px;">${esc(l.name)}</td><td style="padding:8px;">${esc(l.grade||'—')}</td><td style="padding:8px;font-size:12px;">${esc(l.email)}</td>
+          <td style="padding:8px;text-align:center;"><button class="btn" style="padding:3px 10px;font-size:11px;background:var(--nhs-pale-grey);border:none;" onclick="editLearnerPlacement(${l.id})">Assign</button></td>
+        </tr>`;
+      });
+      html += '</table></div></details>';
+    }
+
+    container.innerHTML = html;
+  } catch(e) { console.error('Load roster failed:', e); container.innerHTML = '<div style="color:var(--nhs-red);padding:20px;">Failed to load roster.</div>'; }
+}
+
+async function editLearnerPlacement(learnerId) {
+  try {
+    const data = await sbGet('learners', `id=eq.${learnerId}&select=*`);
+    if (data.length === 0) return;
+    const l = data[0];
+    const html = `<div style="max-width:400px;margin:0 auto;">
+      <h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Edit Placement: ${esc(l.name)}</h3>
+      <label>Grade</label>
+      <select id="editGrade">
+        ${['FY1','FY2','CT1','CT2','SHO','CF','ST3','ST4','ST5','ST6','ST7','ST8','SpR','Registrar','Consultant','ANP','Other'].map(g => `<option ${l.grade===g?'selected':''}>${g}</option>`).join('')}
+      </select>
+      <label>Placement</label>
+      <select id="editPlacement">
+        ${['UGI','LGI / Colorectal','Transplant','Vascular','Surgery','Other'].map(p => `<option ${l.placement===p?'selected':''}>${p}</option>`).join('')}
+      </select>
+      <label>Start Date</label>
+      <input type="date" id="editPlacementStart" value="${l.placement_start||''}">
+      <label>End Date</label>
+      <input type="date" id="editPlacementEnd" value="${l.placement_end||''}">
+      <label style="margin-top:8px;"><input type="checkbox" id="editFollowup" ${l.followup_eligible?'checked':''} style="width:auto;margin-right:6px;">Eligible for attendance follow-up emails</label>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;">
+        <button class="btn btn-green" onclick="saveLearnerPlacement(${l.id})">Save</button>
+        <button class="btn btn-outline" onclick="closeModal('editPlacementModal')">Cancel</button>
+      </div>
+    </div>`;
+    // Use a dynamic modal
+    let modal = document.getElementById('editPlacementModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'editPlacementModal';
+      modal.setAttribute('role', 'dialog');
+      modal.innerHTML = '<div class="modal"><div class="modal-header"><h3>Edit Placement</h3><button class="modal-close" onclick="closeModal(\'editPlacementModal\')">&times;</button></div><div class="modal-body" id="editPlacementModalBody"></div></div>';
+      document.body.appendChild(modal);
+    }
+    document.getElementById('editPlacementModalBody').innerHTML = html;
+    openModal('editPlacementModal');
+  } catch(e) { showToast('Failed to load learner'); }
+}
+
+async function saveLearnerPlacement(learnerId) {
+  const grade = document.getElementById('editGrade').value;
+  const placement = document.getElementById('editPlacement').value;
+  const start = document.getElementById('editPlacementStart').value;
+  const end = document.getElementById('editPlacementEnd').value;
+  const followup = document.getElementById('editFollowup').checked;
+  try {
+    await sbUpdate('learners', learnerId, {
+      grade, placement,
+      placement_start: start || null,
+      placement_end: end || null,
+      followup_eligible: followup
+    });
+    closeModal('editPlacementModal');
+    showToast('Placement updated');
+    loadRosterView();
+  } catch(e) { showToast('Failed to save'); }
+}
+
+function openRotationSetupModal() {
+  let modal = document.getElementById('rotationSetupModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'rotationSetupModal';
+    modal.setAttribute('role', 'dialog');
+    modal.innerHTML = `<div class="modal" style="max-width:600px;"><div class="modal-header"><h3>New Rotation Setup</h3><button class="modal-close" onclick="closeModal('rotationSetupModal')">&times;</button></div><div class="modal-body" id="rotationSetupBody"></div></div>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('rotationSetupBody').innerHTML = `
+    <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">Set up the new rotation. This will update placement dates for all selected learners.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div><label>Rotation Block</label>
+        <select id="newRotBlock" onchange="onNewRotBlockChange()">
+          <option value="">-- Select --</option><option value="aug_dec">Aug – Dec</option><option value="dec_apr">Dec – Apr</option><option value="apr_aug">Apr – Aug</option>
+        </select>
+      </div>
+      <div><label>Placement</label>
+        <select id="newRotPlacement"><option value="UGI">UGI</option><option value="LGI / Colorectal">LGI / Colorectal</option><option value="Surgery">Surgery</option></select>
+      </div>
+      <div><label>Start Date</label><input type="date" id="newRotStart"></div>
+      <div><label>End Date</label><input type="date" id="newRotEnd"></div>
+    </div>
+    <h4 style="margin-bottom:8px;">Add learners to this rotation:</h4>
+    <p style="font-size:12px;color:var(--nhs-grey);margin-bottom:8px;">Paste names and emails (one per line: <code>Name, email@nhs.net, Grade</code>) or select from existing:</p>
+    <textarea id="newRotBulkInput" rows="5" placeholder="Ellen Russell, ellen.russell@nbt.nhs.uk, FY1&#10;Anas Idris, anas.idris@nbt.nhs.uk, FY1" style="width:100%;font-size:13px;font-family:monospace;margin-bottom:12px;"></textarea>
+    <div style="text-align:center;">
+      <button class="btn btn-green" onclick="applyNewRotation()" style="padding:10px 30px;">Apply Rotation</button>
+    </div>`;
+  openModal('rotationSetupModal');
+}
+
+function onNewRotBlockChange() {
+  const block = document.getElementById('newRotBlock').value;
+  if (!block) return;
+  const now = new Date();
+  const yr = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  const blocks = {
+    aug_dec: { start: yr + '-08-01', end: yr + '-12-31' },
+    dec_apr: { start: yr + '-12-01', end: (yr+1) + '-04-30' },
+    apr_aug: { start: (yr+1) + '-04-01', end: (yr+1) + '-08-31' }
+  };
+  const d = blocks[block];
+  if (d) {
+    document.getElementById('newRotStart').value = d.start;
+    document.getElementById('newRotEnd').value = d.end;
+  }
+}
+
+async function applyNewRotation() {
+  const placement = document.getElementById('newRotPlacement').value;
+  const start = document.getElementById('newRotStart').value;
+  const end = document.getElementById('newRotEnd').value;
+  const block = document.getElementById('newRotBlock').value;
+  const bulkText = document.getElementById('newRotBulkInput').value.trim();
+  if (!start || !end) { showToast('Please set rotation dates'); return; }
+  if (!bulkText) { showToast('Please add at least one learner'); return; }
+
+  const lines = bulkText.split('\n').filter(l => l.trim());
+  let count = 0;
+  for (const line of lines) {
+    const parts = line.split(',').map(s => s.trim());
+    if (parts.length < 2) continue;
+    const name = parts[0];
+    const email = parts[1].toLowerCase();
+    const grade = parts[2] || 'FY1';
+    try {
+      // Check if learner exists
+      const existing = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
+      if (existing.length > 0) {
+        await sbUpdate('learners', existing[0].id, {
+          grade, placement, placement_start: start, placement_end: end,
+          rotation_block: block || null, followup_eligible: true
+        });
+      } else {
+        // Create new learner
+        const pin = String(Math.floor(100000 + Math.random() * 900000));
+        const hashedPin = await hashPassword(pin);
+        await sbInsert('learners', {
+          name, email, grade, placement,
+          placement_start: start, placement_end: end,
+          rotation_block: block || null,
+          pin_code: hashedPin, verified: true, followup_eligible: true
+        });
+      }
+      count++;
+    } catch(e) { console.warn('Failed to process:', name, e); }
+  }
+  closeModal('rotationSetupModal');
+  showToast(`Rotation applied — ${count} learner${count!==1?'s':''} updated`);
+  loadRosterView();
+}
+
+async function endCurrentRotation() {
+  if (!confirm('End the current rotation? This will clear placement dates for all current rotation learners. They will move to "Unassigned".')) return;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const current = await sbGet('learners', `placement_end=gte.${today}&followup_eligible=eq.true&select=id`);
+    for (const l of current) {
+      await sbUpdate('learners', l.id, { placement_start: null, placement_end: null, rotation_block: null });
+    }
+    showToast(`Rotation ended — ${current.length} learners moved to unassigned`);
+    loadRosterView();
+  } catch(e) { showToast('Failed to end rotation'); }
+}
+
+function openAddLearnerToRosterModal() {
+  openRotationSetupModal(); // Same modal, just pre-fill dates from current rotation
+}
+
+// ===================== EXPECTED ATTENDANCE (auto from placement dates) =====================
+
+async function getExpectedAttendees(sessionId) {
+  const ev = events.find(e => e.id === sessionId);
+  if (!ev) return [];
+  const sessionDate = eventToDate(ev);
+  if (!sessionDate) return [];
+  const dateStr = sessionDate.toISOString().split('T')[0];
+  // All learners whose placement window includes this session date and are followup_eligible
+  try {
+    const learners = await sbGet('learners', `followup_eligible=eq.true&placement_start=lte.${dateStr}&placement_end=gte.${dateStr}&select=*`);
+    return learners;
+  } catch(e) { console.warn('Expected attendees query failed:', e); return []; }
+}
+
+// ===================== ABSENCE REASON HANDLING =====================
+
+const ABSENCE_REASONS = {
+  clinical: 'On call / clinical commitment',
+  leave: 'On leave / day off',
+  unaware: "Wasn't aware of the session",
+  not_relevant: 'Topic not relevant to me',
+  other: 'Other reason'
+};
+
+async function handleAbsenceURLParams() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('absence_token');
+  const reason = params.get('reason');
+  if (!token) return false;
+
+  // Clear URL params
+  window.history.replaceState({}, '', window.location.pathname);
+
+  const container = document.getElementById('absenceLandingView');
+  container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div>';
+  switchView('absenceLanding');
+
+  try {
+    const records = await sbGet('absence_reasons', `token=eq.${encodeURIComponent(token)}&select=*`);
+    if (records.length === 0) {
+      container.innerHTML = renderAbsenceLanding('error', 'This link has expired or is invalid.');
+      return true;
+    }
+    const record = records[0];
+    if (record.submitted_at) {
+      container.innerHTML = renderAbsenceLanding('already', 'You have already submitted your response. Thank you!');
+      return true;
+    }
+
+    if (reason && reason !== 'other') {
+      // Direct submission from email button
+      await sbUpdate('absence_reasons', record.id, {
+        reason: reason,
+        submitted_at: new Date().toISOString()
+      });
+      container.innerHTML = renderAbsenceLanding('success', `Thank you for letting us know. Your response has been recorded: <strong>${ABSENCE_REASONS[reason] || reason}</strong>`);
+    } else if (reason === 'other') {
+      // Show text input form
+      container.innerHTML = renderAbsenceOtherForm(token, record.id);
+    } else {
+      // Show all options (fallback)
+      container.innerHTML = renderAbsenceChoices(token, record);
+    }
+  } catch(e) {
+    console.error('Absence token error:', e);
+    container.innerHTML = renderAbsenceLanding('error', 'Something went wrong. Please try again later.');
+  }
+  return true;
+}
+
+function renderAbsenceLanding(type, message) {
+  const icon = type === 'success' ? '✅' : type === 'already' ? '👍' : '⚠️';
+  const color = type === 'error' ? 'var(--nhs-red)' : 'var(--nhs-green)';
+  return `<div style="max-width:500px;margin:60px auto;text-align:center;padding:30px;">
+    <img src="${LOGO_URL}" alt="Logo" style="height:60px;margin-bottom:16px;">
+    <div style="font-size:48px;margin-bottom:12px;">${icon}</div>
+    <h2 style="color:var(--nhs-dark-blue);margin-bottom:12px;">Southmead Surgical Teaching</h2>
+    <p style="font-size:15px;color:${color};">${message}</p>
+    <p style="font-size:12px;color:var(--nhs-grey);margin-top:20px;">This helps us improve our teaching programme.</p>
+  </div>`;
+}
+
+function renderAbsenceOtherForm(token, recordId) {
+  return `<div style="max-width:500px;margin:60px auto;text-align:center;padding:30px;">
+    <img src="${LOGO_URL}" alt="Logo" style="height:60px;margin-bottom:16px;">
+    <h2 style="color:var(--nhs-dark-blue);margin-bottom:8px;">Southmead Surgical Teaching</h2>
+    <p style="font-size:14px;color:var(--nhs-grey);margin-bottom:20px;">Please let us know why you couldn't attend:</p>
+    <textarea id="absenceOtherText" rows="4" placeholder="Please briefly describe the reason..." style="width:100%;max-width:400px;padding:12px;font-size:14px;border:1.5px solid var(--nhs-pale-grey);border-radius:8px;margin-bottom:16px;"></textarea>
+    <br>
+    <button class="btn btn-green" style="padding:12px 36px;font-size:15px;" onclick="submitAbsenceOther(${recordId})">Submit</button>
+  </div>`;
+}
+
+async function submitAbsenceOther(recordId) {
+  const text = document.getElementById('absenceOtherText').value.trim();
+  if (!text) { showToast('Please enter a reason'); return; }
+  try {
+    await sbUpdate('absence_reasons', recordId, {
+      reason: 'other',
+      other_text: text,
+      submitted_at: new Date().toISOString()
+    });
+    document.getElementById('absenceLandingView').innerHTML = renderAbsenceLanding('success', 'Thank you for your feedback. Your response has been recorded.');
+  } catch(e) { showToast('Failed to submit. Please try again.'); }
+}
+
+function renderAbsenceChoices(token, record) {
+  let buttonsHtml = '';
+  for (const [key, label] of Object.entries(ABSENCE_REASONS)) {
+    if (key === 'other') {
+      buttonsHtml += `<a href="?absence_token=${encodeURIComponent(token)}&reason=other" style="display:block;padding:14px;margin:6px 0;background:white;border:1.5px solid var(--nhs-pale-grey);border-radius:8px;text-decoration:none;color:var(--nhs-dark-blue);font-size:14px;text-align:center;">${label}</a>`;
+    } else {
+      buttonsHtml += `<a href="?absence_token=${encodeURIComponent(token)}&reason=${key}" style="display:block;padding:14px;margin:6px 0;background:white;border:1.5px solid var(--nhs-pale-grey);border-radius:8px;text-decoration:none;color:var(--nhs-dark-blue);font-size:14px;text-align:center;">${label}</a>`;
+    }
+  }
+  return `<div style="max-width:500px;margin:60px auto;text-align:center;padding:30px;">
+    <img src="${LOGO_URL}" alt="Logo" style="height:60px;margin-bottom:16px;">
+    <h2 style="color:var(--nhs-dark-blue);margin-bottom:8px;">Southmead Surgical Teaching</h2>
+    <p style="font-size:14px;color:var(--nhs-grey);margin-bottom:20px;">We noticed you couldn't make the session. Could you let us know why?</p>
+    <div style="max-width:400px;margin:0 auto;">${buttonsHtml}</div>
+  </div>`;
+}
+
+// ===================== ABSENCES ADMIN VIEW =====================
+
+async function loadAbsencesView() {
+  const container = document.getElementById('absencesView');
+  container.innerHTML = '<div style="text-align:center;padding:30px;"><div class="loading-spinner"></div> Loading absence data...</div>';
+  try {
+    const [absences, learners] = await Promise.all([
+      sbGet('absence_reasons', 'order=created_at.desc&select=*'),
+      sbGet('learners', 'select=id,name,grade,placement')
+    ]);
+    const learnerMap = {};
+    learners.forEach(l => { learnerMap[l.id] = l; });
+
+    // Stats
+    const submitted = absences.filter(a => a.submitted_at);
+    const pending = absences.filter(a => !a.submitted_at);
+    const reasonCounts = {};
+    submitted.forEach(a => {
+      const r = a.reason || 'unknown';
+      reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+    });
+
+    let html = `<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Absence Tracking</h3>`;
+
+    // Stats cards
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-num">${absences.length}</div><div class="stat-label">Total Sent</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--nhs-green);">${submitted.length}</div><div class="stat-label">Responded</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--nhs-orange);">${pending.length}</div><div class="stat-label">Awaiting</div></div>
+      <div class="stat-card"><div class="stat-num">${submitted.length ? Math.round(submitted.length/absences.length*100) : 0}%</div><div class="stat-label">Response Rate</div></div>
+    </div>`;
+
+    // Reason breakdown
+    if (submitted.length > 0) {
+      html += '<div class="dashboard-card" style="margin-bottom:16px;"><h4>Reason Breakdown</h4>';
+      const reasonLabels = { clinical: 'Clinical commitment', leave: 'On leave', unaware: 'Unaware of session', not_relevant: 'Not relevant', other: 'Other' };
+      for (const [reason, count] of Object.entries(reasonCounts).sort((a,b) => b[1]-a[1])) {
+        const pct = Math.round(count/submitted.length*100);
+        html += `<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">
+          <span style="width:160px;font-size:13px;">${reasonLabels[reason]||reason}</span>
+          <div style="flex:1;background:var(--nhs-pale-grey);border-radius:4px;height:20px;"><div style="width:${pct}%;background:var(--nhs-dark-blue);border-radius:4px;height:100%;"></div></div>
+          <span style="font-size:13px;font-weight:600;width:50px;text-align:right;">${count} (${pct}%)</span>
+        </div>`;
+      }
+      html += '</div>';
+    }
+
+    // Recent responses
+    html += '<div class="dashboard-card"><h4>Recent Responses</h4>';
+    if (submitted.length === 0) {
+      html += '<p style="color:var(--nhs-grey);text-align:center;padding:16px;">No responses yet.</p>';
+    } else {
+      html += '<div style="max-height:400px;overflow-y:auto;">';
+      submitted.slice(0, 30).forEach(a => {
+        const learner = learnerMap[a.learner_id] || {};
+        const ev = events.find(e => e.id === a.session_id);
+        const sessionLabel = ev ? `${esc(ev.topic||'Session')} — ${esc(ev.date)} ${esc(ev.month)}` : `Session #${a.session_id}`;
+        const reasonLabel = ABSENCE_REASONS[a.reason] || a.reason || '—';
+        const otherNote = a.other_text ? ` — "${esc(a.other_text)}"` : '';
+        html += `<div style="padding:10px 0;border-bottom:1px solid var(--nhs-pale-grey);font-size:13px;">
+          <strong>${esc(learner.name||'Unknown')}</strong> <span style="color:var(--nhs-grey);">(${esc(learner.grade||'')})</span>
+          <div style="color:var(--nhs-grey);font-size:12px;">${sessionLabel}</div>
+          <div style="margin-top:4px;"><span style="background:#e0e7f5;color:#003087;font-size:11px;padding:2px 8px;border-radius:10px;">${reasonLabel}</span>${otherNote}</div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+
+    container.innerHTML = html;
+  } catch(e) { console.error('Load absences failed:', e); container.innerHTML = '<div style="color:var(--nhs-red);padding:20px;">Failed to load absence data.</div>'; }
 }
