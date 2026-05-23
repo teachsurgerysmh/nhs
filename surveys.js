@@ -699,6 +699,7 @@ async function renderSurveyResults() {
           <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('teacher')">Copy Teacher Link</button>
           <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('trainee')">Copy Trainee Link</button>
         </div>
+        <button class="btn btn-green" style="font-size:13px;margin-top:16px;padding:10px 24px;" onclick="openSurveyEmailGenerator()">📧 Generate Survey Email</button>
       </div>`;
     return;
   }
