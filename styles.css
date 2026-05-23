@@ -405,10 +405,15 @@ body.is-learner .learner-only-block { display: block !important; }
     border-color: var(--nhs-blue) !important;
   }
 
-  /* --- NAV BAR: not sticky on mobile (avoid double-sticky overlap with header)
-         scrollable horizontally, lives in normal flow under the header --- */
-  .nav-bar { position: relative; top: auto; padding: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-  .header { position: sticky; top: 0; }
+  /* --- NAV BAR: HARD non-sticky on mobile.
+         Two-sticky overlap caused the nav-bar to pin over the survey card.
+         !important needed because some browsers (iOS Safari) keep cached
+         sticky behaviour from base rule. --- */
+  .nav-bar { position: static !important; top: auto !important; padding: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1; }
+  .header { position: sticky; top: 0; z-index: 100; }
+
+  /* Survey card needs breathing room from nav above it */
+  .survey-home-card { margin-top: 12px; }
   .nav-inner {
     overflow-x: auto;
     overflow-y: hidden;
@@ -542,10 +547,31 @@ body.is-learner .learner-only-block { display: block !important; }
   .modal-body input, .modal-body select, .modal-body textarea { padding: 12px 14px; font-size: 15px; min-height: 44px; }
   .modal-body label { font-size: 13px; margin-top: 14px; }
 
-  /* --- INBOX: single column --- */
+  /* --- INBOX: single column, reply box clears the FAB --- */
   .inbox-container { grid-template-columns: 1fr; min-height: auto; }
   .inbox-sidebar { max-height: 240px; border-right: none; border-bottom: 1px solid var(--nhs-pale-grey); }
   .inbox-messages { max-height: 60vh; padding: 12px; }
+  .inbox-reply-box { padding: 12px 14px calc(20px + env(safe-area-inset-bottom, 0)); }
+  .inbox-reply-actions {
+    justify-content: stretch;
+    padding-right: 76px; /* leaves clearance for the floating + FAB */
+    flex-wrap: wrap;
+  }
+  .inbox-reply-actions .btn { flex: 1; min-height: 44px; justify-content: center; }
+  .inbox-main-header { padding: 12px 14px; }
+  .inbox-thread-item { padding: 14px 14px; }
+  .inbox-thread-item .thread-subject { font-size: 13.5px; line-height: 1.3; }
+  .inbox-thread-item .thread-meta { font-size: 11px; }
+
+  /* Contacts: leave clearance below cards so FAB doesn't overlap last card actions */
+  #contactsView { padding-bottom: 90px; }
+  #contactsView .contact-card { padding: 14px 16px !important; }
+
+  /* Bare .btn (e.g. "+ Add Contact") needs a visible colour on mobile too */
+  .btn:not(.btn-white):not(.btn-outline):not(.btn-green):not(.btn-red):not(.btn-orange) {
+    background: var(--nhs-blue) !important;
+    color: white !important;
+  }
 
   /* --- FAB: smaller, tucked --- */
   .fab {

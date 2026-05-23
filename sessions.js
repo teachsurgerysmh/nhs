@@ -1127,7 +1127,7 @@ async function loadContacts() {
     html += '<h3 style="color:var(--nhs-dark-blue);margin:0;">Contacts Directory</h3>';
     html += '<div style="display:flex;gap:10px;align-items:center;">';
     html += '<input type="text" id="contactSearch" placeholder="Search contacts..." oninput="filterContacts()" style="padding:8px 14px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;width:220px;">';
-    html += '<button class="btn" onclick="showContactModal()">+ Add Contact</button>';
+    html += '<button class="btn btn-green" onclick="showContactModal()">+ Add Contact</button>';
     html += '</div></div>';
     if (data.length === 0) {
       html += '<div style="text-align:center;padding:40px;color:var(--nhs-grey);">No contacts yet. Add your first contact above.</div>';

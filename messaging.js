@@ -696,6 +696,20 @@ function getEmailLog() {
   return JSON.parse(localStorage.getItem('sst_email_log') || '[]');
 }
 
+// Repair UTF-8 strings that were decoded as Latin-1 upstream
+// (turns "Ã¢Â€Â"" back into "—", "Ã©" back into "é", etc.)
+function fixMojibake(s) {
+  if (!s || typeof s !== 'string') return s || '';
+  if (!/[Â-Ã]/.test(s)) return s;
+  try {
+    const bytes = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i) & 0xff;
+    return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+  } catch (e) {
+    return s;
+  }
+}
+
 async function loadInbox() {
   const container = document.getElementById('inboxView');
   container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading inbox...</div>';
@@ -785,8 +799,8 @@ async function loadInbox() {
   } else {
     gmailThreads.forEach((t, i) => {
       const firstMsg = t.messages?.[0] || {};
-      const subject = firstMsg.subject || '(No subject)';
-      const from = (firstMsg.from || '').replace(/<.*>/, '').trim();
+      const subject = fixMojibake(firstMsg.subject) || '(No subject)';
+      const from = fixMojibake((firstMsg.from || '').replace(/<.*>/, '').trim());
       const dateStr = firstMsg.date ? new Date(firstMsg.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
       const unread = t.messages?.some(m => m.labelIds?.includes('UNREAD'));
       sidebarHtml += `<div class="inbox-thread-item${i === 0 ? ' active' : ''}${unread ? ' unread' : ''}" onclick="selectGmailThread('${t.id}', ${i})" data-thread="${i}">
@@ -851,16 +865,17 @@ async function selectGmailThread(threadId, index) {
     }
 
     const messages = data.messages;
-    const subject = messages[0]?.subject || '(No subject)';
+    const subject = fixMojibake(messages[0]?.subject) || '(No subject)';
     let lastFrom = '';
 
     let messagesHtml = '';
     messages.forEach(m => {
-      const from = (m.from || '').replace(/<.*>/, '').trim();
+      const from = fixMojibake((m.from || '').replace(/<.*>/, '').trim());
       const fromEmail = (m.from || '').match(/<(.+?)>/)?.[1] || m.from || '';
       const isSent = fromEmail.toLowerCase().includes('teachsurgerysmh');
       const dateStr = m.date ? new Date(m.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + new Date(m.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
       lastFrom = isSent ? '' : fromEmail;
+      const bodyText = m.body ? fixMojibake(m.body) : esc(fixMojibake(m.snippet));
 
       messagesHtml += `
         <div class="inbox-message ${isSent ? 'sent' : 'received'}">
@@ -868,7 +883,7 @@ async function selectGmailThread(threadId, index) {
             <span class="msg-from">${isSent ? 'Sent' : 'From: ' + esc(from)}</span>
             <span class="msg-time">${dateStr}</span>
           </div>
-          <div class="msg-body">${m.body || esc(m.snippet)}</div>
+          <div class="msg-body">${bodyText}</div>
         </div>`;
     });
 
