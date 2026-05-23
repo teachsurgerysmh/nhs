@@ -717,6 +717,7 @@ async function renderSurveyResults() {
         <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('staff')">Copy Staff Link</button>
         <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('teacher')">Copy Teacher Link</button>
         <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('trainee')">Copy Trainee Link</button>
+        <button class="btn btn-green" style="font-size:12px;" onclick="openSurveyEmailGenerator()">📧 Generate Email</button>
         <button class="btn btn-green" style="font-size:12px;" onclick="exportSurveyCSV()">Export CSV</button>
       </div>
     </div>
@@ -819,6 +820,141 @@ async function renderSurveyResults() {
 function copySurveyLink(formType) {
   const url = SITE_URL + '?view=survey&type=' + formType;
   navigator.clipboard.writeText(url).then(() => showToast('Survey link copied!'));
+}
+
+// ===================== EMAIL GENERATOR =====================
+const SURVEY_EMAIL_QUESTIONS = {
+  teacher: { id: 'A2', text: 'How much notice were you usually given before a session?',
+    options: ['Day of','1–2 days','3–7 days','1–2 weeks','>2 weeks'] },
+  trainee: { id: 'B1', text: 'What proportion of teaching sessions did you attend?',
+    options: ['<25%','25–50%','50–75%','>75%','Don\'t know'] },
+  staff:   { id: 'A5', text: 'What proportion of scheduled sessions actually took place as planned?',
+    options: ['<25%','25–50%','50–75%','75–90%','>90%','Don\'t know'] },
+};
+
+const SURVEY_CROSS_LINKS = {
+  teacher: { text: 'Were you also on a surgical placement as a trainee?', link: 'trainee', label: 'Trainee Survey' },
+  trainee: { text: 'Did you also teach any sessions during your time here?', link: 'teacher', label: 'Teacher Survey' },
+  staff:   null, // organisers get both links manually
+};
+
+function openSurveyEmailGenerator() {
+  const modal = document.getElementById('detailModal');
+  let html = `
+    <div style="max-width:540px;margin:0 auto;">
+      <h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Generate Survey Email</h3>
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Recipient name</label>
+          <input type="text" id="surveyEmailName" class="text-input" placeholder="e.g. Mr Arvind" style="width:100%;">
+        </div>
+        <div style="flex:1;min-width:160px;">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Survey type</label>
+          <select id="surveyEmailType" class="text-input" style="width:100%;" onchange="previewSurveyEmail()">
+            <option value="teacher">Teacher</option>
+            <option value="trainee">Trainee</option>
+            <option value="staff">Staff / Organiser</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-green" style="margin-bottom:16px;" onclick="previewSurveyEmail()">Generate Preview</button>
+      <div id="surveyEmailPreview" style="border:1px solid var(--nhs-pale-grey);border-radius:var(--radius);padding:16px;background:white;margin-bottom:12px;font-size:13px;line-height:1.6;display:none;"></div>
+      <div id="surveyEmailActions" style="display:none;gap:8px;">
+        <button class="btn btn-green" onclick="copySurveyEmailHTML()">Copy HTML</button>
+        <button class="btn btn-outline" style="color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyEmailPlain()">Copy Plain Text</button>
+      </div>
+    </div>`;
+  modal.querySelector('.modal-body').innerHTML = html;
+  modal.querySelector('.modal-title').textContent = '📧 Survey Email Generator';
+  openModal('detailModal');
+}
+
+function previewSurveyEmail() {
+  const name = document.getElementById('surveyEmailName').value.trim() || '[Name]';
+  const formType = document.getElementById('surveyEmailType').value;
+  const token = generateSurveyToken();
+  const form = SURVEY_FORMS[formType];
+  const eq = SURVEY_EMAIL_QUESTIONS[formType];
+  const cross = SURVEY_CROSS_LINKS[formType];
+
+  // Store token for copy
+  window._surveyEmailToken = token;
+  window._surveyEmailFormType = formType;
+  window._surveyEmailName = name;
+
+  const fullLink = `${SITE_URL}?view=survey&type=${formType}&token=${token}`;
+
+  // Build inline question buttons
+  let optionsHtml = eq.options.map(opt => {
+    const url = `${SITE_URL}?survey_answer=1&form=${formType}&q=${eq.id}&a=${encodeURIComponent(opt)}&token=${token}`;
+    return `<a href="${url}" style="display:inline-block;padding:8px 16px;margin:4px;background:#005eb8;color:white;text-decoration:none;border-radius:20px;font-size:13px;">${opt}</a>`;
+  }).join('\n          ');
+
+  let crossHtml = '';
+  if (cross) {
+    const crossLink = `${SITE_URL}?view=survey&type=${cross.link}`;
+    crossHtml = `<p style="font-size:12px;color:#768692;margin-top:16px;padding-top:12px;border-top:1px solid #e8edee;">
+      ${cross.text} If so, please also fill the <a href="${crossLink}" style="color:#005eb8;">${cross.label}</a> — it covers a separate set of questions.</p>`;
+  } else {
+    // Staff get both links
+    crossHtml = `<p style="font-size:12px;color:#768692;margin-top:16px;padding-top:12px;border-top:1px solid #e8edee;">
+      If you also taught sessions or were on placement as a trainee, please fill those forms too:<br>
+      <a href="${SITE_URL}?view=survey&type=teacher" style="color:#005eb8;">Teacher Survey</a> ·
+      <a href="${SITE_URL}?view=survey&type=trainee" style="color:#005eb8;">Trainee Survey</a></p>`;
+  }
+
+  const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:520px;color:#231f20;line-height:1.6;">
+    <p>Hi ${esc(name)},</p>
+    <p>As part of a QI project on surgical teaching at Southmead, I'm collecting baseline data on how things worked <strong>before</strong> the teaching website was introduced.</p>
+    <p>Quick question to start — <strong>${esc(eq.text)}</strong></p>
+    <div style="text-align:center;margin:16px 0;">
+      ${optionsHtml}
+    </div>
+    <p style="font-size:12px;color:#768692;text-align:center;">Just tap one — your answer is saved instantly.</p>
+    <div style="margin:20px 0;padding:16px;background:#f0f4f5;border-radius:8px;text-align:center;">
+      <p style="font-size:14px;font-weight:600;color:#003087;margin-bottom:8px;">Complete the full survey</p>
+      <p style="font-size:12px;color:#768692;margin-bottom:12px;">Mostly tick-box, takes ${form.timeEstimate}.</p>
+      <a href="${fullLink}" style="display:inline-block;padding:10px 28px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-weight:600;">Open Full Survey →</a>
+    </div>
+    <p style="font-size:12px;color:#768692;">All responses are anonymised. This data will be used in a QI project report supervised by Mr Nitin Arvind.</p>
+    ${crossHtml}
+    <p style="margin-top:16px;">Thanks,<br>Suketu</p>
+  </div>`;
+
+  document.getElementById('surveyEmailPreview').innerHTML = emailHtml;
+  document.getElementById('surveyEmailPreview').style.display = 'block';
+  document.getElementById('surveyEmailActions').style.display = 'flex';
+}
+
+function copySurveyEmailHTML() {
+  const html = document.getElementById('surveyEmailPreview').innerHTML;
+  navigator.clipboard.writeText(html).then(() => showToast('Email HTML copied — paste into email composer'));
+}
+
+function copySurveyEmailPlain() {
+  const formType = window._surveyEmailFormType;
+  const name = window._surveyEmailName || '[Name]';
+  const token = window._surveyEmailToken;
+  const form = SURVEY_FORMS[formType];
+  const eq = SURVEY_EMAIL_QUESTIONS[formType];
+  const cross = SURVEY_CROSS_LINKS[formType];
+  const fullLink = `${SITE_URL}?view=survey&type=${formType}&token=${token}`;
+
+  let text = `Hi ${name},\n\nAs part of a QI project on surgical teaching at Southmead, I'm collecting baseline data on how things worked before the teaching website was introduced.\n\n`;
+  text += `Quick question: ${eq.text}\n\n`;
+  eq.options.forEach(opt => {
+    text += `→ ${opt}: ${SITE_URL}?survey_answer=1&form=${formType}&q=${eq.id}&a=${encodeURIComponent(opt)}&token=${token}\n`;
+  });
+  text += `\nFull survey (${form.timeEstimate}, mostly tick-box):\n${fullLink}\n\n`;
+  text += `All responses are anonymised. QI report supervised by Mr Nitin Arvind.\n\n`;
+  if (cross) {
+    text += `${cross.text} If so, also fill: ${SITE_URL}?view=survey&type=${cross.link}\n\n`;
+  } else {
+    text += `If you also taught sessions or were on placement:\nTeacher: ${SITE_URL}?view=survey&type=teacher\nTrainee: ${SITE_URL}?view=survey&type=trainee\n\n`;
+  }
+  text += `Thanks,\nSuketu`;
+
+  navigator.clipboard.writeText(text).then(() => showToast('Plain text email copied'));
 }
 
 async function exportSurveyCSV() {
