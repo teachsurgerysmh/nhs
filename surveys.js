@@ -930,7 +930,14 @@ function previewSurveyEmail() {
 
 function copySurveyEmailHTML() {
   const html = document.getElementById('surveyEmailPreview').innerHTML;
-  navigator.clipboard.writeText(html).then(() => showToast('Email HTML copied — paste into email composer'));
+  const blob = new Blob([html], { type: 'text/html' });
+  const plainBlob = new Blob([document.getElementById('surveyEmailPreview').innerText], { type: 'text/plain' });
+  navigator.clipboard.write([
+    new ClipboardItem({
+      'text/html': blob,
+      'text/plain': plainBlob,
+    })
+  ]).then(() => showToast('Email copied — paste into Gmail compose'));
 }
 
 function copySurveyEmailPlain() {
