@@ -23,20 +23,39 @@
       <span class="learner-badge" id="learnerBadge">Learner</span>
       <span class="teacher-badge" id="teacherBadge" style="display:none;">Teacher</span>
     </div>
-    <div class="header-actions">
-      <button class="btn btn-outline admin-only" id="viewToggleBtn" onclick="toggleAdminLearnerView()" style="border-color:var(--nhs-green);color:white;">Learner View</button>
-      <button class="btn btn-outline admin-only" onclick="exportCSV()">Export CSV</button>
-      <button class="btn btn-outline admin-only" onclick="openBulkEmailModal()">Bulk Remind</button>
-      <button class="btn btn-outline admin-only" onclick="openBulkWhatsAppModal()" style="border-color:#25D366;color:#25D366;">WhatsApp</button>
-      <button class="btn btn-outline" id="learnerLoginBtn" onclick="openLearnerLoginModal()">Learner Login</button>
-      <button class="btn btn-outline" id="teacherLoginBtn" onclick="openTeacherLoginModal()" style="border-color:#ed8b00;color:#ed8b00;">Teacher Login</button>
-      <button class="btn btn-white" id="loginBtn" onclick="openLoginModal()">Admin Login</button>
-      <button class="btn btn-outline" id="logoutBtn" style="display:none;" onclick="doLogout()">Logout</button>
-      <button class="btn btn-outline" id="learnerLogoutBtn" style="display:none;" onclick="doLearnerLogout()">Learner Logout</button>
-      <button class="btn btn-outline" id="teacherLogoutBtn" style="display:none;border-color:#ed8b00;color:#ed8b00;" onclick="doTeacherLogout()">Teacher Logout</button>
+    <div class="header-actions" id="headerActions">
+      <button class="drawer-close-btn" type="button" aria-label="Close menu" onclick="toggleMobileMenu(false)">&times;</button>
+      <button class="btn btn-outline admin-only" id="viewToggleBtn" onclick="toggleAdminLearnerView();toggleMobileMenu(false);" style="border-color:var(--nhs-green);color:white;">Learner View</button>
+      <button class="btn btn-outline admin-only" onclick="exportCSV();toggleMobileMenu(false);">Export CSV</button>
+      <button class="btn btn-outline admin-only" onclick="openBulkEmailModal();toggleMobileMenu(false);">Bulk Remind</button>
+      <button class="btn btn-outline admin-only" onclick="openBulkWhatsAppModal();toggleMobileMenu(false);" style="border-color:#25D366;color:#25D366;">WhatsApp</button>
+      <button class="btn btn-outline" id="learnerLoginBtn" onclick="openLearnerLoginModal();toggleMobileMenu(false);">Learner Login</button>
+      <button class="btn btn-outline" id="teacherLoginBtn" onclick="openTeacherLoginModal();toggleMobileMenu(false);" style="border-color:#ed8b00;color:#ed8b00;">Teacher Login</button>
+      <button class="btn btn-white" id="loginBtn" onclick="openLoginModal();toggleMobileMenu(false);">Admin Login</button>
+      <button class="btn btn-outline" id="logoutBtn" style="display:none;" onclick="doLogout();toggleMobileMenu(false);">Logout</button>
+      <button class="btn btn-outline" id="learnerLogoutBtn" style="display:none;" onclick="doLearnerLogout();toggleMobileMenu(false);">Learner Logout</button>
+      <button class="btn btn-outline" id="teacherLogoutBtn" style="display:none;border-color:#ed8b00;color:#ed8b00;" onclick="doTeacherLogout();toggleMobileMenu(false);">Teacher Logout</button>
     </div>
+    <button class="mobile-menu-btn" type="button" id="mobileMenuBtn" onclick="toggleMobileMenu()" aria-label="Open menu">&#9776;</button>
   </div>
 </header>
+
+<div class="mobile-drawer-overlay" id="mobileDrawerOverlay" onclick="toggleMobileMenu(false)"></div>
+
+<script>
+  // Mobile drawer toggle (kept inline so it's available before app.js loads)
+  function toggleMobileMenu(open) {
+    var actions = document.getElementById('headerActions');
+    var overlay = document.getElementById('mobileDrawerOverlay');
+    if (!actions || !overlay) return;
+    var willOpen = (open === undefined) ? !actions.classList.contains('drawer-open') : !!open;
+    actions.classList.toggle('drawer-open', willOpen);
+    overlay.classList.toggle('show', willOpen);
+    document.body.style.overflow = willOpen ? 'hidden' : '';
+  }
+  // ESC closes drawer
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') toggleMobileMenu(false); });
+</script>
 
 <nav class="nav-bar">
   <div class="nav-inner" id="navInner">
