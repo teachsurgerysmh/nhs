@@ -20,6 +20,14 @@ async function markSelfAttendance(sessionId) {
       retrospective: isPast ? true : false
     };
     await sbInsert('attendance', attData);
+    logQI('attendance_self_marked', {
+      session_id: sessionId,
+      metadata: {
+        approved: autoApprove,
+        retrospective: isPast,
+        hours_after_session: ev && sessionDate ? Math.round(((Date.now() - sessionDate.getTime()) / 36e5) * 10) / 10 : null
+      }
+    });
     showToast(autoApprove ? 'Attendance marked!' : 'Attendance submitted for approval');
   } catch(e) {
     if (e.message && e.message.includes('409')) {
@@ -151,6 +159,7 @@ async function saveAttendance() {
     for (const learnerId of checkedLearnerIds) {
       try {
         await sbInsert('attendance', { session_id: sessionId, learner_id: learnerId, method: 'admin', status: 'approved' });
+        logQI('attendance_admin_marked', { session_id: sessionId, metadata: { learner_id: learnerId } });
       } catch(e) { /* ignore duplicates */ }
     }
     // Soft-delete unchecked (set status to 'removed' instead of hard DELETE)
@@ -160,6 +169,7 @@ async function saveAttendance() {
         const existing = await sbGet('attendance', `session_id=eq.${sessionId}&learner_id=eq.${learnerId}&select=id`);
         for (const att of existing) {
           await sbUpdate('attendance', att.id, { status: 'removed', approved_by: currentUser?.name || 'admin', approved_at: new Date().toISOString() });
+          logQI('attendance_removed', { session_id: sessionId, metadata: { learner_id: learnerId, attendance_id: att.id } });
         }
       } catch(e) { /* ignore */ }
     }
@@ -231,6 +241,7 @@ async function autoSendFeedbackRequests(sessionId, learnerIds) {
     });
     // Log the send with per-learner recipients
     try { await sbInsert('feedback_sends', { session_id: sessionId, method: 'auto', sent_by: currentUser?.username || 'system', recipient_count: emails.length, recipients: emails.map(e => e.toLowerCase()) }); } catch(le) { console.warn('Log send failed:', le); }
+    logQI('feedback_request_sent', { session_id: sessionId, metadata: { recipients: emails.length, method: 'auto' } });
     const skipped = alreadySentEmails.size;
     showToast(`Feedback sent to ${emails.length} attendee${emails.length!==1?'s':''}${skipped ? ` (${skipped} already sent today)` : ''}`);
   } catch(e) { console.warn('Auto feedback send failed:', e); }
@@ -329,6 +340,22 @@ async function submitFeedback() {
   };
   try {
     await sbInsert('feedback', data);
+    // Compute "hours from feedback request → submission" if any feedback_request_sent event exists
+    let hoursAfterRequest = null;
+    try {
+      const sentEvts = await sbGet('qi_events', `session_id=eq.${sessionId}&event_type=eq.feedback_request_sent&order=created_at.asc&limit=1`);
+      if (sentEvts && sentEvts.length) hoursAfterRequest = Math.round(((Date.now() - new Date(sentEvts[0].created_at).getTime()) / 36e5) * 10) / 10;
+    } catch(e) { /* RLS blocks anon read of qi_events — that's fine, just don't compute */ }
+    logQI('feedback_submitted', {
+      session_id: sessionId,
+      metadata: {
+        anonymous: data.anonymous,
+        ratings: { overall: data.rating_overall, content: data.rating_content_useful, structured: data.rating_structured, presentation: data.rating_presentation, delivery: data.rating_delivery, applicable: data.rating_applicable },
+        good_aspects_len: (data.good_aspects || '').length,
+        improve_aspects_len: (data.improve_aspects || '').length,
+        hours_after_first_request: hoursAfterRequest
+      }
+    });
     closeModal('feedbackModal');
     showToast('Thank you for your feedback! Your attendance has been recorded.');
     // Auto-mark attendance if not already marked
@@ -336,8 +363,11 @@ async function submitFeedback() {
       const existing = await sbGet('attendance', `session_id=eq.${sessionId}&learner_id=eq.${currentLearner.id}`);
       if (existing.length === 0) {
         await sbInsert('attendance', { session_id: sessionId, learner_id: currentLearner.id, method: 'feedback', status: 'approved' });
+        logQI('attendance_via_feedback', { session_id: sessionId });
       }
     } catch(ae) { console.log('Auto-attendance skip:', ae); }
+    // Offer inline rating on the feedback flow
+    setTimeout(() => askInlineRating('feedback_form'), 600);
   } catch(e) {
     console.error('Submit feedback failed:', e);
     if (e.message && e.message.includes('409')) {
@@ -1162,6 +1192,9 @@ async function generateCertificate() {
     attendedSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (da||0)-(db||0); });
     const totalHours = attendedSessions.length;
     if (!totalHours) { showToast('No attended sessions to certify'); return; }
+    logQI('certificate_generated', { metadata: { kind: 'learner_cumulative', sessions: totalHours, cpd_hours: totalHours } });
+    logQI('certificate_downloaded',{ metadata: { kind: 'learner_cumulative', sessions: totalHours, cpd_hours: totalHours } });
+    setTimeout(() => askInlineRating('certificate_flow'), 800);
 
     const certWindow = window.open('', '_blank');
     certWindow.document.write(`<!DOCTYPE html>
@@ -1216,6 +1249,9 @@ async function generateTeacherCertificate() {
     const sessionIds = new Set(teacherSessions.map(s => s.id));
     const teacherFeedback = feedback.filter(f => sessionIds.has(f.session_id));
     const avgOverall = teacherFeedback.length ? (teacherFeedback.reduce((s,f) => s+(f.rating_overall||0), 0) / teacherFeedback.length).toFixed(1) : 'N/A';
+    logQI('certificate_generated', { metadata: { kind: 'teacher_cumulative', sessions: teacherSessions.length, mean_rating: avgOverall } });
+    logQI('certificate_downloaded',{ metadata: { kind: 'teacher_cumulative', sessions: teacherSessions.length, mean_rating: avgOverall } });
+    setTimeout(() => askInlineRating('certificate_flow'), 800);
 
     const certWindow = window.open('', '_blank');
     certWindow.document.write(`<!DOCTYPE html>
@@ -1270,6 +1306,8 @@ async function generateSessionTeacherCert(sessionId) {
   try {
     const feedback = await sbGet('feedback', `session_id=eq.${sessionId}&select=*`);
     const attendance = await sbGet('attendance', `session_id=eq.${sessionId}&status=eq.approved&select=*`);
+    logQI('certificate_generated', { session_id: sessionId, metadata: { kind: 'teacher_session', topic: ev.topic } });
+    logQI('certificate_downloaded',{ session_id: sessionId, metadata: { kind: 'teacher_session', topic: ev.topic } });
     const avgOverall = feedback.length ? (feedback.reduce((s,f) => s+(f.rating_overall||0), 0) / feedback.length).toFixed(1) : 'N/A';
     const sessionDate = `${ev.day} ${ev.date} ${ev.month} ${ev.year}`;
 
@@ -1399,6 +1437,8 @@ async function loadTeacherFeedbackSummary(teacherEmail) {
     const feedback = await sbGet('feedback', 'order=submitted_at.desc&select=*');
     const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === teacherEmail.toLowerCase()).map(e => e.id);
     const filtered = feedback.filter(f => teacherSessions.includes(f.session_id));
+    // Log that teacher saw their own feedback — central QI metric ("did teachers look?")
+    if (filtered.length) logQI('teacher_viewed_feedback', { metadata: { feedback_count: filtered.length, session_count: teacherSessions.length } });
     if (!filtered.length) { container.innerHTML = '<div class="dashboard-card"><h4>Feedback Summary</h4><p style="color:var(--nhs-grey);">No feedback received yet.</p></div>'; return; }
 
     let html = '<div class="dashboard-card"><h4>Anonymous Feedback Summary</h4>';

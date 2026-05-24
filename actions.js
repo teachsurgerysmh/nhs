@@ -79,6 +79,7 @@ async function handleActionParams() {
 async function handleConfirmAction(ev, teacherEmail) {
   try {
     await sbUpdate('schedule', ev.id, { teacher_confirmed: 'confirmed' });
+    logQI('invitation_confirmed', { actor_type: 'teacher', actor_email: teacherEmail, session_id: ev.id, metadata: { topic: ev.topic, channel: 'email_token' }, source: 'email' });
     showActionLanding(
       'Attendance Confirmed',
       `<p>Thank you, <strong>${esc(ev.teacher || 'Colleague')}</strong>!</p>
@@ -101,6 +102,7 @@ async function handleConfirmAction(ev, teacherEmail) {
 async function handleDeclineAction(ev, teacherEmail) {
   try {
     await sbUpdate('schedule', ev.id, { teacher_confirmed: 'declined' });
+    logQI('invitation_declined', { actor_type: 'teacher', actor_email: teacherEmail, session_id: ev.id, metadata: { topic: ev.topic, channel: 'email_token' }, source: 'email' });
     showActionLanding(
       'Response Recorded',
       `<p>Thank you for letting us know, <strong>${esc(ev.teacher || 'Colleague')}</strong>.</p>
@@ -206,6 +208,7 @@ async function submitRescheduleRequest(sessionId, teacher, topic, teacherEmail) 
     try {
       await sbUpdate('schedule', sessionId, { teacher_confirmed: 'reschedule_requested' });
     } catch(e) { /* non-critical */ }
+    logQI('reschedule_requested', { actor_type: 'teacher', actor_email: teacherEmail, session_id: sessionId, metadata: { topic, preferred: selectedRescheduleSlot, message: message || null }, source: 'email' });
     showActionLanding(
       'Reschedule Request Submitted',
       `<p>Thank you, <strong>${esc(teacher)}</strong>!</p>

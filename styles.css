@@ -798,3 +798,135 @@ body.is-learner .learner-only-block { display: block !important; }
   .header-actions { width: 60vw; max-width: 360px; }
   .modal { max-height: 92vh; }
 }
+
+/* ============================================================
+   QI DASHBOARD (v3.6.0) — admin-only engagement & metrics view
+   Follows same mobile-first patterns as admin-dashboard.
+   ============================================================ */
+.qi-dashboard { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.qi-section-title {
+  font-size: 14px; font-weight: 700; color: var(--nhs-dark-blue);
+  margin: 22px 0 10px; padding-left: 10px;
+  border-left: 4px solid var(--nhs-blue);
+}
+.qi-kpi-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 8px;
+}
+.qi-kpi-card {
+  background: white; border: 1px solid var(--nhs-pale-grey);
+  border-radius: var(--radius); padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.qi-kpi-num {
+  font-size: 26px; font-weight: 700; color: var(--nhs-dark-blue);
+  line-height: 1.1;
+}
+.qi-kpi-label {
+  font-size: 11.5px; font-weight: 600; color: var(--nhs-grey);
+  text-transform: uppercase; letter-spacing: 0.4px;
+  margin-top: 4px;
+}
+.qi-kpi-sub { font-size: 11px; color: var(--nhs-grey); margin-top: 4px; line-height: 1.3; }
+
+.qi-card {
+  background: white; border: 1px solid var(--nhs-pale-grey);
+  border-radius: var(--radius); padding: 14px;
+  margin-bottom: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.qi-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.qi-table thead th {
+  text-align: left; padding: 8px 10px;
+  background: var(--nhs-bg);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+  color: var(--nhs-dark-blue);
+  border-bottom: 1px solid var(--nhs-pale-grey);
+  position: sticky; top: 0; z-index: 1;
+}
+.qi-table tbody td {
+  padding: 7px 10px; border-bottom: 1px solid var(--nhs-pale-grey);
+  vertical-align: top;
+}
+.qi-table tbody tr:hover { background: var(--nhs-bg); }
+.qi-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+}
+.qi-pill-upcoming  { background: #e0f5fa; color: var(--nhs-blue); }
+.qi-pill-completed { background: #e6f4ea; color: var(--nhs-green); }
+.qi-pill-cancelled { background: #fde8e8; color: var(--nhs-red); }
+.qi-pill-tbd       { background: #fff4e0; color: var(--nhs-orange); }
+
+/* Inline "rate this feature" widget — bottom-right card, non-blocking */
+.qi-inline-rating {
+  position: fixed; right: 16px; bottom: 16px;
+  width: 280px; max-width: calc(100vw - 32px);
+  background: white; border: 1px solid var(--nhs-pale-grey);
+  border-radius: 12px; padding: 14px 16px 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+  z-index: 900;
+  animation: qiInlineSlideUp 0.28s ease;
+}
+@keyframes qiInlineSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.qi-inline-close {
+  position: absolute; top: 6px; right: 10px;
+  background: none; border: none;
+  font-size: 20px; line-height: 1; color: var(--nhs-grey);
+  cursor: pointer; padding: 4px 8px;
+}
+.qi-inline-q {
+  font-size: 13px; font-weight: 600; color: var(--nhs-dark-blue);
+  margin-bottom: 10px; padding-right: 24px;
+}
+.qi-inline-stars {
+  display: flex; gap: 4px; margin-bottom: 8px;
+}
+.qi-inline-stars button {
+  width: 36px; height: 36px; min-height: 36px;
+  background: var(--nhs-pale-grey); color: white;
+  border: none; border-radius: 50%;
+  font-size: 18px; line-height: 1; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.qi-inline-stars button:hover:not(:disabled) { background: var(--nhs-blue); transform: scale(1.08); }
+.qi-inline-stars button.selected { background: var(--nhs-orange); }
+.qi-inline-snooze { font-size: 11px; color: var(--nhs-grey); display: flex; gap: 14px; }
+.qi-inline-snooze a { color: var(--nhs-grey); text-decoration: underline; }
+.qi-inline-comment { display: flex; gap: 6px; margin-top: 8px; }
+.qi-inline-comment input {
+  flex: 1; padding: 7px 10px; font-size: 12px;
+  border: 1px solid var(--nhs-pale-grey); border-radius: 6px;
+}
+.qi-inline-comment button {
+  padding: 7px 14px; background: var(--nhs-green); color: white;
+  border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.qi-inline-thanks { font-size: 13px; color: var(--nhs-green); font-weight: 600; text-align: center; padding: 8px 0; }
+
+/* Mobile tweaks for QI views */
+@media (max-width: 768px) {
+  .qi-dashboard { padding: 12px 10px; }
+  .qi-section-title { font-size: 13px; margin: 16px 0 8px; }
+  .qi-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .qi-kpi-card { padding: 10px 12px; }
+  .qi-kpi-num { font-size: 20px; }
+  .qi-kpi-label { font-size: 10px; }
+  .qi-kpi-sub { font-size: 10px; }
+  .qi-card { padding: 10px; }
+  .qi-table { font-size: 11.5px; }
+  .qi-table thead th { padding: 6px 8px; font-size: 10px; }
+  .qi-table tbody td { padding: 6px 8px; }
+  /* inline rating card a touch tighter on phones */
+  .qi-inline-rating {
+    right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0));
+    width: calc(100vw - 16px); max-width: 320px;
+    padding: 12px 14px 10px;
+  }
+  .qi-inline-stars button { width: 40px; height: 40px; min-height: 44px; font-size: 20px; }
+}
+@media (max-width: 380px) {
+  .qi-kpi-grid { grid-template-columns: 1fr; }
+}

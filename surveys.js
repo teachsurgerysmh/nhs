@@ -214,6 +214,7 @@ function openSurvey(formType, token) {
     answers: {},
     saving: false,
   };
+  logQI('baseline_survey_started', { metadata: { form: formType, token: surveyState.token } });
   renderSurvey();
   switchView('survey');
   document.querySelector('.nav-bar').style.display = 'none';
@@ -484,6 +485,7 @@ async function saveSurveyAnswer(qId) {
       })
     });
     if (!res.ok) console.warn('Survey save warning:', res.status);
+    else logQI('baseline_survey_question_answered', { metadata: { form: surveyState.formType, q: qId, grade, placement } });
   } catch(e) {
     console.error('Survey save error:', e);
   }
@@ -590,6 +592,7 @@ async function submitSurvey() {
 
   // Mark completion
   surveyState.currentSection = form.sections.length;
+  logQI('baseline_survey_completed', { metadata: { form: surveyState.formType, token: surveyState.token, answer_count: Object.keys(surveyState.answers).length } });
   renderSurvey();
   window.scrollTo(0, 0);
 }
@@ -929,15 +932,15 @@ function previewSurveyEmail() {
 }
 
 function copySurveyEmailHTML() {
-  const html = document.getElementById('surveyEmailPreview').innerHTML;
-  const blob = new Blob([html], { type: 'text/html' });
-  const plainBlob = new Blob([document.getElementById('surveyEmailPreview').innerText], { type: 'text/plain' });
-  navigator.clipboard.write([
-    new ClipboardItem({
-      'text/html': blob,
-      'text/plain': plainBlob,
-    })
-  ]).then(() => showToast('Email copied — paste into Gmail compose'));
+  const preview = document.getElementById('surveyEmailPreview');
+  const range = document.createRange();
+  range.selectNodeContents(preview);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  document.execCommand('copy');
+  sel.removeAllRanges();
+  showToast('Email copied — paste into Gmail compose');
 }
 
 function copySurveyEmailPlain() {

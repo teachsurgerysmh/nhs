@@ -31,7 +31,7 @@ function switchView(view) {
   document.querySelectorAll('.nav-dropdown-item').forEach(t => t.classList.toggle('active', t.dataset.view === view));
   // Highlight "More" button if a dropdown view is active
   const moreBtn = document.querySelector('.nav-more-btn');
-  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','roster','absences','siteFeedback','surveyResults','log'];
+  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','roster','absences','siteFeedback','surveyResults','qiDash','log'];
   // Close nav dropdown on any view switch
   const dd = document.getElementById('navDropdown');
   if (dd) dd.classList.remove('show');
@@ -58,6 +58,7 @@ function switchView(view) {
   document.getElementById('absenceLandingView').style.display = 'none';
   document.getElementById('surveyView').style.display = 'none';
   document.getElementById('surveyResultsView').style.display = 'none';
+  const qiDashEl = document.getElementById('qiDashView'); if (qiDashEl) qiDashEl.style.display = 'none';
   const filtersBar = document.getElementById('filtersBar');
   const statsBar = document.getElementById('statsBar');
   const welcomeBanner = document.getElementById('welcomeBanner');
@@ -136,6 +137,10 @@ function switchView(view) {
     document.getElementById('surveyResultsView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     renderSurveyResults();
+  } else if (view === 'qiDash') {
+    document.getElementById('qiDashView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadQIDashboard();
   } else {
     document.getElementById('listView').style.display = 'block';
     filtersBar.style.display = '';
@@ -756,11 +761,16 @@ async function saveEvent() {
       await sbUpdate('schedule', editingEventId, evData);
       showToast('Session updated');
       logAction('Updated session', evData.topic || evData.date);
+      logQI('session_edited', { session_id: editingEventId, metadata: { topic: evData.topic, status: evData.status, teacher: evData.teacher } });
+      if (evData.status === 'cancelled') logQI('session_cancelled', { session_id: editingEventId, metadata: { topic: evData.topic, reason: evData.notes || null } });
+      if (evData.status === 'completed') logQI('session_completed', { session_id: editingEventId, metadata: { topic: evData.topic } });
     } else {
       evData.event_id = 'EVT' + Date.now();
-      await sbInsert('schedule', evData);
+      const inserted = await sbInsert('schedule', evData);
+      const newId = inserted && inserted[0] && inserted[0].id;
       showToast('Session added');
       logAction('Added session', evData.topic || evData.date);
+      logQI('session_created', { session_id: newId || null, metadata: { topic: evData.topic, teacher: evData.teacher, status: evData.status, published: evData.published } });
     }
     await loadEvents();
     closeModal('eventModal');
@@ -779,6 +789,7 @@ async function deleteEvent() {
     await sbDelete('schedule', editingEventId);
     showToast('Session deleted');
     logAction('Deleted session', ev?.topic || ev?.date || '');
+    logQI('session_deleted', { session_id: editingEventId, metadata: { topic: ev?.topic } });
     await loadEvents();
     closeModal('eventModal');
     renderAll();
@@ -800,6 +811,7 @@ async function togglePublish(id) {
     closeModal('detailModal');
     showToast(ev.published ? 'Unpublished' : 'Published');
     logAction((ev.published ? 'Unpublished' : 'Published') + ' session', ev.topic || ev.date);
+    logQI(ev.published ? 'session_unpublished' : 'session_published', { session_id: id, metadata: { topic: ev.topic } });
     await loadEvents();
     renderAll();
   } catch(e) { console.error('Toggle publish failed:', e); showToast('Failed to update'); }
@@ -1029,6 +1041,7 @@ async function submitSessionRequest() {
   if (!topic) { showToast('Please enter a topic'); return; }
   try {
     await sbInsert('requests', { name, email, phone, topic, preferred_date: slot, message, status: 'pending' });
+    logQI('session_requested', { actor_email: email || null, actor_name: name || null, metadata: { topic, preferred_date: slot } });
     closeModal('requestSessionModal');
     showToast("Request submitted! The teaching team will get back to you.");
   } catch(e) { console.error('Submit request failed:', e); showToast('Failed to submit request'); }

@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="SMH Teaching">
 <link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
-<link rel="stylesheet" href="styles.css?v=3.5.5">
+<link rel="stylesheet" href="styles.css?v=3.6.0">
 </head>
 <body>
 
@@ -82,6 +82,7 @@
         <div class="nav-dropdown-item" data-view="absences" onclick="switchViewFromDropdown('absences')">Absences</div>
         <div class="nav-dropdown-item" data-view="siteFeedback" onclick="switchViewFromDropdown('siteFeedback')">Site Feedback</div>
         <div class="nav-dropdown-item admin-only" data-view="surveyResults" onclick="switchViewFromDropdown('surveyResults')">QI Surveys</div>
+        <div class="nav-dropdown-item" data-view="qiDash" onclick="switchViewFromDropdown('qiDash')" id="qiDashTab" style="display:none;">QI Dashboard</div>
         <div class="nav-dropdown-item" data-view="log" onclick="switchViewFromDropdown('log')" id="logTab" style="display:none;">Activity Log</div>
       </div>
     </div>
@@ -144,6 +145,7 @@
   <div id="absenceLandingView" style="display:none;"></div>
   <div id="surveyView" style="display:none;"></div>
   <div id="surveyResultsView" style="display:none;"></div>
+  <div id="qiDashView" style="display:none;" class="qi-dashboard"></div>
 </div>
 
 <button class="fab" onclick="openAddModal()" title="Add Session">+</button>
@@ -692,13 +694,14 @@
   </div>
 </div>
 
-<script src="config.js?v=3.5.5"></script>
-<script src="auth.js?v=3.5.5"></script>
-<script src="sessions.js?v=3.5.5"></script>
-<script src="messaging.js?v=3.5.5"></script>
-<script src="learner.js?v=3.5.5"></script>
-<script src="actions.js?v=3.5.5"></script>
-<script src="surveys.js?v=3.5.5"></script>
-<script src="app.js?v=3.5.5"></script>
+<script src="config.js?v=3.6.0"></script>
+<script src="auth.js?v=3.6.0"></script>
+<script src="sessions.js?v=3.6.0"></script>
+<script src="messaging.js?v=3.6.0"></script>
+<script src="learner.js?v=3.6.0"></script>
+<script src="actions.js?v=3.6.0"></script>
+<script src="surveys.js?v=3.6.0"></script>
+<script src="analytics.js?v=3.6.0"></script>
+<script src="app.js?v=3.6.0"></script>
 </body>
 </html>

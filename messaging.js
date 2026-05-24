@@ -86,6 +86,10 @@ async function sendSessionEmail(id, type) {
     if (result.success) {
       showToast(`${isConfirm ? 'Confirmation' : 'Reminder'} sent to ${ev.teacher}!`);
       logAction(`Sent ${type} email`, `${ev.topic || 'Session'} → ${ev.teacher}`);
+      logQI(isConfirm ? 'invitation_sent' : 'reminder_sent', {
+        session_id: ev.id,
+        metadata: { teacher_email: to, teacher_name: ev.teacher, topic: ev.topic, channel: 'email', email_type: type }
+      });
       // Track email in local storage for inbox view
       trackSentEmail(ev.id, to, subject, type, ev.topic, ev.teacher, ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year);
     } else {
@@ -200,6 +204,7 @@ async function sendWhatsAppReminder(id, mode) {
     if (result.success) {
       showToast(`WhatsApp sent to ${ev.teacher}!`);
       logAction('Sent WhatsApp reminder', `${ev.topic || 'Session'} → ${ev.teacher}`);
+      logQI('reminder_sent', { session_id: ev.id, metadata: { teacher_name: ev.teacher, channel: 'whatsapp', topic: ev.topic } });
       closeModal('whatsappModal');
     } else {
       showToast(`WhatsApp failed: ${result.error || result.wa_response?.error?.message || 'Unknown error'}`);
@@ -494,6 +499,7 @@ async function sendFeedbackEmails() {
     if (result.success) {
       // Log the send with recipients
       try { await sbInsert('feedback_sends', { session_id: fbReqSessionId, method: 'manual', sent_by: currentUser?.username || currentTeacher?.name || 'unknown', recipient_count: emails.length, recipients: emails.map(e => e.toLowerCase()) }); } catch(le) { console.warn('Log send failed:', le); }
+      logQI('feedback_request_sent', { session_id: fbReqSessionId, metadata: { recipients: emails.length, method: 'manual' } });
       showToast(`Feedback request sent to ${emails.length} recipient(s)!`);
       closeModal('feedbackRequestModal');
     } else {
@@ -641,7 +647,10 @@ async function sendTeacherRequestEmails() {
         body: JSON.stringify({ to: [r.email], subject, html })
       });
       const result = await res.json();
-      if (result.success) sentCount++;
+      if (result.success) {
+        sentCount++;
+        logQI('invitation_sent', { session_id: ev.id, metadata: { teacher_email: r.email, teacher_name: r.name, topic, channel: 'email', bulk: true } });
+      }
     } catch(e) { console.warn('Send failed for', r.email, e); }
   }
 

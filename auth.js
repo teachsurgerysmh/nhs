@@ -37,9 +37,9 @@ async function doLogin() {
   try {
     const hashed = await hashPassword(pass);
     const data = await sbGet('users', `username=eq.${encodeURIComponent(user)}&select=*`);
-    if (data.length === 0) { showToast('User not found'); return; }
+    if (data.length === 0) { logQI('admin_login', { metadata: { result: 'user_not_found', username: user } }); showToast('User not found'); return; }
     const u = data[0];
-    if (u.password !== hashed) { showToast('Incorrect password'); return; }
+    if (u.password !== hashed) { logQI('admin_login', { metadata: { result: 'bad_password', username: user } }); showToast('Incorrect password'); return; }
     currentUser = { id: u.id, username: u.username, name: u.display_name, role: u.role };
     sessionStorage.setItem('sst_user', JSON.stringify(currentUser));
     setAdmin(true);
@@ -48,6 +48,7 @@ async function doLogin() {
     await loadEvents();
     renderAll();
     logAction('Logged in');
+    logQI('admin_login', { metadata: { username: currentUser.username } });
     switchView('adminDash');
   } catch(e) {
     console.error('Login error:', e);
@@ -78,6 +79,7 @@ function doLogout() {
     demoTourCurrentStep = 0;
   }
   logAction('Logged out');
+  if (currentUser) logQI('admin_logout', { metadata: { username: currentUser.username } });
   currentUser = null;
   currentLearner = null;
   currentTeacher = null;
@@ -101,6 +103,13 @@ function setAdmin(val) {
     logTab.style.cssText = '';
   } else {
     logTab.style.cssText = 'display:none !important;';
+  }
+  // QI Dashboard tab — restricted to Suketu only
+  const qiDashTab = document.getElementById('qiDashTab');
+  if (qiDashTab) {
+    const u = (currentUser?.username || '').toLowerCase();
+    const isSuketu = val && (u === 'suketu' || u === 'suketubatra');
+    qiDashTab.style.cssText = isSuketu ? '' : 'display:none !important;';
   }
   // Auto-link admin to learner + teacher records
   if (val && currentUser) {
@@ -299,6 +308,7 @@ async function doLearnerLogin() {
     currentLearner = learner;
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
+    logQI('learner_login', { metadata: { grade: learner.grade, placement: learner.placement } });
     // Cross-link: if learner is also a teacher, give them teacher access too
     await linkLearnerToTeacher();
     closeModal('learnerLoginModal');
@@ -445,6 +455,7 @@ async function doResetPassword(email, learnerId) {
   try {
     const hashedP = await hashPassword(p1);
     await sbUpdate('learners', learnerId, { pin_code: hashedP });
+    logQI('password_reset', { actor_type: 'learner', actor_email: email, metadata: { who: 'learner' } });
     showToast('Password reset! You can now log in.');
     document.getElementById('forgotPasswordForm').style.display = 'none';
     showLearnerLoginForm();
@@ -543,6 +554,7 @@ async function doLearnerRegister() {
     currentLearner = result[0];
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
+    logQI('learner_register', { metadata: { grade, placement, rotation_block: rotationBlock || null } });
 
     // Auto-link to contact if email matches
     try {
@@ -571,6 +583,7 @@ async function doLearnerRegister() {
 }
 
 function doLearnerLogout() {
+  if (currentLearner) logQI('learner_logout');
   currentLearner = null;
   sessionStorage.removeItem('sst_learner');
   setLearnerUI(false);
@@ -645,6 +658,7 @@ async function doTeacherLogin() {
     currentTeacher = teacher;
     sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
     closeModal('teacherLoginModal');
+    logQI('teacher_login', { metadata: { specialty: teacher.specialty || null } });
     // Cross-link: if teacher is also a learner, log them in as learner too
     await linkTeacherToLearner();
     updateHeaderButtons();
@@ -671,6 +685,7 @@ async function doTeacherSetup() {
     currentTeacher = teacher;
     sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
     closeModal('teacherLoginModal');
+    logQI('teacher_setup', { metadata: { specialty: teacher.specialty || null } });
     // Cross-link: if teacher is also a learner, log them in as learner too
     await linkTeacherToLearner();
     updateHeaderButtons();
@@ -705,6 +720,7 @@ async function linkLearnerToTeacher() {
 }
 
 function doTeacherLogout() {
+  if (currentTeacher) logQI('teacher_logout');
   currentTeacher = null;
   currentLearner = null;
   sessionStorage.removeItem('sst_teacher');
