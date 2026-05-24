@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="SMH Teaching">
 <link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
-<link rel="stylesheet" href="styles.css?v=3.6.1">
+<link rel="stylesheet" href="styles.css?v=3.6.2">
 </head>
 <body>
 
@@ -71,25 +71,28 @@
     <div class="nav-tab admin-only" data-view="inbox" onclick="switchView('inbox')">Inbox</div>
     <div class="nav-more-wrapper">
       <button class="nav-more-btn" onclick="toggleNavDropdown(event)">More ▾</button>
-      <div class="nav-dropdown" id="navDropdown">
-        <div class="nav-dropdown-item" data-view="all" onclick="switchViewFromDropdown('all')">All Sessions</div>
-        <div class="nav-dropdown-item" data-view="ideas" onclick="switchViewFromDropdown('ideas')">Topic Ideas</div>
-        <div class="nav-dropdown-item" data-view="requests" onclick="switchViewFromDropdown('requests')">Requests</div>
-        <div class="nav-dropdown-item" data-view="feedback" onclick="switchViewFromDropdown('feedback')">Feedback</div>
-        <div class="nav-dropdown-item" data-view="approvals" onclick="switchViewFromDropdown('approvals')">Approvals</div>
-        <div class="nav-dropdown-item" data-view="attendanceChart" onclick="switchViewFromDropdown('attendanceChart')">Attendance Chart</div>
-        <div class="nav-dropdown-item" data-view="roster" onclick="switchViewFromDropdown('roster')">Roster</div>
-        <div class="nav-dropdown-item" data-view="absences" onclick="switchViewFromDropdown('absences')">Absences</div>
-        <div class="nav-dropdown-item" data-view="siteFeedback" onclick="switchViewFromDropdown('siteFeedback')">Site Feedback</div>
-        <div class="nav-dropdown-item admin-only" data-view="surveyResults" onclick="switchViewFromDropdown('surveyResults')">QI Surveys</div>
-        <div class="nav-dropdown-item" data-view="qiDash" onclick="switchViewFromDropdown('qiDash')" id="qiDashTab" style="display:none;">QI Dashboard</div>
-        <div class="nav-dropdown-item" data-view="log" onclick="switchViewFromDropdown('log')" id="logTab" style="display:none;">Activity Log</div>
-      </div>
     </div>
     <div class="nav-tab" data-view="dashboard" id="dashboardTab" style="display:none;" onclick="switchView('dashboard')">My Dashboard</div>
     <div class="nav-tab" data-view="teacherDash" id="teacherDashTab" style="display:none;" onclick="switchView('teacherDash')">Teacher Dashboard</div>
   </div>
 </nav>
+
+<!-- More dropdown — lives OUTSIDE the sticky .nav-more-wrapper so its z-index
+     isn't trapped inside that wrapper's stacking context. -->
+<div class="nav-dropdown" id="navDropdown">
+  <div class="nav-dropdown-item" data-view="all" onclick="switchViewFromDropdown('all')">All Sessions</div>
+  <div class="nav-dropdown-item" data-view="ideas" onclick="switchViewFromDropdown('ideas')">Topic Ideas</div>
+  <div class="nav-dropdown-item" data-view="requests" onclick="switchViewFromDropdown('requests')">Requests</div>
+  <div class="nav-dropdown-item" data-view="feedback" onclick="switchViewFromDropdown('feedback')">Feedback</div>
+  <div class="nav-dropdown-item" data-view="approvals" onclick="switchViewFromDropdown('approvals')">Approvals</div>
+  <div class="nav-dropdown-item" data-view="attendanceChart" onclick="switchViewFromDropdown('attendanceChart')">Attendance Chart</div>
+  <div class="nav-dropdown-item" data-view="roster" onclick="switchViewFromDropdown('roster')">Roster</div>
+  <div class="nav-dropdown-item" data-view="absences" onclick="switchViewFromDropdown('absences')">Absences</div>
+  <div class="nav-dropdown-item" data-view="siteFeedback" onclick="switchViewFromDropdown('siteFeedback')">Site Feedback</div>
+  <div class="nav-dropdown-item admin-only" data-view="surveyResults" onclick="switchViewFromDropdown('surveyResults')">QI Surveys</div>
+  <div class="nav-dropdown-item" data-view="qiDash" onclick="switchViewFromDropdown('qiDash')" id="qiDashTab" style="display:none;">QI Dashboard</div>
+  <div class="nav-dropdown-item" data-view="log" onclick="switchViewFromDropdown('log')" id="logTab" style="display:none;">Activity Log</div>
+</div>
 
 <div class="welcome-banner" id="welcomeBanner">
   <h2>Surgical Teaching at Southmead Hospital</h2>
@@ -694,14 +697,14 @@
   </div>
 </div>
 
-<script src="config.js?v=3.6.1"></script>
-<script src="auth.js?v=3.6.1"></script>
-<script src="sessions.js?v=3.6.1"></script>
-<script src="messaging.js?v=3.6.1"></script>
-<script src="learner.js?v=3.6.1"></script>
-<script src="actions.js?v=3.6.1"></script>
-<script src="surveys.js?v=3.6.1"></script>
-<script src="analytics.js?v=3.6.1"></script>
-<script src="app.js?v=3.6.1"></script>
+<script src="config.js?v=3.6.2"></script>
+<script src="auth.js?v=3.6.2"></script>
+<script src="sessions.js?v=3.6.2"></script>
+<script src="messaging.js?v=3.6.2"></script>
+<script src="learner.js?v=3.6.2"></script>
+<script src="actions.js?v=3.6.2"></script>
+<script src="surveys.js?v=3.6.2"></script>
+<script src="analytics.js?v=3.6.2"></script>
+<script src="app.js?v=3.6.2"></script>
 </body>
 </html>

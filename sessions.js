@@ -15,13 +15,16 @@ function switchViewFromDropdown(view) {
   document.getElementById('navDropdown').classList.remove('show');
   switchView(view);
 }
-// Close dropdown when clicking outside
+// Close dropdown when clicking outside.
+// NB: as of v3.5.6 the .nav-dropdown lives OUTSIDE .nav-more-wrapper so we
+// must check both for the click target before deciding to close.
 document.addEventListener('click', (e) => {
   const wrapper = document.querySelector('.nav-more-wrapper');
-  if (wrapper && !wrapper.contains(e.target)) {
-    const dd = document.getElementById('navDropdown');
-    if (dd) dd.classList.remove('show');
-  }
+  const dd = document.getElementById('navDropdown');
+  if (!dd) return;
+  if (wrapper && wrapper.contains(e.target)) return; // clicked the More button area
+  if (dd.contains(e.target)) return;                  // clicked an item inside the dropdown
+  dd.classList.remove('show');
 });
 
 function switchView(view) {
