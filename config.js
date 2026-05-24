@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.6.2';
-const APP_BUILD = '2026-05-24';
+const APP_VERSION = 'v3.6.3';
+const APP_BUILD = '2026-05-24b';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;
@@ -117,6 +117,23 @@ function isInCurrentRotation(ev) {
   const rot = getCurrentRotationDates();
   return d >= rot.start && d <= rot.end;
 }
+
+// ===================== CPD HOURS =====================
+// Parse a free-text time range like "0800-0900", "08:00-09:00", "13:00-13:30"
+// and return CPD hours (1 hour per 60 min). Defaults to 1.0 if unparseable.
+function cpdHoursFromTime(timeStr) {
+  if (!timeStr) return 1;
+  const m = String(timeStr).match(/(\d{1,2}):?(\d{2})\s*[-–—]\s*(\d{1,2}):?(\d{2})/);
+  if (!m) return 1;
+  const start = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  let end   = parseInt(m[3], 10) * 60 + parseInt(m[4], 10);
+  let mins = end - start;
+  if (mins <= 0) mins += 24 * 60;
+  // Round to nearest 0.25h to keep clean values
+  return Math.round((mins / 60) * 4) / 4;
+}
+// Format hours: 1 → "1", 0.5 → "0.5", 1.25 → "1.25"
+function fmtCpdHours(h) { return String(+(+h).toFixed(2)); }
 
 // ── Data Loading ──
 

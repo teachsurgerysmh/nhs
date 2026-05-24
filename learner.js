@@ -783,7 +783,7 @@ async function loadDashboard() {
     const attendance = await sbGet('attendance', `learner_id=eq.${currentLearner.id}&status=neq.removed&select=*`);
     const attendedSessionIds = attendance.map(a => a.session_id);
     const attendedSessions = events.filter(e => attendedSessionIds.includes(e.id));
-    const totalHours = attendedSessions.length; // 1 hour per session default
+    const totalHours = attendedSessions.reduce((sum, e) => sum + cpdHoursFromTime(e.time), 0);
 
     // Placement progress
     let placementProgress = 0;
@@ -821,7 +821,7 @@ async function loadDashboard() {
       <h4>CPD Summary</h4>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;text-align:center;">
         <div class="stat-card"><div class="stat-num">${attendedSessions.length}</div><div class="stat-label">Sessions Attended</div></div>
-        <div class="stat-card"><div class="stat-num">${totalHours}</div><div class="stat-label">CPD Hours</div></div>
+        <div class="stat-card"><div class="stat-num">${fmtCpdHours(totalHours)}</div><div class="stat-label">CPD Hours</div></div>
       </div>
     </div>`;
 
@@ -1062,7 +1062,9 @@ async function loadAttendanceChart() {
       </tr></thead><tbody>`;
 
       const rows = filteredLearners.map(l => {
-        const attended = completedSessions.filter(s => attendanceSet.has(`${l.id}_${s.id}`)).length;
+        const attendedSess = completedSessions.filter(s => attendanceSet.has(`${l.id}_${s.id}`));
+        const attended = attendedSess.length;
+        const cpdHours = attendedSess.reduce((sum, s) => sum + cpdHoursFromTime(s.time), 0);
         let available = completedSessions.length;
         if (l.placement_start && l.placement_end) {
           const ps = new Date(l.placement_start); ps.setHours(0,0,0,0);
@@ -1074,7 +1076,7 @@ async function loadAttendanceChart() {
         }
         const pct = available > 0 ? Math.round((attended / available) * 100) : 0;
         const rotationLabels = { aug_dec: 'Aug-Dec', dec_apr: 'Dec-Apr', apr_aug: 'Apr-Aug' };
-        return { learner: l, attended, available, pct, rotation: rotationLabels[l.rotation_block] || '-' };
+        return { learner: l, attended, cpdHours, available, pct, rotation: rotationLabels[l.rotation_block] || '-' };
       });
 
       // Sort if needed
@@ -1110,7 +1112,7 @@ async function loadAttendanceChart() {
           <td style="padding:8px 12px;text-align:center;">${r.attended}</td>
           <td style="padding:8px 12px;text-align:center;">${r.available}</td>
           <td style="padding:8px 12px;text-align:center;"><span style="background:${pctBg};color:${pctColor};font-weight:700;padding:2px 10px;border-radius:10px;font-size:12px;">${r.pct}%</span></td>
-          <td style="padding:8px 12px;text-align:center;">${r.attended}</td>
+          <td style="padding:8px 12px;text-align:center;">${fmtCpdHours(r.cpdHours)}</td>
         </tr>`;
       });
       html += '</tbody></table></div>';
@@ -1195,10 +1197,11 @@ async function generateCertificate() {
     const attendedSessionIds = attendance.map(a => a.session_id);
     const attendedSessions = events.filter(e => attendedSessionIds.includes(e.id));
     attendedSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (da||0)-(db||0); });
-    const totalHours = attendedSessions.length;
-    if (!totalHours) { showToast('No attended sessions to certify'); return; }
-    logQI('certificate_generated', { metadata: { kind: 'learner_cumulative', sessions: totalHours, cpd_hours: totalHours } });
-    logQI('certificate_downloaded',{ metadata: { kind: 'learner_cumulative', sessions: totalHours, cpd_hours: totalHours } });
+    const sessionCount = attendedSessions.length;
+    const totalHours = attendedSessions.reduce((sum, e) => sum + cpdHoursFromTime(e.time), 0);
+    if (!sessionCount) { showToast('No attended sessions to certify'); return; }
+    logQI('certificate_generated', { metadata: { kind: 'learner_cumulative', sessions: sessionCount, cpd_hours: totalHours } });
+    logQI('certificate_downloaded',{ metadata: { kind: 'learner_cumulative', sessions: sessionCount, cpd_hours: totalHours } });
     setTimeout(() => askInlineRating('certificate_flow'), 800);
 
     const certWindow = window.open('', '_blank');
@@ -1221,12 +1224,12 @@ async function generateCertificate() {
       <dt>Placement</dt><dd>${esc(currentLearner.placement)}</dd>
       ${currentLearner.placement_start ? '<dt>Period</dt><dd>' + new Date(currentLearner.placement_start).toLocaleDateString('en-GB') + ' to ' + (currentLearner.placement_end ? new Date(currentLearner.placement_end).toLocaleDateString('en-GB') : 'present') + '</dd>' : ''}
     </div>
-    <div style="text-align:center;font-size:11px;color:#768692;margin:8px 0;">has attended the following surgical teaching sessions and is awarded <strong>${totalHours} CPD hour${totalHours!==1?'s':''}</strong>:</div>
+    <div style="text-align:center;font-size:11px;color:#768692;margin:8px 0;">has attended the following surgical teaching sessions and is awarded <strong>${fmtCpdHours(totalHours)} CPD hour${totalHours!==1?'s':''}</strong>:</div>
     <table class="cert-table">
-      <thead><tr><th>#</th><th>Date</th><th>Topic</th><th>Teacher</th></tr></thead>
-      <tbody>${attendedSessions.map((s, i) => `<tr><td>${i+1}</td><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td></tr>`).join('')}</tbody>
+      <thead><tr><th>#</th><th>Date</th><th>Topic</th><th>Teacher</th><th>CPD</th></tr></thead>
+      <tbody>${attendedSessions.map((s, i) => `<tr><td>${i+1}</td><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td><td style="text-align:center;">${fmtCpdHours(cpdHoursFromTime(s.time))}h</td></tr>`).join('')}</tbody>
     </table>
-    <div class="cert-total">Total CPD Hours Awarded: ${totalHours}</div>
+    <div class="cert-total">Total CPD Hours Awarded: ${fmtCpdHours(totalHours)}</div>
   </div>
   <div class="cert-signature">
     <div class="cert-sig-block">
@@ -1340,7 +1343,7 @@ async function generateSessionTeacherCert(sessionId) {
       <thead><tr><th>Date</th><th>Topic</th><th>Attendees</th><th>Feedback Score</th></tr></thead>
       <tbody><tr><td>${esc(sessionDate)}</td><td>${esc(ev.topic || 'TBD')}</td><td>${attendance.length}</td><td>${avgOverall}/10 (${feedback.length} responses)</td></tr></tbody>
     </table>
-    <div class="cert-total">Teaching Hours: 1 | CPD Hours: 1</div>
+    <div class="cert-total">Teaching Hours: ${fmtCpdHours(cpdHoursFromTime(ev.time))} | CPD Hours: ${fmtCpdHours(cpdHoursFromTime(ev.time))}</div>
     ${feedback.length > 0 ? '<div style="margin-top:12px;"><div style="font-size:12px;font-weight:600;color:#005eb8;margin-bottom:6px;">Feedback Summary</div><div class="cert-details" style="gap:2px;">' +
       (feedback.some(f=>f.rating_content_useful) ? '<dt>Content useful</dt><dd>' + (feedback.reduce((s,f)=>s+(f.rating_content_useful||0),0)/feedback.filter(f=>f.rating_content_useful).length).toFixed(1) + '/10</dd>' : '') +
       (feedback.some(f=>f.rating_structured) ? '<dt>Structured</dt><dd>' + (feedback.reduce((s,f)=>s+(f.rating_structured||0),0)/feedback.filter(f=>f.rating_structured).length).toFixed(1) + '/10</dd>' : '') +
