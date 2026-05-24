@@ -25,7 +25,20 @@ a:hover { text-decoration: underline; }
 .header-logo small { font-size: 13px; font-weight: 400; opacity: 0.85; display: block; }
 .admin-badge { background: var(--nhs-orange); color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: none; }
 .admin-badge.show { display: inline-block; }
-.header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.header-actions {
+  /* .header-actions now lives OUTSIDE <header> in the DOM (so the drawer can
+     escape the header's sticky stacking context). On desktop, pin it visually
+     to the top-right of the header with position:fixed. */
+  position: fixed;
+  top: 14px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  z-index: 101;
+  max-width: calc(100% - 260px);
+}
 .btn { padding: 7px 16px; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
 .btn-white { background: white; color: var(--nhs-blue); }
 .btn-white:hover { background: var(--nhs-pale-grey); }
@@ -423,7 +436,7 @@ body.is-learner .learner-only-block { display: block !important; }
    ============================================================ */
 .mobile-menu-btn { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.25); font-size: 22px; cursor: pointer; flex-shrink: 0; padding: 0; line-height: 1; }
 .mobile-menu-btn:active { background: rgba(255,255,255,0.3); }
-.mobile-drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 998; backdrop-filter: blur(2px); }
+.mobile-drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 998; }
 .mobile-drawer-overlay.show { display: block; }
 .drawer-close-btn { display: none; }
 
@@ -444,14 +457,17 @@ body.is-learner .learner-only-block { display: block !important; }
   /* Show hamburger */
   .mobile-menu-btn { display: inline-flex; }
 
-  /* --- HEADER-ACTIONS becomes a slide-in drawer --- */
+  /* --- HEADER-ACTIONS becomes a slide-in drawer ---
+         z-index must be ABOVE the overlay (998) so the drawer renders on top,
+         not behind it (the latter was blurring the drawer and stealing taps) */
   .header-actions {
-    position: fixed; top: 0; right: 0; bottom: 0;
+    position: fixed !important; top: 0 !important; right: 0 !important; bottom: 0 !important;
+    left: auto !important;
     width: 84vw; max-width: 320px;
     background: white;
     transform: translateX(105%);
     transition: transform 0.28s ease;
-    z-index: 999;
+    z-index: 1000 !important;
     padding: 64px 18px calc(24px + env(safe-area-inset-bottom, 0));
     flex-direction: column;
     flex-wrap: nowrap;
@@ -459,8 +475,16 @@ body.is-learner .learner-only-block { display: block !important; }
     overflow-y: auto;
     box-shadow: -6px 0 22px rgba(0,0,0,0.18);
     gap: 8px;
+    max-height: 100vh;
+    pointer-events: auto;
   }
-  .header-actions.drawer-open { transform: translateX(0); }
+  .header-actions:not(.drawer-open) { pointer-events: none; }
+  .header-actions.drawer-open {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  /* Overlay must be below the drawer (1000) and above page content */
+  .mobile-drawer-overlay { z-index: 999; backdrop-filter: none; }
   .header-actions::before {
     content: 'Menu';
     position: absolute; top: 18px; left: 20px;

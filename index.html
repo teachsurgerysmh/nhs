@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="SMH Teaching">
 <link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
-<link rel="stylesheet" href="styles.css?v=3.5.2">
+<link rel="stylesheet" href="styles.css?v=3.5.3">
 </head>
 <body>
 
@@ -23,24 +23,28 @@
       <span class="learner-badge" id="learnerBadge">Learner</span>
       <span class="teacher-badge" id="teacherBadge" style="display:none;">Teacher</span>
     </div>
-    <div class="header-actions" id="headerActions">
-      <button class="drawer-close-btn" type="button" aria-label="Close menu" onclick="toggleMobileMenu(false)">&times;</button>
-      <button class="btn btn-outline admin-only" id="viewToggleBtn" onclick="toggleAdminLearnerView();toggleMobileMenu(false);" style="border-color:var(--nhs-green);color:white;">Learner View</button>
-      <button class="btn btn-outline admin-only" onclick="exportCSV();toggleMobileMenu(false);">Export CSV</button>
-      <button class="btn btn-outline admin-only" onclick="openBulkEmailModal();toggleMobileMenu(false);">Bulk Remind</button>
-      <button class="btn btn-outline admin-only" onclick="openBulkWhatsAppModal();toggleMobileMenu(false);" style="border-color:#25D366;color:#25D366;">WhatsApp</button>
-      <button class="btn btn-outline" id="learnerLoginBtn" onclick="openLearnerLoginModal();toggleMobileMenu(false);">Learner Login</button>
-      <button class="btn btn-outline" id="teacherLoginBtn" onclick="openTeacherLoginModal();toggleMobileMenu(false);" style="border-color:#ed8b00;color:#ed8b00;">Teacher Login</button>
-      <button class="btn btn-white" id="loginBtn" onclick="openLoginModal();toggleMobileMenu(false);">Admin Login</button>
-      <button class="btn btn-outline" id="logoutBtn" style="display:none;" onclick="doLogout();toggleMobileMenu(false);">Logout</button>
-      <button class="btn btn-outline" id="learnerLogoutBtn" style="display:none;" onclick="doLearnerLogout();toggleMobileMenu(false);">Learner Logout</button>
-      <button class="btn btn-outline" id="teacherLogoutBtn" style="display:none;border-color:#ed8b00;color:#ed8b00;" onclick="doTeacherLogout();toggleMobileMenu(false);">Teacher Logout</button>
-    </div>
+    <div class="header-actions-desktop-slot"></div>
     <button class="mobile-menu-btn" type="button" id="mobileMenuBtn" onclick="toggleMobileMenu()" aria-label="Open menu">&#9776;</button>
   </div>
 </header>
 
+<!-- Header action buttons + mobile drawer. Lives OUTSIDE <header> so it escapes
+     the header's sticky stacking context — otherwise the drawer overlay would
+     render ON TOP of the drawer, blurring it and absorbing taps. -->
 <div class="mobile-drawer-overlay" id="mobileDrawerOverlay" onclick="toggleMobileMenu(false)"></div>
+<div class="header-actions" id="headerActions">
+  <button class="drawer-close-btn" type="button" aria-label="Close menu" onclick="toggleMobileMenu(false)">&times;</button>
+  <button class="btn btn-outline admin-only" id="viewToggleBtn" onclick="toggleAdminLearnerView();toggleMobileMenu(false);" style="border-color:var(--nhs-green);color:white;">Learner View</button>
+  <button class="btn btn-outline admin-only" onclick="exportCSV();toggleMobileMenu(false);">Export CSV</button>
+  <button class="btn btn-outline admin-only" onclick="openBulkEmailModal();toggleMobileMenu(false);">Bulk Remind</button>
+  <button class="btn btn-outline admin-only" onclick="openBulkWhatsAppModal();toggleMobileMenu(false);" style="border-color:#25D366;color:#25D366;">WhatsApp</button>
+  <button class="btn btn-outline" id="learnerLoginBtn" onclick="openLearnerLoginModal();toggleMobileMenu(false);">Learner Login</button>
+  <button class="btn btn-outline" id="teacherLoginBtn" onclick="openTeacherLoginModal();toggleMobileMenu(false);" style="border-color:#ed8b00;color:#ed8b00;">Teacher Login</button>
+  <button class="btn btn-white" id="loginBtn" onclick="openLoginModal();toggleMobileMenu(false);">Admin Login</button>
+  <button class="btn btn-outline" id="logoutBtn" style="display:none;" onclick="doLogout();toggleMobileMenu(false);">Logout</button>
+  <button class="btn btn-outline" id="learnerLogoutBtn" style="display:none;" onclick="doLearnerLogout();toggleMobileMenu(false);">Learner Logout</button>
+  <button class="btn btn-outline" id="teacherLogoutBtn" style="display:none;border-color:#ed8b00;color:#ed8b00;" onclick="doTeacherLogout();toggleMobileMenu(false);">Teacher Logout</button>
+</div>
 
 <script>
   // Mobile drawer toggle (kept inline so it's available before app.js loads)
@@ -688,13 +692,13 @@
   </div>
 </div>
 
-<script src="config.js?v=3.5.2"></script>
-<script src="auth.js?v=3.5.2"></script>
-<script src="sessions.js?v=3.5.2"></script>
-<script src="messaging.js?v=3.5.2"></script>
-<script src="learner.js?v=3.5.2"></script>
-<script src="actions.js?v=3.5.2"></script>
-<script src="surveys.js?v=3.5.2"></script>
-<script src="app.js?v=3.5.2"></script>
+<script src="config.js?v=3.5.3"></script>
+<script src="auth.js?v=3.5.3"></script>
+<script src="sessions.js?v=3.5.3"></script>
+<script src="messaging.js?v=3.5.3"></script>
+<script src="learner.js?v=3.5.3"></script>
+<script src="actions.js?v=3.5.3"></script>
+<script src="surveys.js?v=3.5.3"></script>
+<script src="app.js?v=3.5.3"></script>
 </body>
 </html>
