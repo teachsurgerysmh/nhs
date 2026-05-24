@@ -532,6 +532,7 @@ body.is-learner .learner-only-block { display: block !important; }
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    position: relative;
     /* No mask — earlier fade was hiding the "More ▾" button when it scrolled
        near the right edge, making it look empty / non-tappable. */
   }
@@ -543,15 +544,36 @@ body.is-learner .learner-only-block { display: block !important; }
     display: flex; align-items: center;
     flex-shrink: 0;
   }
-  .nav-more-btn {
-    padding: 13px 14px; font-size: 13px;
-    min-height: 44px; flex-shrink: 0;
-  }
 
+  /* Pin "More" sticky to the RIGHT edge of the horizontally-scrolling nav so
+     users never lose it. Without this it was scrolling off-screen with the
+     other admin tabs and the user couldn't find it. */
+  body.is-admin .nav-more-wrapper {
+    display: flex !important;
+    position: sticky !important;
+    right: 0; left: auto; top: auto;
+    background: var(--nhs-dark-blue);
+    z-index: 5;
+    box-shadow: -12px 0 14px rgba(0,48,135,0.55);
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  body.is-admin .nav-more-btn {
+    background: var(--nhs-blue);
+    color: white !important;
+    border-radius: 6px;
+    padding: 9px 14px;
+    margin: 5px 6px 5px 4px;
+    font-weight: 700;
+    min-height: 38px;
+    border-bottom: none !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
   /* --- MORE dropdown: full-width top-down sheet (same pattern as the drawer)
          The previous anchored top-right variant was being hidden by the
-         feedback nudge banner / iOS notch and looked "invisible". --- */
-  .nav-more-wrapper { position: static !important; }
+         feedback nudge banner / iOS notch and looked "invisible".
+         (.nav-more-wrapper itself stays sticky-right per rule above so the
+         More button is always reachable.) --- */
   .nav-dropdown {
     position: fixed !important;
     top: 0 !important; left: 0 !important; right: 0 !important; bottom: auto !important;
