@@ -646,18 +646,23 @@ async function loadAdminDashboard() {
     // ---- Quick Actions ----
     html += '<div class="dash-section-header"><h3 style="font-size:16px;color:var(--nhs-dark-blue);border:none;padding:0;">Quick Actions</h3></div>';
     html += '<div class="quick-actions">';
+    const isSuketu = (currentUser?.username || '').toLowerCase() === 'suketu' || (currentUser?.username || '').toLowerCase() === 'suketubatra';
     const actions = [
-      { icon: '➕', text: 'Add Session', action: "document.getElementById('addSessionBtn')?.click()" },
-      { icon: '📧', text: 'Bulk Remind', action: "openBulkEmailModal()" },
-      { icon: '💬', text: 'WhatsApp', action: "openBulkWhatsAppModal()" },
-      { icon: '📋', text: 'Export CSV', action: "exportCSV()" },
-      { icon: '📥', text: 'Check Inbox', action: "switchView('inbox')" },
-      { icon: '👥', text: 'Contacts', action: "switchView('contacts')" },
-      { icon: '📊', text: 'Attendance', action: "switchViewFromDropdown('attendanceChart')" },
-      { icon: '💡', text: 'Topic Ideas', action: "switchViewFromDropdown('ideas')" },
+      { icon: '➕', text: 'Add Session',    action: "document.getElementById('addSessionBtn')?.click()" },
+      { icon: '📧', text: 'Bulk Remind',    action: "openBulkEmailModal()" },
+      { icon: '💬', text: 'WhatsApp',       action: "openBulkWhatsAppModal()" },
+      { icon: '📋', text: 'Export CSV',     action: "exportCSV()" },
+      { icon: '📥', text: 'Check Inbox',    action: "switchView('inbox')" },
+      { icon: '👥', text: 'Contacts',       action: "switchView('contacts')" },
+      { icon: '✅', text: 'Attendance',     action: "switchViewFromDropdown('attendanceChart')" },
+      { icon: '📋', text: 'Roster',         action: "switchViewFromDropdown('roster')" },
+      { icon: '💡', text: 'Topic Ideas',    action: "switchViewFromDropdown('ideas')" },
+      { icon: '📊', text: 'QI Surveys',     action: "switchViewFromDropdown('surveyResults')" },
+      ...(isSuketu ? [{ icon: '📈', text: 'QI Dashboard', action: "switchViewFromDropdown('qiDash')", highlight: true }] : []),
     ];
     actions.forEach(a => {
-      html += `<div class="qa-tile" onclick="${a.action}"><div class="qa-icon">${a.icon}</div><div class="qa-text">${a.text}</div></div>`;
+      const hl = a.highlight ? ' qa-tile-highlight' : '';
+      html += `<div class="qa-tile${hl}" onclick="${a.action}"><div class="qa-icon">${a.icon}</div><div class="qa-text">${a.text}</div></div>`;
     });
     html += '</div>';
 

@@ -906,6 +906,23 @@ body.is-learner .learner-only-block { display: block !important; }
 }
 .qi-inline-thanks { font-size: 13px; color: var(--nhs-green); font-weight: 600; text-align: center; padding: 8px 0; }
 
+/* Highlighted Quick Action tile (used for QI Dashboard — Suketu-only) */
+.qa-tile-highlight {
+  background: linear-gradient(135deg, var(--nhs-dark-blue), var(--nhs-blue));
+  color: white;
+  position: relative;
+}
+.qa-tile-highlight .qa-text { color: white; font-weight: 700; }
+.qa-tile-highlight .qa-icon { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+.qa-tile-highlight::after {
+  content: 'QI';
+  position: absolute; top: 4px; right: 6px;
+  background: var(--nhs-orange);
+  color: white; font-size: 9px; font-weight: 700;
+  padding: 1px 6px; border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
 /* Mobile tweaks for QI views */
 @media (max-width: 768px) {
   .qi-dashboard { padding: 12px 10px; }
