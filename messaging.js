@@ -455,68 +455,94 @@ async function sendFeedbackEmails() {
   const ev = events.find(e => e.id === fbReqSessionId);
   const topic = ev?.topic || 'Teaching Session';
   const date = ev ? `${ev.day} ${ev.date} ${ev.month} ${ev.year}` : '';
-  const link = document.getElementById('fbReqLink').value;
-  const subject = `Feedback Request: ${topic} (${date})`;
-  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
-      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
-      <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
-    </div>
-    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
-      <p>Hi,</p>
-      <p>Please take a moment to provide feedback for the recent teaching session:</p>
-      <table style="margin:16px 0;font-size:14px;">
-        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${topic}</td></tr>
-        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${date}</td></tr>
-        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Teacher:</td><td>${ev?.teacher || 'N/A'}</td></tr>
-      </table>
-      <a href="${link}" style="display:inline-block;background:#009639;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0;">Submit Feedback</a>
-      <div style="background:#e6f4ea;border-left:4px solid #009639;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0;">
-        <p style="font-size:13px;color:#231f20;margin:0;"><strong>Providing feedback will mark your attendance for this session.</strong> Use this to confirm you attended and help us improve the programme.</p>
-      </div>
-      <p style="font-size:13px;color:#666;margin-top:12px;">It only takes 2 minutes.</p>
-      <p>Thank you,<br>Southmead Surgical Teaching Team</p>
-    </div>
-  </div>`;
+  const teacher = ev?.teacher || 'the teacher';
+  const sessionTime = ev?.time || 'TBC';
+  const fallbackLink = document.getElementById('fbReqLink').value;
+  const subject = `Feedback Request: ${topic} with ${teacher} - ${ev?.day || ''} ${ev?.date || ''} ${ev?.month || ''}`.trim();
 
-  // Send via Edge Function
+  // Map selected emails → learner rows so we can issue per-recipient tokens.
+  let learnersByEmail = {};
+  try {
+    const allLearners = await sbGet('learners', 'select=id,name,email');
+    allLearners.forEach(l => { if (l.email) learnersByEmail[l.email.toLowerCase()] = l; });
+  } catch(le) { console.warn('Could not load learners for token issue:', le); }
+
   const btn = document.querySelector('#feedbackRequestModal .btn-green');
   const originalText = btn.textContent;
   btn.textContent = 'Sending...';
   btn.disabled = true;
 
-  try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'apikey': SUPABASE_KEY
-      },
-      body: JSON.stringify({ to: emails, subject, html })
-    });
-    const result = await res.json();
-    if (result.success) {
-      // Log the send with recipients
-      try { await sbInsert('feedback_sends', { session_id: fbReqSessionId, method: 'manual', sent_by: currentUser?.username || currentTeacher?.name || 'unknown', recipient_count: emails.length, recipients: emails.map(e => e.toLowerCase()) }); } catch(le) { console.warn('Log send failed:', le); }
-      logQI('feedback_request_sent', { session_id: fbReqSessionId, metadata: { recipients: emails.length, method: 'manual' } });
-      showToast(`Feedback request sent to ${emails.length} recipient(s)!`);
-      closeModal('feedbackRequestModal');
-    } else {
-      console.warn('Edge function failed:', result);
-      const errMsg = result.error || 'Unknown error';
-      if (confirm(`Direct send failed: ${errMsg}\n\nWould you like to open your email client instead?`)) {
-        sendFeedbackMailto(emails, subject, topic, date, ev, link);
+  let sentCount = 0;
+  const sentEmails = [];
+
+  for (const email of emails) {
+    const learner = learnersByEmail[email.toLowerCase()];
+    let fbUrl = fallbackLink;
+    if (learner) {
+      try {
+        const tok = await getOrCreateFeedbackToken(fbReqSessionId, learner.id);
+        if (tok) fbUrl = feedbackUrlWithToken(fbReqSessionId, tok);
+      } catch(te) { console.warn('Token issue failed for', email, te); }
+    }
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(fbUrl)}`;
+    const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+        <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+        <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
+      </div>
+      <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+        <p>Dear ${learner?.name || 'Colleague'},</p>
+        <p>Please take a moment to provide feedback for the teaching session below, delivered by <strong>${teacher}</strong>:</p>
+        <table style="margin:16px 0;font-size:14px;">
+          <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${topic}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Teacher:</td><td>${teacher}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${date}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Time:</td><td>${sessionTime}</td></tr>
+        </table>
+        <div style="text-align:center;margin:16px 0;">
+          <a href="${fbUrl}" style="display:inline-block;background:#009639;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Submit Feedback</a>
+        </div>
+        <div style="text-align:center;margin:12px 0;">
+          <img src="${qrUrl}" alt="Feedback QR" style="width:140px;height:140px;">
+          <p style="font-size:11px;color:#768692;margin:4px 0 0;">Or scan this QR code</p>
+        </div>
+        <div style="background:#e6f4ea;border-left:4px solid #009639;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0;">
+          <p style="font-size:13px;color:#231f20;margin:0;"><strong>One click, no login needed.</strong> Submitting feedback also marks your attendance.</p>
+        </div>
+        <p style="font-size:13px;color:#666;margin-top:12px;">It only takes 2 minutes.</p>
+        <p>Thank you,<br>Southmead Surgical Teaching Team</p>
+      </div>
+    </div>`;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({ to: [email], subject, html })
+      });
+      const result = await res.json();
+      if (result.success) {
+        sentCount++;
+        sentEmails.push(email.toLowerCase());
+      } else {
+        console.warn('Manual feedback send failed for', email, result);
       }
+    } catch(se) {
+      console.warn('Manual feedback send error for', email, se);
     }
-  } catch(e) {
-    console.warn('Send failed:', e);
-    if (confirm(`Direct send failed: ${e.message}\n\nWould you like to open your email client instead?`)) {
-      sendFeedbackMailto(emails, subject, topic, date, ev, link);
+  }
+
+  btn.textContent = originalText;
+  btn.disabled = false;
+
+  if (sentCount > 0) {
+    try { await sbInsert('feedback_sends', { session_id: fbReqSessionId, method: 'manual', sent_by: currentUser?.username || currentTeacher?.name || 'unknown', recipient_count: sentCount, recipients: sentEmails }); } catch(le) { console.warn('Log send failed:', le); }
+    logQI('feedback_request_sent', { session_id: fbReqSessionId, metadata: { recipients: sentCount, method: 'manual' } });
+    showToast(`Feedback request sent to ${sentCount} of ${emails.length} recipient(s)!`);
+    if (sentCount === emails.length) closeModal('feedbackRequestModal');
+  } else {
+    if (confirm(`Direct send failed for all recipients.\n\nWould you like to open your email client instead?`)) {
+      sendFeedbackMailto(emails, subject, topic, date, ev, fallbackLink);
     }
-  } finally {
-    btn.textContent = originalText;
-    btn.disabled = false;
   }
 }
 
@@ -526,9 +552,11 @@ function sendFeedbackMailto(emailsArg, subjectArg, topicArg, dateArg, evArg, lin
   const ev = evArg || events.find(e => e.id === fbReqSessionId);
   const topic = topicArg || ev?.topic || 'Teaching Session';
   const date = dateArg || (ev ? `${ev.day} ${ev.date} ${ev.month} ${ev.year}` : '');
+  const teacher = ev?.teacher || 'the teacher';
+  const sessionTime = ev?.time || 'TBC';
   const link = linkArg || document.getElementById('fbReqLink').value;
-  const subject = subjectArg || `Feedback Request: ${topic} (${date})`;
-  const body = encodeURIComponent(`Hi,\n\nPlease take a moment to provide feedback for the recent teaching session:\n\nTopic: ${topic}\nDate: ${date}\nTeacher: ${ev?.teacher || 'N/A'}\n\nClick here to submit your feedback:\n${link}\n\nIMPORTANT: Providing feedback will mark your attendance for this session. Use this to confirm you attended and help us improve the programme.\n\nIt only takes 2 minutes.\n\nThank you,\nSouthmead Surgical Teaching Team`);
+  const subject = subjectArg || `Feedback Request: ${topic} with ${teacher} - ${ev?.day || ''} ${ev?.date || ''} ${ev?.month || ''}`.trim();
+  const body = encodeURIComponent(`Hi,\n\nPlease take a moment to provide feedback for the teaching session below, delivered by ${teacher}:\n\nTopic: ${topic}\nTeacher: ${teacher}\nDate: ${date}\nTime: ${sessionTime}\n\nClick here to submit your feedback:\n${link}\n\nIMPORTANT: Providing feedback will mark your attendance for this session. Use this to confirm you attended and help us improve the programme.\n\nIt only takes 2 minutes.\n\nThank you,\nSouthmead Surgical Teaching Team`);
   const bcc = emails.join(',');
   window.open(`mailto:?bcc=${bcc}&subject=${encodeURIComponent(subject)}&body=${body}`, '_self');
   showToast('Opening email client...');

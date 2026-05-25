@@ -458,6 +458,27 @@
   </div>
 </div>
 
+<!-- Quick-Feedback Email Modal: shown when ?feedback=X has no token (e.g. QR scan) -->
+<div class="modal-overlay" id="quickFeedbackModal" role="dialog" aria-modal="true" aria-label="Submit feedback">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header"><h3>Submit feedback</h3><button class="modal-close" onclick="closeModal('quickFeedbackModal')">&times;</button></div>
+    <div class="modal-body">
+      <div id="quickFbSessionInfo" style="background:var(--nhs-bg);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"></div>
+      <label>Your NHS email</label>
+      <input type="email" id="quickFbEmail" placeholder="name@nbt.nhs.uk" autocomplete="email">
+      <div style="background:#e6f4ea;border-left:3px solid #009639;padding:10px 12px;margin:14px 0;border-radius:0 6px 6px 0;font-size:12px;color:#231f20;line-height:1.5;">
+        <strong>Your feedback is anonymous to the teacher.</strong> Your email is used only to confirm your attendance and award your CPD certificate. Ratings and comments shared with the teacher are not linked to your name.
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;">
+        <button class="btn btn-green" style="flex:1;" onclick="doQuickFeedbackLookup()">Continue</button>
+      </div>
+      <div style="margin-top:10px;text-align:center;">
+        <button class="btn btn-link" style="font-size:12px;color:var(--nhs-grey);background:none;border:none;cursor:pointer;text-decoration:underline;" onclick="closeModal('quickFeedbackModal');openLearnerLoginModal();">Have an account? Log in instead</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Feedback Modal -->
 <div class="modal-overlay" id="feedbackModal" role="dialog" aria-modal="true" aria-label="Session Feedback">
   <div class="modal" style="max-width:600px;">

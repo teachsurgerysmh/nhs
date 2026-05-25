@@ -205,40 +205,61 @@ async function autoSendFeedbackRequests(sessionId, learnerIds) {
       if (alreadySentEmails.size > 0) showToast('All attendees already received feedback requests today');
       return;
     }
-    const fbUrl = SITE_URL + '?feedback=' + sessionId;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(fbUrl)}`;
-    const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
-        <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
-        <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
-      </div>
-      <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
-        <p>Dear Colleague,</p>
-        <p>Thank you for attending today's teaching session on <strong>${ev.topic || 'Surgery'}</strong>.</p>
-        <p>Your feedback is essential to improving our teaching programme. <strong>${SIGNING_CONSULTANT}</strong> personally reviews all feedback as part of the programme's quality assurance.</p>
-        <p><strong>By submitting feedback you will:</strong></p>
-        <ul>
-          <li>Confirm your attendance record</li>
-          <li>Earn CPD hours for this session</li>
-          <li>Receive a certificate of attendance</li>
-        </ul>
-        <div style="text-align:center;margin:20px 0;">
-          <a href="${fbUrl}" style="display:inline-block;padding:14px 36px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:15px;">Submit Feedback</a>
+    const teacherName = ev.teacher || 'the teacher';
+    const sessionDate = `${ev.day || ''} ${ev.date || ''} ${ev.month || ''} ${ev.year || ''}`.trim();
+    const sessionTime = ev.time || 'TBC';
+    const topicLabel = ev.topic || 'Surgery';
+    const subjectLine = `Feedback Request: ${topicLabel} with ${teacherName} - ${ev.day || ''} ${ev.date || ''} ${ev.month || ''}`.trim();
+    const emails = [];
+    // Send one personalised email per recipient (each carries its own magic-link token).
+    for (const r of recipients) {
+      let fbUrl = SITE_URL + '?feedback=' + sessionId;
+      try {
+        const tok = await getOrCreateFeedbackToken(sessionId, r.id);
+        if (tok) fbUrl = feedbackUrlWithToken(sessionId, tok);
+      } catch(te) { console.warn('Token issue failed for learner', r.id, te); }
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(fbUrl)}`;
+      const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+          <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+          <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
         </div>
-        <div style="text-align:center;margin:16px 0;">
-          <img src="${qrUrl}" alt="Feedback QR" style="width:150px;height:150px;">
-          <p style="font-size:11px;color:#768692;margin:4px 0 0;">Or scan this QR code</p>
+        <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+          <p>Dear ${r.name || 'Colleague'},</p>
+          <p>Thank you for attending the teaching session below, delivered by <strong>${teacherName}</strong>:</p>
+          <table style="margin:12px 0 16px;font-size:14px;border-collapse:collapse;">
+            <tr><td style="padding:4px 16px 4px 0;font-weight:bold;color:#4c6272;">Topic:</td><td>${topicLabel}</td></tr>
+            <tr><td style="padding:4px 16px 4px 0;font-weight:bold;color:#4c6272;">Teacher:</td><td>${teacherName}</td></tr>
+            <tr><td style="padding:4px 16px 4px 0;font-weight:bold;color:#4c6272;">Date:</td><td>${sessionDate}</td></tr>
+            <tr><td style="padding:4px 16px 4px 0;font-weight:bold;color:#4c6272;">Time:</td><td>${sessionTime}</td></tr>
+          </table>
+          <p>Your feedback is essential to improving our teaching programme. <strong>${SIGNING_CONSULTANT}</strong> personally reviews all feedback as part of the programme's quality assurance.</p>
+          <p><strong>By submitting feedback you will:</strong></p>
+          <ul>
+            <li>Confirm your attendance record</li>
+            <li>Earn CPD hours for this session</li>
+            <li>Receive a certificate of attendance</li>
+          </ul>
+          <div style="text-align:center;margin:20px 0;">
+            <a href="${fbUrl}" style="display:inline-block;padding:14px 36px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:15px;">Submit Feedback</a>
+          </div>
+          <div style="text-align:center;margin:16px 0;">
+            <img src="${qrUrl}" alt="Feedback QR" style="width:150px;height:150px;">
+            <p style="font-size:11px;color:#768692;margin:4px 0 0;">Or scan this QR code</p>
+          </div>
+          <p style="font-size:12px;color:#4c6272;">One click, no login needed. This takes less than 2 minutes.</p>
+          <p>Best regards,<br>Southmead Surgical Teaching Team<br><em>Under the supervision of ${SIGNING_CONSULTANT}</em></p>
         </div>
-        <p style="font-size:12px;color:#4c6272;">This takes less than 2 minutes. Your responses may be shared anonymously with the presenter.</p>
-        <p>Best regards,<br>Southmead Surgical Teaching Team<br><em>Under the supervision of ${SIGNING_CONSULTANT}</em></p>
-      </div>
-    </div>`;
-    const emails = recipients.map(r => r.email);
-    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
-      body: JSON.stringify({ to: emails, subject: `Feedback Request: ${ev.topic || 'Teaching Session'} - ${ev.day} ${ev.date} ${ev.month}`, html })
-    });
+      </div>`;
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+          body: JSON.stringify({ to: [r.email], subject: subjectLine, html })
+        });
+        emails.push(r.email);
+      } catch(se) { console.warn('Send failed for', r.email, se); }
+    }
     // Log the send with per-learner recipients
     try { await sbInsert('feedback_sends', { session_id: sessionId, method: 'auto', sent_by: currentUser?.username || 'system', recipient_count: emails.length, recipients: emails.map(e => e.toLowerCase()) }); } catch(le) { console.warn('Log send failed:', le); }
     logQI('feedback_request_sent', { session_id: sessionId, metadata: { recipients: emails.length, method: 'auto' } });
@@ -296,6 +317,73 @@ function setScaleRating(field, value) {
       else btn.classList.add('high');
     }
   });
+}
+
+// Magic-link redemption: look up the token, set a transient learner identity,
+// and open the feedback modal. Returns true on success.
+async function resolveFeedbackToken(sessionId, token) {
+  if (!token) return false;
+  try {
+    const rows = await sbGet('feedback_tokens', `token=eq.${encodeURIComponent(token)}&select=*&limit=1`);
+    if (!rows || !rows.length) { showToast('Feedback link is invalid or expired'); return false; }
+    const row = rows[0];
+    if (String(row.session_id) !== String(sessionId)) { showToast('Feedback link does not match this session'); return false; }
+    if (row.used_at) {
+      // Already submitted — show a friendly toast but DON'T open the form again.
+      showToast('Feedback already submitted for this session. Thank you!');
+      return true; // Treat as handled so we don't fall through to login.
+    }
+    // Hydrate the learner record so submitFeedback can use it.
+    const learners = await sbGet('learners', `id=eq.${row.learner_id}&select=*&limit=1`);
+    if (!learners || !learners.length) { showToast('Could not find your account'); return false; }
+    currentLearner = learners[0];
+    window._magicLinkFeedbackToken = token; // remember it so submitFeedback can mark it used
+    setLearnerUI(true);
+    // Make sure events are loaded so openFeedbackModal can find the session.
+    if (!events.length) { try { await loadEvents(); } catch(e) {} }
+    openFeedbackModal(parseInt(sessionId));
+    return true;
+  } catch(e) {
+    console.warn('resolveFeedbackToken error:', e);
+    return false;
+  }
+}
+
+// Generic feedback link (QR code, manual URL, forwarded link) with no token —
+// collect email only, look up learner, then open the feedback form. No password.
+function openQuickFeedbackModal(sessionId) {
+  window._pendingQuickFeedback = sessionId;
+  const ev = events.find(e => String(e.id) === String(sessionId));
+  const info = ev
+    ? `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day || '')} ${esc(ev.date || '')} ${esc(ev.month || '')} ${ev.year || ''}${ev.teacher ? ' · ' + esc(ev.teacher) : ''}`
+    : 'Teaching session';
+  document.getElementById('quickFbSessionInfo').innerHTML = info;
+  document.getElementById('quickFbEmail').value = currentLearner?.email || '';
+  openModal('quickFeedbackModal');
+  setTimeout(() => document.getElementById('quickFbEmail').focus(), 100);
+}
+
+async function doQuickFeedbackLookup() {
+  const email = document.getElementById('quickFbEmail').value.trim().toLowerCase();
+  const sessionId = window._pendingQuickFeedback;
+  if (!email) { showToast('Please enter your email'); return; }
+  if (!sessionId) { showToast('Session reference lost. Please reopen the link.'); return; }
+  try {
+    const rows = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*&limit=1`);
+    if (!rows.length) {
+      showToast('Email not recognised. Please contact the teaching team to be added.');
+      return;
+    }
+    currentLearner = rows[0];
+    setLearnerUI(true);
+    closeModal('quickFeedbackModal');
+    delete window._pendingQuickFeedback;
+    if (!events.length) { try { await loadEvents(); } catch(e) {} }
+    openFeedbackModal(parseInt(sessionId));
+  } catch(e) {
+    console.warn('Quick feedback lookup failed:', e);
+    showToast('Lookup failed. Please try again.');
+  }
 }
 
 function openFeedbackModal(sessionId) {
@@ -358,6 +446,17 @@ async function submitFeedback() {
     });
     closeModal('feedbackModal');
     showToast('Thank you for your feedback! Your attendance has been recorded.');
+    // Mark the magic-link token as used so the same email can't submit twice.
+    if (window._magicLinkFeedbackToken) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/feedback_tokens?token=eq.${encodeURIComponent(window._magicLinkFeedbackToken)}`, {
+          method: 'PATCH',
+          headers: { ...headers, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ used_at: new Date().toISOString() })
+        });
+      } catch(te) { console.warn('Token redeem failed:', te); }
+      delete window._magicLinkFeedbackToken;
+    }
     // Auto-mark attendance if not already marked
     try {
       const existing = await sbGet('attendance', `session_id=eq.${sessionId}&learner_id=eq.${currentLearner.id}`);

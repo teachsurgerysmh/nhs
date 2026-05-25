@@ -309,14 +309,34 @@ async function init() {
   // Handle learner URL params
   const pendingAttend = params.get('attend');
   const pendingFeedback = params.get('feedback');
+  const pendingFeedbackToken = params.get('feedback') ? params.get('token') : null;
   if (pendingAttend || pendingFeedback) {
     // Store params so they survive URL cleanup
     if (pendingAttend) window._pendingAttend = pendingAttend;
     if (pendingFeedback) window._pendingFeedback = pendingFeedback;
+    if (pendingFeedbackToken) window._pendingFeedbackToken = pendingFeedbackToken;
     // Clean URL without reloading
     window.history.replaceState({}, document.title, window.location.pathname);
+    // Magic-link path: token resolves to a learner identity — no login modal.
+    if (pendingFeedback && pendingFeedbackToken) {
+      try {
+        const ok = await resolveFeedbackToken(pendingFeedback, pendingFeedbackToken);
+        if (ok) {
+          const initialView = isAdmin ? 'adminDash' : (currentTeacher ? 'teacherDash' : 'list');
+          switchView(initialView);
+          history.replaceState({ view: initialView }, '', `?view=${encodeURIComponent(initialView)}`);
+          return;
+        }
+      } catch(e) { console.warn('Feedback token resolve failed:', e); }
+      // Fall through to login flow if token invalid/used.
+    }
     if (currentLearner) {
       handleLearnerURLParams();
+    } else if (pendingFeedback) {
+      // No token (or token invalid): use the lightweight email-only path.
+      // Make sure events are loaded so the modal can show session details.
+      try { if (!events.length) await loadEvents(); } catch(e) {}
+      openQuickFeedbackModal(pendingFeedback);
     } else {
       openLearnerLoginModal();
     }

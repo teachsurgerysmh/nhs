@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.6.3';
-const APP_BUILD = '2026-05-24b';
+const APP_VERSION = 'v3.6.6';
+const APP_BUILD = '2026-05-25c';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;
@@ -79,6 +79,36 @@ async function sbDelete(table, id) {
     method: 'DELETE', headers
   });
   if (!res.ok) throw new Error(`DELETE ${table} failed: ${res.status}`);
+}
+
+// ===================== FEEDBACK TOKENS (magic-link / one-click feedback) =====================
+// Returns a persistent token for (session, learner). One token per pair — reused across
+// auto-send, manual-send, and cron reminders. Security relies on 192-bit randomness.
+function _randomToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function getOrCreateFeedbackToken(sessionId, learnerId) {
+  if (isDemoMode) return 'demo-token-' + sessionId + '-' + learnerId;
+  try {
+    const existing = await sbGet('feedback_tokens', `session_id=eq.${sessionId}&learner_id=eq.${learnerId}&select=token&limit=1`);
+    if (existing && existing.length) return existing[0].token;
+  } catch(e) { /* fall through to insert */ }
+  const token = _randomToken();
+  try {
+    await sbInsert('feedback_tokens', { session_id: sessionId, learner_id: learnerId, token });
+    return token;
+  } catch(e) {
+    // Race condition: another sender created it between our SELECT and INSERT. Re-read.
+    const rows = await sbGet('feedback_tokens', `session_id=eq.${sessionId}&learner_id=eq.${learnerId}&select=token&limit=1`);
+    return rows && rows[0] ? rows[0].token : token;
+  }
+}
+
+function feedbackUrlWithToken(sessionId, token) {
+  return SITE_URL + '?feedback=' + sessionId + (token ? '&token=' + encodeURIComponent(token) : '');
 }
 
 // ── Date Helpers ──
