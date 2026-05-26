@@ -129,8 +129,6 @@ async function linkAdminToLearner() {
       currentLearner = data[0];
     } else {
       // Create a learner record for this admin
-      const adminPin = String(Math.floor(100000 + Math.random() * 900000));
-      const hashedAdminPin = await hashPassword(adminPin);
       // Find matching contact for auto-link
       let adminContactId = null;
       try {
@@ -142,7 +140,7 @@ async function linkAdminToLearner() {
         email: email,
         grade: 'Consultant',
         placement: 'Admin',
-        pin_code: hashedAdminPin,
+        pin_code: null,
         contact_id: adminContactId,
         verified: true
       });

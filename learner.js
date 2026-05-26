@@ -1898,13 +1898,11 @@ async function applyNewRotation() {
         }
       } else {
         // Create new learner and auto-link to contact
-        const pin = String(Math.floor(100000 + Math.random() * 900000));
-        const hashedPin = await hashPassword(pin);
         const result = await sbInsert('learners', {
           name, email, grade, placement,
           placement_start: start, placement_end: end,
           rotation_block: block || null,
-          pin_code: hashedPin, verified: true, followup_eligible: true
+          pin_code: null, verified: true, followup_eligible: true
         });
         // Auto-link contact
         try {
