@@ -35,11 +35,8 @@ async function doLogin() {
   }
 
   try {
-    const hashed = await hashPassword(pass);
-    const data = await sbGet('users', `username=eq.${encodeURIComponent(user)}&select=*`);
-    if (data.length === 0) { logQI('admin_login', { metadata: { result: 'user_not_found', username: user } }); showToast('User not found'); return; }
-    const u = data[0];
-    if (u.password !== hashed) { logQI('admin_login', { metadata: { result: 'bad_password', username: user } }); showToast('Incorrect password'); return; }
+    const result = await callAuth({ action: 'login', type: 'admin', username: user, password: pass });
+    const u = result.user;
     currentUser = { id: u.id, username: u.username, name: u.display_name, role: u.role };
     sessionStorage.setItem('sst_user', JSON.stringify(currentUser));
     setAdmin(true);
@@ -52,7 +49,8 @@ async function doLogin() {
     switchView('adminDash');
   } catch(e) {
     console.error('Login error:', e);
-    showToast('Login failed - check connection');
+    logQI('admin_login', { metadata: { result: 'failed', username: user } });
+    showToast(e.message || 'Login failed - check connection');
   }
 }
 
@@ -295,28 +293,22 @@ async function doLearnerLogin() {
   const pin = document.getElementById('learnerPin').value.trim();
   if (!email || !pin) { showToast('Enter email and password'); return; }
   try {
-    const data = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
-    if (data.length === 0) { showToast('Account not found. Please register.'); return; }
-    const learner = data[0];
-    // Pre-created account with no PIN — prompt to set up
-    if (!learner.pin_code) {
-      showSetupPinForm(learner, pin);
+    const result = await callAuth({ action: 'login', type: 'learner', email, password: pin });
+    if (result.needs_setup) {
+      showSetupPinForm(result.user, pin);
       return;
     }
-    const hashedPin = await hashPassword(pin);
-    if (learner.pin_code !== hashedPin) { showToast('Incorrect password'); return; }
+    const learner = result.user;
     currentLearner = learner;
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
     logQI('learner_login', { metadata: { grade: learner.grade, placement: learner.placement } });
-    // Cross-link: if learner is also a teacher, give them teacher access too
     await linkLearnerToTeacher();
     closeModal('learnerLoginModal');
     showToast('Welcome, ' + learner.name + '!');
     updateHeaderButtons();
-    // Check URL params for auto-actions
     handleLearnerURLParams();
-  } catch(e) { console.error('Learner login error:', e); showToast('Login failed'); }
+  } catch(e) { console.error('Learner login error:', e); showToast(e.message || 'Login failed'); }
 }
 
 function showSetupPinForm(learner, attemptedPin) {
@@ -373,14 +365,15 @@ async function completeAccountSetup(learnerId) {
   if (!placement) { showToast('Please select a placement'); return; }
 
   try {
-    const hashedPin = await hashPassword(pin1);
-    const updates = { pin_code: hashedPin, verified: true, grade, placement, rotation_block: rotation || null };
+    // Set password via server-side Edge Function
+    const authResult = await callAuth({ action: 'setup', type: 'learner', email: document.getElementById('learnerEmail')?.value?.trim()?.toLowerCase() || '', password: pin1 });
+    // Update profile fields directly (non-sensitive data)
+    const updates = { verified: true, grade, placement, rotation_block: rotation || null };
     if (pStart) updates.placement_start = pStart;
     if (pEnd) updates.placement_end = pEnd;
     await sbUpdate('learners', learnerId, updates);
 
-    const data = await sbGet('learners', `id=eq.${learnerId}&select=*`);
-    currentLearner = data[0];
+    currentLearner = { ...authResult.user, ...updates };
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
 
@@ -434,16 +427,15 @@ async function handleForgotPassword() {
   if (!email) { showToast('Please enter your email'); return; }
   const newFields = document.getElementById('fpNewFields');
   if (newFields.style.display === 'none') {
-    // Step 1: verify email exists
+    // Step 1: verify email exists (server-side)
     try {
-      const data = await sbGet('learners', `email=eq.${encodeURIComponent(email)}&select=id,name`);
-      if (data.length === 0) { showToast('No account found with that email'); return; }
+      const result = await callAuth({ action: 'verify_email', type: 'learner', email });
       newFields.style.display = '';
       document.getElementById('fpEmail').setAttribute('readonly', true);
       document.getElementById('fpSubmitBtn').textContent = 'Reset Password';
-      document.getElementById('fpSubmitBtn').setAttribute('onclick', `doResetPassword('${email}', ${data[0].id})`);
+      document.getElementById('fpSubmitBtn').setAttribute('onclick', `doResetPassword('${email}', ${result.id})`);
       showToast('Email verified! Set your new password.');
-    } catch(e) { showToast('Error verifying email'); }
+    } catch(e) { showToast('No account found with that email'); }
   }
 }
 
@@ -453,8 +445,7 @@ async function doResetPassword(email, learnerId) {
   if (!p1 || p1.length < 4) { showToast('Password must be at least 4 characters'); return; }
   if (p1 !== p2) { showToast('Passwords do not match'); return; }
   try {
-    const hashedP = await hashPassword(p1);
-    await sbUpdate('learners', learnerId, { pin_code: hashedP });
+    await callAuth({ action: 'reset_password', type: 'learner', email, new_password: p1 });
     logQI('password_reset', { actor_type: 'learner', actor_email: email, metadata: { who: 'learner' } });
     showToast('Password reset! You can now log in.');
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -539,18 +530,20 @@ async function doLearnerRegister() {
     return;
   }
 
-  // Generate 6-digit PIN and hash it before storing
+  // Generate 6-digit PIN
   const pin = String(Math.floor(100000 + Math.random() * 900000));
-  const hashedPin = await hashPassword(pin);
 
   try {
+    // Register without password first, then set password server-side
     const result = await sbInsert('learners', {
       name, email, grade, specialty: '', placement,
       placement_start: placementStart || null,
       placement_end: placementEnd || null,
       rotation_block: rotationBlock || null,
-      pin_code: hashedPin, verified: true
+      pin_code: null, verified: true
     });
+    // Set password server-side
+    await callAuth({ action: 'setup', type: 'learner', email, password: pin });
     currentLearner = result[0];
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
@@ -649,22 +642,18 @@ async function doTeacherLogin() {
   const pin = document.getElementById('teacherPin').value.trim();
   if (!email || !pin) { showToast('Please enter email and password'); return; }
   try {
-    const contacts = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
-    if (contacts.length === 0) { showToast('No teacher account found with this email. Use "Set up your account" if this is your first time.'); return; }
-    const teacher = contacts[0];
-    if (!teacher.pin_code) { showToast('Account not set up yet. Please use "Set up your account" first.'); return; }
-    const hashed = await hashPassword(pin);
-    if (hashed !== teacher.pin_code) { showToast('Incorrect password'); return; }
+    const result = await callAuth({ action: 'login', type: 'teacher', email, password: pin });
+    if (result.needs_setup) { showToast('Account not set up yet. Please use "Set up your account" first.'); return; }
+    const teacher = result.user;
     currentTeacher = teacher;
     sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
     closeModal('teacherLoginModal');
     logQI('teacher_login', { metadata: { specialty: teacher.specialty || null } });
-    // Cross-link: if teacher is also a learner, log them in as learner too
     await linkTeacherToLearner();
     updateHeaderButtons();
     showToast(`Welcome, ${teacher.name}!`);
     switchView('teacherDash');
-  } catch(e) { console.error('Teacher login failed:', e); showToast('Login failed'); }
+  } catch(e) { console.error('Teacher login failed:', e); showToast(e.message || 'Login failed'); }
 }
 
 async function doTeacherSetup() {
@@ -675,23 +664,17 @@ async function doTeacherSetup() {
   if (pin !== pinConfirm) { showToast('Passwords do not match'); return; }
   if (pin.length < 4) { showToast('Password must be at least 4 characters'); return; }
   try {
-    const contacts = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
-    if (contacts.length === 0) { showToast('No teacher record found with this email. Please contact the admin to be added.'); return; }
-    const teacher = contacts[0];
-    if (teacher.pin_code) { showToast('Account already set up. Please login instead.'); return; }
-    const hashed = await hashPassword(pin);
-    await sbUpdate('contacts', teacher.id, { pin_code: hashed });
-    teacher.pin_code = hashed;
+    const result = await callAuth({ action: 'setup', type: 'teacher', email, password: pin });
+    const teacher = result.user;
     currentTeacher = teacher;
     sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
     closeModal('teacherLoginModal');
     logQI('teacher_setup', { metadata: { specialty: teacher.specialty || null } });
-    // Cross-link: if teacher is also a learner, log them in as learner too
     await linkTeacherToLearner();
     updateHeaderButtons();
     showToast(`Account set up! Welcome, ${teacher.name}!`);
     switchView('teacherDash');
-  } catch(e) { console.error('Teacher setup failed:', e); showToast('Setup failed'); }
+  } catch(e) { console.error('Teacher setup failed:', e); showToast(e.message || 'Setup failed'); }
 }
 
 async function linkTeacherToLearner() {

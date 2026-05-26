@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.6.7';
-const APP_BUILD = '2026-05-26a';
+const APP_VERSION = 'v3.6.8';
+const APP_BUILD = '2026-05-26b';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;
@@ -45,6 +45,18 @@ let calYear = new Date().getFullYear();
 let editingEventId = null;
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+// ── Server-Side Auth Helper ──
+async function callAuth(body) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/authenticate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok && !data.needs_setup) throw new Error(data.error || 'Auth failed');
+  return data;
+}
 
 // ── Supabase REST Helpers ──
 
