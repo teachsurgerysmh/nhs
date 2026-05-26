@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.6.8';
-const APP_BUILD = '2026-05-26b';
+const APP_VERSION = 'v3.6.9';
+const APP_BUILD = '2026-05-26c';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;
@@ -22,12 +22,43 @@ function showDemoToast(action) {
 const SUPABASE_URL = 'https://rufihxjquwrluaenmbaa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1ZmloeGpxdXdybHVhZW5tYmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyOTg4NDMsImV4cCI6MjA5Mzg3NDg0M30.6o8GrCPcQ__JjrGLUiqQwdgWcM1Qk_02TvLvTOwUjyg';
 
+let _authToken = null;
+
 const headers = {
   'apikey': SUPABASE_KEY,
   'Authorization': 'Bearer ' + SUPABASE_KEY,
   'Content-Type': 'application/json',
   'Prefer': 'return=representation'
 };
+
+// Switch to authenticated JWT after login, back to anon on logout
+function setAuthToken(token) {
+  _authToken = token;
+  headers['Authorization'] = 'Bearer ' + (token || SUPABASE_KEY);
+  if (token) {
+    sessionStorage.setItem('sst_token', token);
+  } else {
+    sessionStorage.removeItem('sst_token');
+  }
+}
+
+// Restore JWT from session (called on page load)
+function restoreAuthToken() {
+  const token = sessionStorage.getItem('sst_token');
+  if (token) {
+    // Check if token is expired
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp && payload.exp > Math.floor(Date.now() / 1000)) {
+        setAuthToken(token);
+        return true;
+      }
+    } catch(e) {}
+    // Token expired or invalid — clear it
+    sessionStorage.removeItem('sst_token');
+  }
+  return false;
+}
 
 // ===================== STATE =====================
 let events = [];

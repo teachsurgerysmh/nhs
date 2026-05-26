@@ -2,12 +2,7 @@
 // Admin authentication, learner authentication, registration, view toggle
 
 // ── Admin Auth ──
-
-async function hashPassword(pwd) {
-  const data = new TextEncoder().encode(pwd + 'sst_nbt_2026');
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
+// Password hashing moved server-side (authenticate Edge Function) — v3.6.8
 
 async function doLogin() {
   const user = document.getElementById('loginUser').value.trim().toLowerCase();
@@ -36,6 +31,7 @@ async function doLogin() {
 
   try {
     const result = await callAuth({ action: 'login', type: 'admin', username: user, password: pass });
+    if (result.access_token) setAuthToken(result.access_token);
     const u = result.user;
     currentUser = { id: u.id, username: u.username, name: u.display_name, role: u.role };
     sessionStorage.setItem('sst_user', JSON.stringify(currentUser));
@@ -81,6 +77,7 @@ function doLogout() {
   currentUser = null;
   currentLearner = null;
   currentTeacher = null;
+  setAuthToken(null);
   sessionStorage.removeItem('sst_user');
   sessionStorage.removeItem('sst_learner');
   sessionStorage.removeItem('sst_teacher');
@@ -244,6 +241,7 @@ function updateHeaderButtons() {
 }
 
 function checkSession() {
+  restoreAuthToken(); // Restore JWT from sessionStorage
   const stored = sessionStorage.getItem('sst_user');
   if (stored) {
     try {
@@ -298,6 +296,7 @@ async function doLearnerLogin() {
       showSetupPinForm(result.user, pin);
       return;
     }
+    if (result.access_token) setAuthToken(result.access_token);
     const learner = result.user;
     currentLearner = learner;
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
@@ -367,6 +366,7 @@ async function completeAccountSetup(learnerId) {
   try {
     // Set password via server-side Edge Function
     const authResult = await callAuth({ action: 'setup', type: 'learner', email: document.getElementById('learnerEmail')?.value?.trim()?.toLowerCase() || '', password: pin1 });
+    if (authResult.access_token) setAuthToken(authResult.access_token);
     // Update profile fields directly (non-sensitive data)
     const updates = { verified: true, grade, placement, rotation_block: rotation || null };
     if (pStart) updates.placement_start = pStart;
@@ -578,6 +578,7 @@ async function doLearnerRegister() {
 function doLearnerLogout() {
   if (currentLearner) logQI('learner_logout');
   currentLearner = null;
+  setAuthToken(null);
   sessionStorage.removeItem('sst_learner');
   setLearnerUI(false);
   updateSessionsTabLabel();
@@ -644,6 +645,7 @@ async function doTeacherLogin() {
   try {
     const result = await callAuth({ action: 'login', type: 'teacher', email, password: pin });
     if (result.needs_setup) { showToast('Account not set up yet. Please use "Set up your account" first.'); return; }
+    if (result.access_token) setAuthToken(result.access_token);
     const teacher = result.user;
     currentTeacher = teacher;
     sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
@@ -665,6 +667,7 @@ async function doTeacherSetup() {
   if (pin.length < 4) { showToast('Password must be at least 4 characters'); return; }
   try {
     const result = await callAuth({ action: 'setup', type: 'teacher', email, password: pin });
+    if (result.access_token) setAuthToken(result.access_token);
     const teacher = result.user;
     currentTeacher = teacher;
     sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
@@ -706,6 +709,7 @@ function doTeacherLogout() {
   if (currentTeacher) logQI('teacher_logout');
   currentTeacher = null;
   currentLearner = null;
+  setAuthToken(null);
   sessionStorage.removeItem('sst_teacher');
   sessionStorage.removeItem('sst_learner');
   document.body.classList.remove('is-learner');
