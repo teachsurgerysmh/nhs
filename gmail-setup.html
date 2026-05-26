@@ -1,175 +1,157 @@
 <!DOCTYPE html>
-<html><head><title>Gmail API Setup Helper</title>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gmail OAuth Setup</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f8f9fa; }
-  h1 { color: #003087; font-size: 22px; }
-  .step { background: white; border-radius: 12px; padding: 24px; margin: 16px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-  .step h2 { color: #005eb8; font-size: 16px; margin-top: 0; }
-  label { display: block; font-weight: 600; font-size: 13px; margin: 12px 0 4px; color: #333; }
-  input { width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
-  button { background: #009639; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; }
-  button:hover { background: #007a2e; }
-  .result { background: #e6f4ea; border: 2px solid #009639; border-radius: 8px; padding: 16px; margin-top: 16px; word-break: break-all; }
-  .result h3 { color: #009639; margin-top: 0; }
-  .token { font-family: monospace; font-size: 13px; background: white; padding: 10px; border-radius: 6px; margin: 8px 0; user-select: all; }
-  .copy-btn { background: #005eb8; font-size: 12px; padding: 6px 16px; margin-top: 4px; }
-  .error { background: #fce8e8; border: 2px solid #d93025; border-radius: 8px; padding: 16px; margin-top: 16px; color: #d93025; }
-  .hidden { display: none; }
-  .info { font-size: 12px; color: #666; margin-top: 6px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f4f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); max-width: 520px; width: 100%; padding: 32px; }
+  h1 { color: #005eb8; font-size: 22px; margin-bottom: 8px; }
+  .subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+  .step { background: #f0f4f5; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .step-num { display: inline-block; background: #005eb8; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 13px; font-weight: 600; margin-right: 8px; }
+  .step-title { font-weight: 600; color: #333; }
+  .step-desc { color: #555; font-size: 14px; margin-top: 6px; }
+  button { background: #005eb8; color: #fff; border: none; border-radius: 8px; padding: 12px 24px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 8px; }
+  button:hover { background: #004a93; }
+  button:disabled { background: #aaa; cursor: not-allowed; }
+  .token-box { background: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 16px; margin-top: 16px; word-break: break-all; font-family: monospace; font-size: 13px; }
+  .token-label { font-weight: 600; color: #2e7d32; margin-bottom: 8px; font-family: -apple-system, sans-serif; font-size: 14px; }
+  .error-box { background: #fce4ec; border: 2px solid #e53935; border-radius: 8px; padding: 16px; margin-top: 16px; color: #c62828; font-size: 14px; }
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .success-icon { font-size: 48px; text-align: center; margin-bottom: 12px; }
+  .copy-btn { background: #4caf50; margin-top: 12px; }
+  .copy-btn:hover { background: #388e3c; }
+  #status { margin-top: 16px; font-size: 14px; color: #555; }
 </style>
-</head><body>
-<h1>Gmail API Setup for Southmead Teaching</h1>
+</head>
+<body>
+<div class="card" id="main">
+  <h1>Gmail OAuth Setup</h1>
+  <p class="subtitle">Reconnect Gmail for the Surgical Teaching app</p>
 
-<div class="step" id="step1">
-  <h2>Step 1: Enter your Google OAuth credentials</h2>
-  <p style="font-size:13px;color:#666;">From Google Cloud Console → APIs & Services → Credentials → your OAuth Client ID</p>
-  <label>Client ID</label>
-  <input type="text" id="clientId" placeholder="xxxx.apps.googleusercontent.com">
-  <label>Client Secret</label>
-  <input type="text" id="clientSecret" placeholder="GOCSPX-xxxx">
-  <button onclick="startAuth()">Authorize with Gmail</button>
-  <p class="info">This will open a Google sign-in window. Sign in with <strong>teachsurgerysmh@gmail.com</strong></p>
-</div>
-
-<div class="step hidden" id="step2">
-  <h2>Step 2: Waiting for authorization...</h2>
-  <p>Complete the sign-in in the popup window, then click "Allow".</p>
-</div>
-
-<div class="step hidden" id="step3">
-  <div class="result">
-    <h3>Your tokens are ready!</h3>
-    <label>Refresh Token (add this to Supabase)</label>
-    <div class="token" id="refreshToken"></div>
-    <button class="copy-btn" onclick="copyToken('refreshToken')">Copy Refresh Token</button>
-
-    <label style="margin-top:16px;">Client ID</label>
-    <div class="token" id="showClientId"></div>
-    <button class="copy-btn" onclick="copyToken('showClientId')">Copy Client ID</button>
-
-    <label style="margin-top:16px;">Client Secret</label>
-    <div class="token" id="showClientSecret"></div>
-    <button class="copy-btn" onclick="copyToken('showClientSecret')">Copy Client Secret</button>
+  <div id="start-view">
+    <div class="step">
+      <span class="step-num">1</span><span class="step-title">Authorise Gmail access</span>
+      <p class="step-desc">Click below to sign in as teachsurgerysmh@gmail.com and grant send + read permissions.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span><span class="step-title">Automatic token exchange</span>
+      <p class="step-desc">After you approve, this page will automatically exchange the code for a refresh token.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span><span class="step-title">Copy the refresh token</span>
+      <p class="step-desc">Paste it into Supabase Edge Function Secrets as GMAIL_REFRESH_TOKEN.</p>
+    </div>
+    <button id="auth-btn" onclick="startAuth()">Authorise Gmail</button>
   </div>
-  <p style="font-size:13px;color:#666;margin-top:16px;">
-    <strong>Now add these 3 secrets in Supabase:</strong><br>
-    Dashboard → Project Settings → Edge Functions → Secrets<br>
-    • GMAIL_CLIENT_ID<br>
-    • GMAIL_CLIENT_SECRET<br>
-    • GMAIL_REFRESH_TOKEN
-  </p>
-</div>
 
-<div class="hidden" id="errorDiv"></div>
+  <div id="exchanging-view" style="display:none; text-align:center; padding: 32px 0;">
+    <div class="spinner" style="width:40px;height:40px;border-width:4px;border-color:#005eb8;border-top-color:transparent;"></div>
+    <p style="margin-top:16px; color:#555;">Exchanging authorization code for tokens...</p>
+  </div>
+
+  <div id="success-view" style="display:none;">
+    <div class="success-icon">&#10003;</div>
+    <div class="token-box">
+      <div class="token-label">Refresh Token:</div>
+      <div id="refresh-token"></div>
+    </div>
+    <button class="copy-btn" onclick="copyToken()">Copy Refresh Token</button>
+    <p id="copy-msg" style="text-align:center; margin-top:8px; color:#4caf50; font-size:13px; display:none;">Copied!</p>
+    <div class="step" style="margin-top:16px;">
+      <span class="step-num">!</span><span class="step-title">Next step</span>
+      <p class="step-desc">Go to Supabase Dashboard &rarr; Edge Functions &rarr; Secrets &rarr; update <strong>GMAIL_REFRESH_TOKEN</strong> with the value above.</p>
+    </div>
+  </div>
+
+  <div id="error-view" style="display:none;">
+    <div class="error-box" id="error-msg"></div>
+    <button onclick="startAuth()" style="margin-top:12px;">Try Again</button>
+  </div>
+
+  <div id="status"></div>
+</div>
 
 <script>
-const REDIRECT_URI = location.href.split('?')[0]; // This page's URL
-const SCOPES = 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly';
+const SUPABASE_URL = 'https://rufihxjquwrluaenmbaa.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1ZmloeGpxdXdybHVhZW5tYmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyOTg4NDMsImV4cCI6MjA5Mzg3NDg0M30.6o8GrCPcQ__JjrGLUiqQwdgWcM1Qk_02TvLvTOwUjyg';
 
-function startAuth() {
-  const clientId = document.getElementById('clientId').value.trim();
-  const clientSecret = document.getElementById('clientSecret').value.trim();
-  if (!clientId || !clientSecret) { alert('Please enter both Client ID and Client Secret'); return; }
+// Check if we're returning from OAuth with a code
+const params = new URLSearchParams(window.location.search);
+const code = params.get('code');
 
-  // Save for later
-  sessionStorage.setItem('gmail_client_id', clientId);
-  sessionStorage.setItem('gmail_client_secret', clientSecret);
-
-  // Build OAuth URL
-  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: REDIRECT_URI,
-    response_type: 'code',
-    scope: SCOPES,
-    access_type: 'offline',
-    prompt: 'consent',
-    login_hint: 'teachsurgerysmh@gmail.com'
-  });
-
-  document.getElementById('step1').classList.add('hidden');
-  document.getElementById('step2').classList.remove('hidden');
-
-  // Redirect to Google
-  window.location.href = authUrl;
+if (code) {
+  // We have an auth code — exchange it automatically
+  document.getElementById('start-view').style.display = 'none';
+  document.getElementById('exchanging-view').style.display = 'block';
+  exchangeCode(code);
 }
 
-// Check if we're returning from OAuth
-async function checkCallback() {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-  const error = params.get('error');
-
-  if (error) {
-    document.getElementById('errorDiv').classList.remove('hidden');
-    document.getElementById('errorDiv').innerHTML = `<div class="error"><strong>Authorization failed:</strong> ${error}</div>`;
-    return;
-  }
-
-  if (!code) return; // Not a callback
-
-  const clientId = sessionStorage.getItem('gmail_client_id');
-  const clientSecret = sessionStorage.getItem('gmail_client_secret');
-
-  if (!clientId || !clientSecret) {
-    document.getElementById('errorDiv').classList.remove('hidden');
-    document.getElementById('errorDiv').innerHTML = `<div class="error"><strong>Session expired.</strong> Please start over — enter your Client ID and Secret again.</div>`;
-    return;
-  }
-
-  document.getElementById('step1').classList.add('hidden');
-  document.getElementById('step2').classList.remove('hidden');
-  document.getElementById('step2').innerHTML = '<h2>Exchanging code for tokens...</h2><p>Please wait...</p>';
+async function startAuth() {
+  document.getElementById('auth-btn').disabled = true;
+  document.getElementById('auth-btn').innerHTML = '<span class="spinner"></span> Getting auth URL...';
+  document.getElementById('error-view').style.display = 'none';
 
   try {
-    const res = await fetch('https://oauth2.googleapis.com/token', {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code: code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: REDIRECT_URI,
-        grant_type: 'authorization_code'
-      })
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ subject: 'get-auth-url' })
     });
-
     const data = await res.json();
-
-    if (data.refresh_token) {
-      document.getElementById('step2').classList.add('hidden');
-      document.getElementById('step3').classList.remove('hidden');
-      document.getElementById('refreshToken').textContent = data.refresh_token;
-      document.getElementById('showClientId').textContent = clientId;
-      document.getElementById('showClientSecret').textContent = clientSecret;
-      // Clear URL
-      window.history.replaceState({}, '', window.location.pathname);
+    if (data.authUrl) {
+      window.location.href = data.authUrl;
     } else {
-      document.getElementById('errorDiv').classList.remove('hidden');
-      document.getElementById('errorDiv').innerHTML = `<div class="error"><strong>No refresh token received.</strong><br>Error: ${JSON.stringify(data)}<br><br>Try again — make sure "prompt: consent" is working.</div>`;
-      document.getElementById('step2').classList.add('hidden');
-      document.getElementById('step1').classList.remove('hidden');
+      showError('Failed to get auth URL: ' + JSON.stringify(data));
     }
-  } catch(e) {
-    document.getElementById('errorDiv').classList.remove('hidden');
-    document.getElementById('errorDiv').innerHTML = `<div class="error"><strong>Token exchange failed:</strong> ${e.message}</div>`;
-    document.getElementById('step2').classList.add('hidden');
-    document.getElementById('step1').classList.remove('hidden');
+  } catch (err) {
+    showError('Network error: ' + err.message);
   }
 }
 
-function copyToken(id) {
-  const text = document.getElementById(id).textContent;
-  navigator.clipboard.writeText(text).then(() => alert('Copied!')).catch(() => {
-    const range = document.createRange();
-    range.selectNode(document.getElementById(id));
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
-    document.execCommand('copy');
-    alert('Copied!');
-  });
+async function exchangeCode(authCode) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ subject: 'exchange-code', code: authCode })
+    });
+    const data = await res.json();
+
+    if (data.tokenData && data.tokenData.refresh_token) {
+      document.getElementById('exchanging-view').style.display = 'none';
+      document.getElementById('success-view').style.display = 'block';
+      document.getElementById('refresh-token').textContent = data.tokenData.refresh_token;
+      // Clear the URL so refreshing doesn't re-exchange
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (data.tokenData && data.tokenData.error) {
+      showError('Token exchange failed: ' + data.tokenData.error_description + ' (' + data.tokenData.error + ')');
+    } else {
+      showError('Unexpected response: ' + JSON.stringify(data));
+    }
+  } catch (err) {
+    showError('Network error: ' + err.message);
+  }
 }
 
-// Run on load
-checkCallback();
+function showError(msg) {
+  document.getElementById('start-view').style.display = 'none';
+  document.getElementById('exchanging-view').style.display = 'none';
+  document.getElementById('error-view').style.display = 'block';
+  document.getElementById('error-msg').textContent = msg;
+}
+
+function copyToken() {
+  const token = document.getElementById('refresh-token').textContent;
+  navigator.clipboard.writeText(token).then(() => {
+    document.getElementById('copy-msg').style.display = 'block';
+    setTimeout(() => { document.getElementById('copy-msg').style.display = 'none'; }, 2000);
+  });
+}
 </script>
-</body></html>
+</body>
+</html>
