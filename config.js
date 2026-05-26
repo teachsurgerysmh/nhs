@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.6.6';
-const APP_BUILD = '2026-05-25c';
+const APP_VERSION = 'v3.6.7';
+const APP_BUILD = '2026-05-26a';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;

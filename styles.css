@@ -66,7 +66,7 @@ body.is-admin .nav-more-wrapper { display: flex; }
 .nav-more-btn { padding: 11px 18px; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
 .nav-more-btn:hover { color: white; background: rgba(255,255,255,0.05); }
 .nav-more-btn.has-active { color: white; border-bottom-color: var(--nhs-light-blue); }
-.nav-dropdown { display: none; position: absolute; top: 100%; left: 0; background: white; border-radius: 0 0 8px 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); min-width: 200px; z-index: 200; overflow: hidden; }
+.nav-dropdown { display: none; position: fixed; top: auto; left: auto; background: white; border-radius: 0 0 8px 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); min-width: 200px; z-index: 200; overflow: hidden; }
 .nav-dropdown.show { display: block; }
 .nav-dropdown-item { padding: 10px 18px; font-size: 13px; font-weight: 600; color: #4C6272; cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent; }
 .nav-dropdown-item:hover { background: var(--nhs-bg); color: var(--nhs-blue); }

@@ -9,6 +9,15 @@ function toggleNavDropdown(e) {
   e.stopPropagation();
   const dd = document.getElementById('navDropdown');
   const isOpen = dd.classList.contains('show');
+  if (!isOpen) {
+    // Position dropdown below the More button (desktop only — mobile CSS overrides to fixed full-width)
+    const btn = document.querySelector('.nav-more-btn');
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      dd.style.top = rect.bottom + 'px';
+      dd.style.left = Math.max(0, rect.right - 200) + 'px'; // right-align, 200 = min-width
+    }
+  }
   dd.classList.toggle('show', !isOpen);
 }
 function switchViewFromDropdown(view) {
