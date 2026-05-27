@@ -437,16 +437,28 @@ async function checkForNotifications() {
   if (!isAdmin || isDemoMode) return;
   try {
     const lastCheck = sessionStorage.getItem('sst_last_notify') || new Date(Date.now() - 300000).toISOString();
-    // Check new requests
-    const newReqs = await sbGet('session_requests', `created_at=gte.${lastCheck}&status=eq.pending&select=id,topic,suggested_topic,name`);
-    newReqs.forEach(r => {
-      new Notification('New Session Request', { body: `${r.name || 'Someone'} requested: ${r.topic || r.suggested_topic || 'a session'}`, icon: 'logo_transparent.png', tag: 'req-' + r.id });
-    });
+    // Check new session requests
+    try {
+      const newReqs = await sbGet('requests', `created_at=gte.${lastCheck}&status=eq.pending&select=id,topic,name`);
+      newReqs.forEach(r => {
+        new Notification('New Session Request', { body: `${r.name || 'Someone'} requested: ${r.topic || 'a session'}`, icon: 'logo_transparent.png', tag: 'req-' + r.id });
+      });
+    } catch(e) {}
     // Check new feedback
-    const newFb = await sbGet('feedback', `created_at=gte.${lastCheck}&select=id,session_id,rating`);
-    newFb.forEach(f => {
-      new Notification('New Feedback', { body: `Feedback received for session #${f.session_id}${f.rating ? ' (' + f.rating + '/5)' : ''}`, icon: 'logo_transparent.png', tag: 'fb-' + f.id });
-    });
+    try {
+      const newFb = await sbGet('feedback', `submitted_at=gte.${lastCheck}&select=id,session_id,rating_overall`);
+      newFb.forEach(f => {
+        new Notification('New Feedback', { body: `Feedback received for session #${f.session_id}${f.rating_overall ? ' (' + f.rating_overall + '/10)' : ''}`, icon: 'logo_transparent.png', tag: 'fb-' + f.id });
+      });
+    } catch(e) {}
+    // Check new bug reports / site feedback
+    try {
+      const newSfb = await sbGet('site_feedback', `created_at=gte.${lastCheck}&status=eq.new&select=id,type,subject,submitted_by`);
+      const sfbTitles = { feature: 'New feature request', bug: 'New bug report', feedback: 'New site feedback', grievance: 'New grievance' };
+      newSfb.forEach(s => {
+        new Notification(sfbTitles[s.type] || 'New site feedback', { body: `${s.submitted_by || 'Someone'}: ${s.subject || '(no subject)'}`, icon: 'logo_transparent.png', tag: 'sfb-' + s.id });
+      });
+    } catch(e) {}
     sessionStorage.setItem('sst_last_notify', new Date().toISOString());
   } catch(e) { console.warn('Notification check failed:', e); }
 }

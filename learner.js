@@ -690,7 +690,7 @@ async function loadAdminDashboard() {
     // Requests count
     let pendingRequests = 0;
     try {
-      const reqs = await sbGet('session_requests', 'status=eq.pending&select=id');
+      const reqs = await sbGet('requests', 'status=eq.pending&select=id');
       pendingRequests = reqs.length;
     } catch(e) {}
 
@@ -705,8 +705,15 @@ async function loadAdminDashboard() {
     let recentFeedback = 0;
     try {
       const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-      const fb = await sbGet('feedback', `created_at=gte.${weekAgo}&select=id`);
+      const fb = await sbGet('feedback', `submitted_at=gte.${weekAgo}&select=id`);
       recentFeedback = fb.length;
+    } catch(e) {}
+
+    // New site feedback / bug reports count
+    let newSiteFeedback = 0;
+    try {
+      const sfb = await sbGet('site_feedback', 'status=eq.new&select=id');
+      newSiteFeedback = sfb.length;
     } catch(e) {}
 
     // This week sessions
@@ -739,6 +746,9 @@ async function loadAdminDashboard() {
     html += `<div class="action-card ac-info" onclick="switchViewFromDropdown('feedback')">
       <div class="ac-count" style="color:var(--nhs-blue);">${recentFeedback}</div>
       <div class="ac-label">Feedback (7 days)</div></div>`;
+    html += `<div class="action-card ${newSiteFeedback > 0 ? 'ac-urgent' : 'ac-good'}" onclick="switchViewFromDropdown('siteFeedback')">
+      <div class="ac-count" style="color:${newSiteFeedback > 0 ? 'var(--nhs-red)' : 'var(--nhs-green)'};">${newSiteFeedback}</div>
+      <div class="ac-label">Bugs &amp; Ideas</div></div>`;
     html += `<div class="action-card ${draftSessions.length > 0 ? 'ac-warning' : 'ac-good'}" onclick="switchView('drafts')">
       <div class="ac-count" style="color:${draftSessions.length > 0 ? 'var(--nhs-orange)' : 'var(--nhs-green)'};">${draftSessions.length}</div>
       <div class="ac-label">Drafts</div></div>`;
@@ -815,11 +825,11 @@ async function loadAdminDashboard() {
 
     // Pending requests
     try {
-      const reqs = await sbGet('session_requests', 'order=created_at.desc&limit=3&select=*');
+      const reqs = await sbGet('requests', 'order=created_at.desc&limit=3&select=*');
       reqs.forEach(r => {
         feedItems.push({
           icon: '📩', bg: '#fde8e8',
-          text: `New request: <strong>${esc(r.topic || r.suggested_topic || 'Topic')}</strong> from ${esc(r.name || 'Anonymous')}`,
+          text: `New request: <strong>${esc(r.topic || 'Topic')}</strong> from ${esc(r.name || 'Anonymous')}`,
           time: r.created_at ? timeAgo(new Date(r.created_at)) : '',
           ts: new Date(r.created_at || 0)
         });
@@ -828,13 +838,28 @@ async function loadAdminDashboard() {
 
     // Recent feedback
     try {
-      const fb = await sbGet('feedback', 'order=created_at.desc&limit=3&select=*');
+      const fb = await sbGet('feedback', 'order=submitted_at.desc&limit=3&select=*');
       fb.forEach(f => {
         feedItems.push({
           icon: '⭐', bg: '#fff4e0',
-          text: `Feedback received${f.rating ? ' ('+f.rating+'/5)' : ''} for session #${f.session_id}`,
-          time: f.created_at ? timeAgo(new Date(f.created_at)) : '',
-          ts: new Date(f.created_at || 0)
+          text: `Feedback received${f.rating_overall ? ' ('+f.rating_overall+'/10)' : ''} for session #${f.session_id}`,
+          time: f.submitted_at ? timeAgo(new Date(f.submitted_at)) : '',
+          ts: new Date(f.submitted_at || 0)
+        });
+      });
+    } catch(e) {}
+
+    // Recent site feedback / bug reports
+    try {
+      const sfb = await sbGet('site_feedback', 'order=created_at.desc&limit=3&select=*');
+      const sfbIcons = { feature: '🚀', bug: '🐛', feedback: '💡', grievance: '⚠️' };
+      const sfbLabels = { feature: 'Feature request', bug: 'Bug report', feedback: 'Feedback', grievance: 'Grievance' };
+      sfb.forEach(s => {
+        feedItems.push({
+          icon: sfbIcons[s.type] || '💬', bg: '#ffe8e8',
+          text: `${sfbLabels[s.type] || 'Site feedback'}: <strong>${esc(s.subject || 'No subject')}</strong>${s.submitted_by ? ' from ' + esc(s.submitted_by) : ''}`,
+          time: s.created_at ? timeAgo(new Date(s.created_at)) : '',
+          ts: new Date(s.created_at || 0)
         });
       });
     } catch(e) {}
