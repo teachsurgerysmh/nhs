@@ -5,7 +5,7 @@
 
 // ===================== VERSION =====================
 const APP_VERSION = 'v3.7.3';
-const APP_BUILD = '2026-05-27e';
+const APP_BUILD = '2026-05-27f';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
 // ===================== SAFE COLUMN LISTS (exclude pin_code) =====================

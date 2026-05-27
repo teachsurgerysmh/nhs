@@ -404,8 +404,10 @@ function selectSurveyAnswer(qId, value, type, btn) {
   clearSurveyError(qId);
   if (type === 'single') {
     surveyState.answers[qId] = value;
-    // Visual: deselect siblings, select this
-    btn.parentElement.querySelectorAll('.survey-opt-btn').forEach(b => b.classList.remove('selected'));
+    // Visual: deselect siblings (covers both option buttons and scale buttons), then select this
+    btn.parentElement.querySelectorAll('.survey-opt-btn, .scale-btn').forEach(b => {
+      b.classList.remove('selected', 'low', 'mid', 'high');
+    });
     btn.classList.add('selected');
     // For scales, add color class
     if (btn.classList.contains('scale-btn')) {
