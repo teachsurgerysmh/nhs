@@ -318,7 +318,7 @@ async function openFeedbackRequestModal(sessionId) {
   // Load contacts and attendance for this session
   let contacts = window._contactsData || [];
   if (!contacts.length) {
-    try { contacts = await sbGet('contacts', 'order=name.asc&select=*'); } catch(e) { contacts = []; }
+    try { contacts = await sbGet('contacts', `order=name.asc&select=${CONTACT_FIELDS}`); } catch(e) { contacts = []; }
   }
   try {
     const att = await sbGet('attendance', `session_id=eq.${sessionId}&status=neq.removed&select=learner_id`);
@@ -576,7 +576,7 @@ async function requestTeacherForSession(sessionId) {
   // Load contacts
   let contacts = window._contactsData || [];
   if (!contacts.length) {
-    try { contacts = await sbGet('contacts', 'order=name.asc&select=*'); } catch(e) { contacts = []; }
+    try { contacts = await sbGet('contacts', `order=name.asc&select=${CONTACT_FIELDS}`); } catch(e) { contacts = []; }
   }
 
   let html = '';

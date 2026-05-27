@@ -546,10 +546,10 @@ function showDetail(id) {
     <div class="detail-field"><div class="detail-label">Topic</div><div class="detail-value" style="font-size:18px;font-weight:700;color:var(--nhs-dark-blue);">${esc(topicDisplay)}</div></div>
   `;
   if (ev.teacher) {
-    html += `<div class="detail-field"><div class="detail-label">Teacher</div><div class="detail-value">${esc(ev.teacher)}${ev.teacherEmail ? ' <span style="color:var(--nhs-grey);font-size:12px;">(' + esc(ev.teacherEmail) + ')</span>' : ''}</div></div>`;
+    html += `<div class="detail-field"><div class="detail-label">Teacher</div><div class="detail-value">${esc(ev.teacher)}${isAdminView && ev.teacherEmail ? ' <span style="color:var(--nhs-grey);font-size:12px;">(' + esc(ev.teacherEmail) + ')</span>' : ''}</div></div>`;
   }
   if (ev.backupTeacher) {
-    html += `<div class="detail-field"><div class="detail-label">Backup Teacher</div><div class="detail-value" style="color:var(--nhs-orange);">${esc(ev.backupTeacher)}${ev.backupTeacherEmail ? ' <span style="color:var(--nhs-grey);font-size:12px;">(' + esc(ev.backupTeacherEmail) + ')</span>' : ''}</div></div>`;
+    html += `<div class="detail-field"><div class="detail-label">Backup Teacher</div><div class="detail-value" style="color:var(--nhs-orange);">${esc(ev.backupTeacher)}${isAdminView && ev.backupTeacherEmail ? ' <span style="color:var(--nhs-grey);font-size:12px;">(' + esc(ev.backupTeacherEmail) + ')</span>' : ''}</div></div>`;
   }
   if (ev.room) {
     html += `<div class="detail-field"><div class="detail-label">Room</div><div class="detail-value">${esc(ev.room)}</div></div>`;

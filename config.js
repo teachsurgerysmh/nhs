@@ -4,9 +4,13 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.7.1';
-const APP_BUILD = '2026-05-27a';
+const APP_VERSION = 'v3.7.2';
+const APP_BUILD = '2026-05-27c';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
+
+// ===================== SAFE COLUMN LISTS (exclude pin_code) =====================
+const LEARNER_FIELDS = 'id,name,email,grade,specialty,placement,placement_start,placement_end,verified,created_at,rotation_block,role,contact_id,followup_eligible';
+const CONTACT_FIELDS = 'id,name,role,email,phone,specialty,notes,added_by,created_at,is_manager';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;
 
@@ -37,8 +41,10 @@ function setAuthToken(token) {
   headers['Authorization'] = 'Bearer ' + (token || SUPABASE_KEY);
   if (token) {
     sessionStorage.setItem('sst_token', token);
+    resetInactivityTimer();
   } else {
     sessionStorage.removeItem('sst_token');
+    if (_inactivityTimer) { clearTimeout(_inactivityTimer); _inactivityTimer = null; }
   }
 }
 
@@ -59,6 +65,25 @@ function restoreAuthToken() {
   }
   return false;
 }
+
+// ===================== INACTIVITY AUTO-LOGOUT (NHS DSPT) =====================
+const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
+let _inactivityTimer = null;
+
+function resetInactivityTimer() {
+  if (_inactivityTimer) clearTimeout(_inactivityTimer);
+  if (!currentUser && !currentLearner && !currentTeacher) return; // not logged in
+  _inactivityTimer = setTimeout(() => {
+    if (isDemoMode) { endDemoMode(); return; }
+    if (typeof doLogout === 'function') doLogout();
+    else if (typeof doLearnerLogout === 'function') doLearnerLogout();
+    showToast('Logged out due to inactivity (20 min)', 5000);
+  }, INACTIVITY_TIMEOUT_MS);
+}
+
+['click', 'keydown', 'scroll', 'touchstart'].forEach(evt =>
+  document.addEventListener(evt, resetInactivityTimer, { passive: true })
+);
 
 // ===================== STATE =====================
 let events = [];
@@ -215,12 +240,14 @@ function fmtCpdHours(h) { return String(+(+h).toFixed(2)); }
 async function loadEvents() {
   try {
     let data;
+    // Safe column list for public — excludes teacher_email, backup_teacher_email, last_edit_by, last_edit_at, notes
+    const SCHEDULE_PUBLIC = 'id,event_id,day,date,month,year,time,room,topic,teacher,backup_teacher,status,published';
     if (isAdmin) {
       // Admin sees everything
       data = await sbGet('schedule', 'order=year.asc,id.asc&select=*');
     } else {
-      // Public sees only published
-      data = await sbGet('schedule', 'published=eq.true&order=year.asc,id.asc&select=*');
+      // Public sees only published — no email addresses
+      data = await sbGet('schedule', `published=eq.true&order=year.asc,id.asc&select=${SCHEDULE_PUBLIC}`);
     }
     events = data.map(row => ({
       id: row.id,

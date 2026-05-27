@@ -45,8 +45,8 @@ async function openAttendanceModal(sessionId) {
   openModal('attendanceModal');
   try {
     const [learners, contacts, existing] = await Promise.all([
-      sbGet('learners', 'order=name.asc&select=*'),
-      sbGet('contacts', 'order=name.asc&select=*'),
+      sbGet('learners', `order=name.asc&select=${LEARNER_FIELDS}`),
+      sbGet('contacts', `order=name.asc&select=${CONTACT_FIELDS}`),
       sbGet('attendance', `session_id=eq.${sessionId}&status=neq.removed&select=*`)
     ]);
     const attendanceMap = {};
@@ -131,7 +131,7 @@ async function saveAttendance() {
     // Auto-create learner records for checked contacts who don't have one yet
     for (const contactId of checkedContactIds) {
       try {
-        const contact = await sbGet('contacts', `id=eq.${contactId}&select=*`);
+        const contact = await sbGet('contacts', `id=eq.${contactId}&select=${CONTACT_FIELDS}`);
         if (contact.length === 0) continue;
         const c = contact[0];
         // Check if learner already exists for this contact email
@@ -324,7 +324,12 @@ function setScaleRating(field, value) {
 async function resolveFeedbackToken(sessionId, token) {
   if (!token) return false;
   try {
-    const rows = await sbGet('feedback_tokens', `token=eq.${encodeURIComponent(token)}&select=*&limit=1`);
+    // Use RPC function — anon can't SELECT feedback_tokens directly
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/validate_feedback_token`, {
+      method: 'POST', headers, body: JSON.stringify({ token_val: token })
+    });
+    if (!res.ok) { showToast('Feedback link is invalid or expired'); return false; }
+    const rows = await res.json();
     if (!rows || !rows.length) { showToast('Feedback link is invalid or expired'); return false; }
     const row = rows[0];
     if (String(row.session_id) !== String(sessionId)) { showToast('Feedback link does not match this session'); return false; }
@@ -334,7 +339,7 @@ async function resolveFeedbackToken(sessionId, token) {
       return true; // Treat as handled so we don't fall through to login.
     }
     // Hydrate the learner record so submitFeedback can use it.
-    const learners = await sbGet('learners', `id=eq.${row.learner_id}&select=*&limit=1`);
+    const learners = await sbGet('learners', `id=eq.${row.learner_id}&select=${LEARNER_FIELDS}&limit=1`);
     if (!learners || !learners.length) { showToast('Could not find your account'); return false; }
     currentLearner = learners[0];
     window._magicLinkFeedbackToken = token; // remember it so submitFeedback can mark it used
@@ -368,28 +373,10 @@ async function doQuickFeedbackLookup() {
   const sessionId = window._pendingQuickFeedback;
   if (!email) { showToast('Please enter your email'); return; }
   if (!sessionId) { showToast('Session reference lost. Please reopen the link.'); return; }
-  if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) {
-    showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return;
-  }
-  if (window.logInteraction) logInteraction('quick_feedback_lookup', { email, sessionId });
   try {
-    const rows = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*&limit=1`);
+    const rows = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=${LEARNER_FIELDS}&limit=1`);
     if (!rows.length) {
-      // v3.7.0: instead of dead-ending the user, offer self-registration via
-      // verified email code so they can submit feedback after sign-up.
-      if (window.logInteraction) logInteraction('quick_feedback_unknown_email', { email });
-      closeModal('quickFeedbackModal');
-      window._pendingFeedback = sessionId;
-      delete window._pendingQuickFeedback;
-      showToast('No account found — let\'s create one quickly.', 3500);
-      openLearnerLoginModal();
-      setTimeout(() => {
-        try {
-          showLearnerRegister();
-          const re = document.getElementById('regEmail');
-          if (re) re.value = email;
-        } catch(_) {}
-      }, 150);
+      showToast('Email not recognised. Please contact the teaching team to be added.');
       return;
     }
     currentLearner = rows[0];
@@ -400,7 +387,6 @@ async function doQuickFeedbackLookup() {
     openFeedbackModal(parseInt(sessionId));
   } catch(e) {
     console.warn('Quick feedback lookup failed:', e);
-    if (window.logError) logError('warn','flow_step','quick_feedback_lookup_failed', { email, error: e.message });
     showToast('Lookup failed. Please try again.');
   }
 }
@@ -999,7 +985,7 @@ async function loadApprovals() {
     const allLearnerIds = [...new Set([...pending, ...recent].map(a => a.learner_id))];
     let learnersMap = {};
     if (allLearnerIds.length > 0) {
-      const learners = await sbGet('learners', `id=in.(${allLearnerIds.join(',')})&select=*`);
+      const learners = await sbGet('learners', `id=in.(${allLearnerIds.join(',')})&select=${LEARNER_FIELDS}`);
       learners.forEach(l => { learnersMap[l.id] = l; });
     }
     let html = '<h3 style="color:var(--nhs-dark-blue);margin-bottom:16px;">Attendance Approvals</h3>';
@@ -1077,7 +1063,7 @@ async function loadAttendanceChart() {
   container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div>';
   try {
     const [learners, attendance] = await Promise.all([
-      sbGet('learners', 'order=name.asc&select=*'),
+      sbGet('learners', `order=name.asc&select=${LEARNER_FIELDS}`),
       sbGet('attendance', 'status=eq.approved&select=*')
     ]);
 
@@ -1651,7 +1637,7 @@ async function loadRosterView() {
   const container = document.getElementById('rosterView');
   container.innerHTML = '<div style="text-align:center;padding:30px;"><div class="loading-spinner"></div> Loading roster...</div>';
   try {
-    const learners = await sbGet('learners', 'order=placement.asc,grade.asc,name.asc&select=*');
+    const learners = await sbGet('learners', `order=placement.asc,grade.asc,name.asc&select=${LEARNER_FIELDS}`);
     const today = new Date().toISOString().split('T')[0];
 
     // Fetch attendance counts per learner (approved only)
@@ -1771,7 +1757,7 @@ async function loadRosterView() {
 
 async function editLearnerPlacement(learnerId) {
   try {
-    const data = await sbGet('learners', `id=eq.${learnerId}&select=*`);
+    const data = await sbGet('learners', `id=eq.${learnerId}&select=${LEARNER_FIELDS}`);
     if (data.length === 0) return;
     const l = data[0];
     const html = `<div style="max-width:400px;margin:0 auto;">
@@ -1905,7 +1891,7 @@ async function applyNewRotation() {
     const grade = parts[2] || 'FY1';
     try {
       // Check if learner exists
-      const existing = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
+      const existing = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=${LEARNER_FIELDS}`);
       if (existing.length > 0) {
         await sbUpdate('learners', existing[0].id, {
           grade, placement, placement_start: start, placement_end: end,
@@ -2071,7 +2057,7 @@ async function getExpectedAttendees(sessionId) {
   const dateStr = sessionDate.toISOString().split('T')[0];
   // All learners whose placement window includes this session date and are followup_eligible
   try {
-    const learners = await sbGet('learners', `followup_eligible=eq.true&placement_start=lte.${dateStr}&placement_end=gte.${dateStr}&select=*`);
+    const learners = await sbGet('learners', `followup_eligible=eq.true&placement_start=lte.${dateStr}&placement_end=gte.${dateStr}&select=${LEARNER_FIELDS}`);
     return learners;
   } catch(e) { console.warn('Expected attendees query failed:', e); return []; }
 }
