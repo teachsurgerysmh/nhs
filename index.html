@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="SMH Teaching">
 <link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
-<link rel="stylesheet" href="styles.css?v=3.6.2">
+<link rel="stylesheet" href="styles.css?v=3.7.0">
 </head>
 <body>
 
@@ -92,6 +92,7 @@
   <div class="nav-dropdown-item admin-only" data-view="surveyResults" onclick="switchViewFromDropdown('surveyResults')">QI Surveys</div>
   <div class="nav-dropdown-item" data-view="qiDash" onclick="switchViewFromDropdown('qiDash')" id="qiDashTab" style="display:none;">QI Dashboard</div>
   <div class="nav-dropdown-item" data-view="log" onclick="switchViewFromDropdown('log')" id="logTab" style="display:none;">Activity Log</div>
+  <div class="nav-dropdown-item" data-view="errorLog" onclick="switchViewFromDropdown('errorLog')" id="errorLogTab" style="display:none;">Error Log</div>
 </div>
 
 <div class="welcome-banner" id="welcomeBanner">
@@ -149,6 +150,7 @@
   <div id="surveyView" style="display:none;"></div>
   <div id="surveyResultsView" style="display:none;"></div>
   <div id="qiDashView" style="display:none;" class="qi-dashboard"></div>
+  <div id="errorLogView" style="display:none;"></div>
 </div>
 
 <button class="fab" onclick="openAddModal()" title="Add Session">+</button>
@@ -441,8 +443,11 @@
           <div><label>Placement Start</label><input type="date" id="regPlacementStart"></div>
           <div><label>Placement End</label><input type="date" id="regPlacementEnd"></div>
         </div>
-        <div style="margin-top:14px;text-align:center;">
-          <button class="btn btn-green" onclick="doLearnerRegister()" style="width:100%;">Register</button>
+        <div style="background:#e0f5fa;border-left:3px solid var(--nhs-aqua);padding:10px 12px;border-radius:0 6px 6px 0;margin:14px 0;font-size:12px;color:#231f20;">
+          We'll send a 6-digit code to your NHS email to verify it's really you. After verification you'll choose a password.
+        </div>
+        <div style="margin-top:10px;text-align:center;">
+          <button class="btn btn-green" onclick="doLearnerRegister()" style="width:100%;">Continue — Verify Email</button>
         </div>
         <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--nhs-grey);">
           Already registered? <a href="#" onclick="showLearnerLoginForm();return false;">Login here</a>
@@ -718,14 +723,15 @@
   </div>
 </div>
 
-<script src="config.js?v=3.6.2"></script>
-<script src="auth.js?v=3.6.2"></script>
-<script src="sessions.js?v=3.6.2"></script>
-<script src="messaging.js?v=3.6.2"></script>
-<script src="learner.js?v=3.6.2"></script>
-<script src="actions.js?v=3.6.2"></script>
-<script src="surveys.js?v=3.6.2"></script>
-<script src="analytics.js?v=3.6.2"></script>
-<script src="app.js?v=3.6.2"></script>
+<script src="config.js?v=3.7.0"></script>
+<script src="auth.js?v=3.7.0"></script>
+<script src="sessions.js?v=3.7.0"></script>
+<script src="messaging.js?v=3.7.0"></script>
+<script src="learner.js?v=3.7.0"></script>
+<script src="actions.js?v=3.7.0"></script>
+<script src="surveys.js?v=3.7.0"></script>
+<script src="analytics.js?v=3.7.0"></script>
+<script src="errorlog.js?v=3.7.0"></script>
+<script src="app.js?v=3.7.0"></script>
 </body>
 </html>

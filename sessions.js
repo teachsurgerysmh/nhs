@@ -43,7 +43,7 @@ function switchView(view) {
   document.querySelectorAll('.nav-dropdown-item').forEach(t => t.classList.toggle('active', t.dataset.view === view));
   // Highlight "More" button if a dropdown view is active
   const moreBtn = document.querySelector('.nav-more-btn');
-  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','roster','absences','siteFeedback','surveyResults','qiDash','log'];
+  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','roster','absences','siteFeedback','surveyResults','qiDash','log','errorLog'];
   // Close nav dropdown on any view switch
   const dd = document.getElementById('navDropdown');
   if (dd) dd.classList.remove('show');
@@ -153,6 +153,10 @@ function switchView(view) {
     document.getElementById('qiDashView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     loadQIDashboard();
+  } else if (view === 'errorLog') {
+    document.getElementById('errorLogView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    loadErrorLog();
   } else {
     document.getElementById('listView').style.display = 'block';
     filtersBar.style.display = '';
@@ -530,7 +534,7 @@ function showDetail(id) {
     const fbUrl = encodeURIComponent(SITE_URL + '?feedback=' + ev.id);
     html += `<div style="text-align:center;margin:12px 0;padding:16px;background:var(--nhs-bg);border-radius:8px;">
       <div style="font-size:13px;font-weight:600;color:var(--nhs-dark-blue);margin-bottom:8px;">Feedback QR Code — display at end of session</div>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${fbUrl}" alt="Feedback QR" style="width:180px;height:180px;border-radius:4px;">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=${fbUrl}" alt="Feedback QR" style="width:180px;height:180px;border-radius:4px;">
       <div style="font-size:11px;color:var(--nhs-grey);margin-top:6px;">Scan to submit feedback</div>
     </div>`;
   }

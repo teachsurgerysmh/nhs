@@ -1,11 +1,12 @@
 // Southmead Surgical Teaching — config.js
 // Core configuration, Supabase helpers, date utilities, UI helpers, bank holidays
+// v3.7.0 — Email-verified registration/reset + internal error/interaction logger.
 
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.6.10';
-const APP_BUILD = '2026-05-26d';
+const APP_VERSION = 'v3.7.0';
+const APP_BUILD = '2026-05-27a';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;
@@ -46,7 +47,6 @@ function setAuthToken(token) {
 function restoreAuthToken() {
   const token = sessionStorage.getItem('sst_token');
   if (token) {
-    // Check if token is expired
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       if (payload.exp && payload.exp > Math.floor(Date.now() / 1000)) {
@@ -54,7 +54,6 @@ function restoreAuthToken() {
         return true;
       }
     } catch(e) {}
-    // Token expired or invalid — clear it
     sessionStorage.removeItem('sst_token');
   }
   return false;
@@ -77,56 +76,195 @@ let editingEventId = null;
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
+// =====================================================================
+// INTERNAL ERROR / INTERACTION LOGGER (v3.7.0)
+// Posts to `error_log` table in Supabase. Anon insert allowed by RLS.
+// Fails silently — never throws so it never breaks the page.
+// =====================================================================
+const ERROR_LOG_ENDPOINT = SUPABASE_URL + '/rest/v1/error_log';
+const _logQueue = [];
+let _logFlushTimer = null;
+const _LOG_FLUSH_MS = 1500;     // batch logs every 1.5s
+const _LOG_MAX_BATCH = 20;
+
+function _currentActor() {
+  if (currentUser) return { actor_type: 'admin',   actor_email: (currentUser.username || '').toLowerCase() + '@nbt.nhs.uk', actor_id: currentUser.id || null };
+  if (currentTeacher) return { actor_type: 'teacher', actor_email: (currentTeacher.email || '').toLowerCase(), actor_id: currentTeacher.id || null };
+  if (currentLearner) return { actor_type: 'learner', actor_email: (currentLearner.email || '').toLowerCase(), actor_id: currentLearner.id || null };
+  return { actor_type: 'anon', actor_email: null, actor_id: null };
+}
+
+function _enqueueLog(row) {
+  try { _logQueue.push(row); } catch(_) {}
+  if (_logFlushTimer) return;
+  _logFlushTimer = setTimeout(_flushLogs, _LOG_FLUSH_MS);
+}
+
+async function _flushLogs() {
+  _logFlushTimer = null;
+  if (!_logQueue.length) return;
+  const batch = _logQueue.splice(0, _LOG_MAX_BATCH);
+  try {
+    await fetch(ERROR_LOG_ENDPOINT, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(batch),
+      keepalive: true,
+    });
+  } catch (e) {
+    if (window.console && console.debug) console.debug('error_log flush failed:', e);
+  }
+  if (_logQueue.length) _logFlushTimer = setTimeout(_flushLogs, _LOG_FLUSH_MS);
+}
+
+// Strip non-serialisable values from context payloads
+function _safeJsonReplacer(_k, v) {
+  if (v instanceof Error) return { name: v.name, message: v.message, stack: v.stack };
+  if (typeof v === 'function') return '[fn]';
+  if (typeof v === 'bigint') return v.toString();
+  return v;
+}
+
+function logError(level, category, message, context) {
+  const actor = _currentActor();
+  let safeCtx = null;
+  try { safeCtx = context ? JSON.parse(JSON.stringify(context, _safeJsonReplacer)) : null; } catch(_) { safeCtx = { _err: 'context-not-serialisable' }; }
+  _enqueueLog({
+    level: level || 'error',
+    category: category || 'js_error',
+    message: String(message || '').slice(0, 1000),
+    stack: (context && context.stack) || null,
+    url: location && location.href,
+    user_agent: navigator.userAgent,
+    context: safeCtx,
+    app_version: typeof APP_VERSION !== 'undefined' ? APP_VERSION : null,
+    client_ts: new Date().toISOString(),
+    ...actor,
+  });
+}
+
+function logInteraction(action, context) {
+  logError('info', 'user_action', action, context || {});
+}
+
+function logFlowStep(flow, step, context) {
+  logError('info', 'flow_step', flow + '.' + step, context || {});
+}
+
+// Global error hooks
+window.addEventListener('error', (e) => {
+  try {
+    logError('error', 'js_error', e.message || 'Unknown JS error', {
+      stack: e.error && e.error.stack,
+      filename: e.filename, lineno: e.lineno, colno: e.colno
+    });
+  } catch(_) {}
+});
+window.addEventListener('unhandledrejection', (e) => {
+  try {
+    const r = e.reason || {};
+    logError('error', 'unhandled_rejection', r.message || String(r), { stack: r.stack });
+  } catch(_) {}
+});
+// Flush remaining logs before tab unload
+window.addEventListener('pagehide', () => { try { _flushLogs(); } catch(_) {} });
+
 // ── Server-Side Auth Helper ──
 async function callAuth(body) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/authenticate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if (!res.ok && !data.needs_setup) throw new Error(data.error || 'Auth failed');
+  const url = `${SUPABASE_URL}/functions/v1/authenticate`;
+  let res, data;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
+      body: JSON.stringify(body)
+    });
+    data = await res.json();
+  } catch (e) {
+    logError('error', 'network_error', 'callAuth fetch failed', { action: body && body.action, error: e.message });
+    throw new Error('Network error — check your connection');
+  }
+  if (!res.ok && !data.needs_setup) {
+    const err = new Error(data.error || 'Auth failed');
+    if (data.not_found) err._notFound = true;
+    if (data.already_registered) err._alreadyRegistered = true;
+    if (res.status >= 500) {
+      logError('error', 'auth_server_error', err.message, { action: body && body.action, status: res.status });
+    }
+    throw err;
+  }
   return data;
 }
 
 // ── Supabase REST Helpers ──
-
-// ===================== SUPABASE REST HELPERS =====================
 async function sbGet(table, query = '') {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers });
-  if (!res.ok) throw new Error(`GET ${table} failed: ${res.status}`);
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers });
+  } catch (e) {
+    logError('error', 'network_error', 'sbGet fetch failed', { table, query, error: e.message });
+    throw new Error(`Network error reading ${table}`);
+  }
+  if (!res.ok) {
+    // 404 / 406 / 409 are routine; only WARN log
+    logError('warn', 'db_error', `GET ${table} returned ${res.status}`, { table, query, status: res.status });
+    throw new Error(`GET ${table} failed: ${res.status}`);
+  }
   return res.json();
 }
 
 async function sbInsert(table, data) {
   if (isDemoMode) { showDemoToast(`Add to ${table}`); return [{ id: 99999, ...data }]; }
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-    method: 'POST', headers, body: JSON.stringify(data)
-  });
-  if (!res.ok) throw new Error(`INSERT ${table} failed: ${res.status}`);
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST', headers, body: JSON.stringify(data)
+    });
+  } catch (e) {
+    logError('error', 'network_error', 'sbInsert fetch failed', { table, error: e.message });
+    throw new Error(`Network error inserting into ${table}`);
+  }
+  if (!res.ok) {
+    logError('warn', 'db_error', `INSERT ${table} returned ${res.status}`, { table, status: res.status });
+    throw new Error(`INSERT ${table} failed: ${res.status}`);
+  }
   return res.json();
 }
 
 async function sbUpdate(table, id, data) {
   if (isDemoMode) { showDemoToast(`Update ${table} #${id}`); return [{ id, ...data }]; }
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
-    method: 'PATCH', headers: { ...headers, 'Prefer': 'return=representation' }, body: JSON.stringify(data)
-  });
-  if (!res.ok) throw new Error(`UPDATE ${table} failed: ${res.status}`);
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'PATCH', headers: { ...headers, 'Prefer': 'return=representation' }, body: JSON.stringify(data)
+    });
+  } catch (e) {
+    logError('error', 'network_error', 'sbUpdate fetch failed', { table, id, error: e.message });
+    throw new Error(`Network error updating ${table}`);
+  }
+  if (!res.ok) {
+    logError('warn', 'db_error', `UPDATE ${table} returned ${res.status}`, { table, id, status: res.status });
+    throw new Error(`UPDATE ${table} failed: ${res.status}`);
+  }
   return res.json();
 }
 
 async function sbDelete(table, id) {
   if (isDemoMode) { showDemoToast(`Delete from ${table}`); return; }
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
-    method: 'DELETE', headers
-  });
-  if (!res.ok) throw new Error(`DELETE ${table} failed: ${res.status}`);
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'DELETE', headers });
+  } catch (e) {
+    logError('error', 'network_error', 'sbDelete fetch failed', { table, id, error: e.message });
+    throw new Error(`Network error deleting from ${table}`);
+  }
+  if (!res.ok) {
+    logError('warn', 'db_error', `DELETE ${table} returned ${res.status}`, { table, id, status: res.status });
+    throw new Error(`DELETE ${table} failed: ${res.status}`);
+  }
 }
 
 // ===================== FEEDBACK TOKENS (magic-link / one-click feedback) =====================
-// Returns a persistent token for (session, learner). One token per pair — reused across
-// auto-send, manual-send, and cron reminders. Security relies on 192-bit randomness.
 function _randomToken() {
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
@@ -144,7 +282,6 @@ async function getOrCreateFeedbackToken(sessionId, learnerId) {
     await sbInsert('feedback_tokens', { session_id: sessionId, learner_id: learnerId, token });
     return token;
   } catch(e) {
-    // Race condition: another sender created it between our SELECT and INSERT. Re-read.
     const rows = await sbGet('feedback_tokens', `session_id=eq.${sessionId}&learner_id=eq.${learnerId}&select=token&limit=1`);
     return rows && rows[0] ? rows[0].token : token;
   }
@@ -155,8 +292,6 @@ function feedbackUrlWithToken(sessionId, token) {
 }
 
 // ── Date Helpers ──
-
-// ===================== DATE HELPERS =====================
 function monthIndex(m) { return MONTHS.indexOf(m); }
 function parseDateNum(d) { return parseInt(d); }
 function eventToDate(ev) {
@@ -176,9 +311,9 @@ function getCurrentRotationDates() {
   const now = new Date();
   const yr = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
   const blocks = [
-    { start: new Date(yr, 7, 1), end: new Date(yr, 10, 30, 23, 59, 59) },       // Aug-Nov (aug_dec → adjusted)
-    { start: new Date(yr, 11, 1), end: new Date(yr + 1, 2, 31, 23, 59, 59) },    // Dec-Mar
-    { start: new Date(yr + 1, 3, 1), end: new Date(yr + 1, 6, 31, 23, 59, 59) }  // Apr-Jul
+    { start: new Date(yr, 7, 1), end: new Date(yr, 10, 30, 23, 59, 59) },
+    { start: new Date(yr, 11, 1), end: new Date(yr + 1, 2, 31, 23, 59, 59) },
+    { start: new Date(yr + 1, 3, 1), end: new Date(yr + 1, 6, 31, 23, 59, 59) }
   ];
   for (const b of blocks) { if (now >= b.start && now <= b.end) return b; }
   return { start: new Date(yr, 7, 1), end: new Date(yr + 1, 7, 31, 23, 59, 59) };
@@ -192,8 +327,6 @@ function isInCurrentRotation(ev) {
 }
 
 // ===================== CPD HOURS =====================
-// Parse a free-text time range like "0800-0900", "08:00-09:00", "13:00-13:30"
-// and return CPD hours (1 hour per 60 min). Defaults to 1.0 if unparseable.
 function cpdHoursFromTime(timeStr) {
   if (!timeStr) return 1;
   const m = String(timeStr).match(/(\d{1,2}):?(\d{2})\s*[-–—]\s*(\d{1,2}):?(\d{2})/);
@@ -202,23 +335,17 @@ function cpdHoursFromTime(timeStr) {
   let end   = parseInt(m[3], 10) * 60 + parseInt(m[4], 10);
   let mins = end - start;
   if (mins <= 0) mins += 24 * 60;
-  // Round to nearest 0.25h to keep clean values
   return Math.round((mins / 60) * 4) / 4;
 }
-// Format hours: 1 → "1", 0.5 → "0.5", 1.25 → "1.25"
 function fmtCpdHours(h) { return String(+(+h).toFixed(2)); }
 
 // ── Data Loading ──
-
-// ===================== DATA LOADING =====================
 async function loadEvents() {
   try {
     let data;
     if (isAdmin) {
-      // Admin sees everything
       data = await sbGet('schedule', 'order=year.asc,id.asc&select=*');
     } else {
-      // Public sees only published
       data = await sbGet('schedule', 'published=eq.true&order=year.asc,id.asc&select=*');
     }
     events = data.map(row => ({
@@ -248,8 +375,6 @@ async function loadEvents() {
   }
 }
 
-// ── Modal Helpers & Toast ──
-
 // ===================== MODAL HELPERS =====================
 function openModal(id) { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
@@ -265,8 +390,6 @@ function showToast(msg, duration) {
   const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), duration || 3000);
 }
-
-// ── UK Bank Holidays ──
 
 // ===================== UK BANK HOLIDAYS =====================
 const UK_BANK_HOLIDAYS = {};

@@ -104,7 +104,7 @@ async function openAttendanceModal(sessionId) {
     const qrUrl = `${SITE_URL}?attend=${sessionId}`;
     html += `<div style="margin-top:16px;padding:14px;background:var(--nhs-bg);border-radius:8px;text-align:center;">
       <div style="font-size:13px;font-weight:600;color:var(--nhs-dark-blue);margin-bottom:8px;">QR Code for Self-Registration</div>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}" alt="QR Code" style="border-radius:8px;">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&amp;data=${encodeURIComponent(qrUrl)}" alt="QR Code" style="border-radius:8px;">
       <div style="font-size:11px;color:var(--nhs-grey);margin-top:6px;">Learners scan this to mark attendance</div>
     </div>`;
     body.innerHTML = html;
@@ -218,7 +218,7 @@ async function autoSendFeedbackRequests(sessionId, learnerIds) {
         const tok = await getOrCreateFeedbackToken(sessionId, r.id);
         if (tok) fbUrl = feedbackUrlWithToken(sessionId, tok);
       } catch(te) { console.warn('Token issue failed for learner', r.id, te); }
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(fbUrl)}`;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&amp;data=${encodeURIComponent(fbUrl)}`;
       const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
         <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
           <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
@@ -368,10 +368,28 @@ async function doQuickFeedbackLookup() {
   const sessionId = window._pendingQuickFeedback;
   if (!email) { showToast('Please enter your email'); return; }
   if (!sessionId) { showToast('Session reference lost. Please reopen the link.'); return; }
+  if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) {
+    showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return;
+  }
+  if (window.logInteraction) logInteraction('quick_feedback_lookup', { email, sessionId });
   try {
     const rows = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*&limit=1`);
     if (!rows.length) {
-      showToast('Email not recognised. Please contact the teaching team to be added.');
+      // v3.7.0: instead of dead-ending the user, offer self-registration via
+      // verified email code so they can submit feedback after sign-up.
+      if (window.logInteraction) logInteraction('quick_feedback_unknown_email', { email });
+      closeModal('quickFeedbackModal');
+      window._pendingFeedback = sessionId;
+      delete window._pendingQuickFeedback;
+      showToast('No account found — let\'s create one quickly.', 3500);
+      openLearnerLoginModal();
+      setTimeout(() => {
+        try {
+          showLearnerRegister();
+          const re = document.getElementById('regEmail');
+          if (re) re.value = email;
+        } catch(_) {}
+      }, 150);
       return;
     }
     currentLearner = rows[0];
@@ -382,6 +400,7 @@ async function doQuickFeedbackLookup() {
     openFeedbackModal(parseInt(sessionId));
   } catch(e) {
     console.warn('Quick feedback lookup failed:', e);
+    if (window.logError) logError('warn','flow_step','quick_feedback_lookup_failed', { email, error: e.message });
     showToast('Lookup failed. Please try again.');
   }
 }
