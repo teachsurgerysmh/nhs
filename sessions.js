@@ -670,16 +670,75 @@ async function loadDetailAttendance(sessionId) {
   const container = document.getElementById('detailAttendanceSummary');
   if (!container) return;
   try {
+    const ev = events.find(e => e.id === sessionId);
     const att = await sbGet('attendance', `session_id=eq.${sessionId}&status=neq.removed&select=learner_id`);
-    if (att.length === 0) { container.innerHTML = ''; return; }
-    const ids = att.map(a => a.learner_id);
-    const learners = await sbGet('learners', `id=in.(${ids.join(',')})&select=id,name`);
-    const nameMap = {}; learners.forEach(l => nameMap[l.id] = l.name);
-    const names = ids.map(id => nameMap[id] || 'Unknown').sort();
-    container.innerHTML = `<div class="attendance-summary">
-      <h4>Attendance (${names.length})</h4>
-      <div>${names.map(n => '<span class="att-name-chip">' + esc(n) + '</span>').join('')}</div>
-    </div>`;
+
+    // Get daily_rota count for this session's date (turnout denominator)
+    let rotaCount = 0;
+    let rotaNames = [];
+    if (ev && (isAdmin || (typeof canMarkAttendance === 'function' && canMarkAttendance(sessionId)))) {
+      const evDate = eventToDate(ev);
+      if (evDate) {
+        const dateStr = evDate.toISOString().split('T')[0];
+        try {
+          const rota = await sbGet('daily_rota', `rota_date=eq.${dateStr}&select=learner_id`);
+          const uniqueIds = [...new Set(rota.map(r => r.learner_id))];
+          rotaCount = uniqueIds.length;
+          if (uniqueIds.length > 0) {
+            const rotaLearners = await sbGet('learners', `id=in.(${uniqueIds.join(',')})&select=id,name`);
+            rotaNames = rotaLearners.map(l => l.name).sort();
+          }
+        } catch(e) {}
+      }
+    }
+
+    if (att.length === 0 && rotaCount === 0) { container.innerHTML = ''; return; }
+
+    let html = '';
+
+    // Turnout stat (admin/managers only)
+    if (rotaCount > 0) {
+      const attended = att.length;
+      const pct = Math.round((attended / rotaCount) * 100);
+      const color = pct >= 75 ? 'var(--nhs-green)' : pct >= 50 ? 'var(--nhs-orange)' : 'var(--nhs-red)';
+      html += `<div style="background:var(--nhs-bg);border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:28px;font-weight:700;color:${color};">${pct}%</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--nhs-dark-blue);">Turnout: ${attended}/${rotaCount} rostered</div>
+            <div style="font-size:11px;color:var(--nhs-grey);">${rotaCount - attended} absent from rota</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Attendance names
+    if (att.length > 0) {
+      const ids = att.map(a => a.learner_id);
+      const learners = await sbGet('learners', `id=in.(${ids.join(',')})&select=id,name`);
+      const nameMap = {}; learners.forEach(l => nameMap[l.id] = l.name);
+      const names = ids.map(id => nameMap[id] || 'Unknown').sort();
+      html += `<div class="attendance-summary">
+        <h4>Attended (${names.length})</h4>
+        <div>${names.map(n => '<span class="att-name-chip">' + esc(n) + '</span>').join('')}</div>
+      </div>`;
+
+      // Show who was rostered but absent
+      if (rotaNames.length > 0) {
+        const attendedSet = new Set(names.map(n => n.toLowerCase()));
+        const absent = rotaNames.filter(n => !attendedSet.has(n.toLowerCase()));
+        if (absent.length > 0) {
+          html += `<div class="attendance-summary" style="margin-top:8px;">
+            <h4 style="color:var(--nhs-red);">Absent from Rota (${absent.length})</h4>
+            <div>${absent.map(n => '<span class="att-name-chip" style="background:#fde8e8;color:#d5281b;">' + esc(n) + '</span>').join('')}</div>
+          </div>`;
+        }
+      }
+    } else if (rotaCount > 0) {
+      html += `<div class="attendance-summary"><h4>Attendance (0)</h4><p style="color:var(--nhs-grey);font-size:12px;">No attendance recorded yet.</p></div>`;
+    }
+
+    container.innerHTML = html;
   } catch(e) { container.innerHTML = ''; }
 }
 

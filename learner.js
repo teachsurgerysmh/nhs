@@ -2202,12 +2202,28 @@ async function loadAbsencesView() {
   const container = document.getElementById('absencesView');
   container.innerHTML = '<div style="text-align:center;padding:30px;"><div class="loading-spinner"></div> Loading absence data...</div>';
   try {
-    const [absences, learners] = await Promise.all([
+    const [absences, learners, rotaData, attendanceData] = await Promise.all([
       sbGet('absence_reasons', 'order=created_at.desc&select=*'),
-      sbGet('learners', 'select=id,name,grade,placement')
+      sbGet('learners', 'select=id,name,grade,placement'),
+      sbGet('daily_rota', 'select=rota_date,learner_id'),
+      sbGet('attendance', 'status=in.(approved,pending)&select=session_id,learner_id')
     ]);
     const learnerMap = {};
     learners.forEach(l => { learnerMap[l.id] = l; });
+
+    // Build rota counts per date
+    const rotaByDate = {};
+    rotaData.forEach(r => {
+      if (!rotaByDate[r.rota_date]) rotaByDate[r.rota_date] = new Set();
+      rotaByDate[r.rota_date].add(r.learner_id);
+    });
+
+    // Build attendance sets per session
+    const attBySession = {};
+    attendanceData.forEach(a => {
+      if (!attBySession[a.session_id]) attBySession[a.session_id] = new Set();
+      attBySession[a.session_id].add(a.learner_id);
+    });
 
     // Stats
     const submitted = absences.filter(a => a.submitted_at);
@@ -2227,6 +2243,54 @@ async function loadAbsencesView() {
       <div class="stat-card"><div class="stat-num" style="color:var(--nhs-orange);">${pending.length}</div><div class="stat-label">Awaiting</div></div>
       <div class="stat-card"><div class="stat-num">${submitted.length ? Math.round(submitted.length/absences.length*100) : 0}%</div><div class="stat-label">Response Rate</div></div>
     </div>`;
+
+    // Per-session turnout table
+    const pastSessions = events.filter(e => {
+      const d = eventToDate(e);
+      return d && d < new Date() && e.status !== 'cancelled' && e.published;
+    }).sort((a,b) => (eventToDate(b)||0)-(eventToDate(a)||0));
+
+    const sessionsWithRota = pastSessions.filter(s => {
+      const d = eventToDate(s);
+      if (!d) return false;
+      const dateStr = d.toISOString().split('T')[0];
+      return rotaByDate[dateStr] && rotaByDate[dateStr].size > 0;
+    });
+
+    if (sessionsWithRota.length > 0) {
+      // Overall turnout
+      let totalRostered = 0, totalAttended = 0;
+      sessionsWithRota.forEach(s => {
+        const d = eventToDate(s);
+        const dateStr = d.toISOString().split('T')[0];
+        const rostered = rotaByDate[dateStr] ? rotaByDate[dateStr].size : 0;
+        const attended = attBySession[s.id] ? attBySession[s.id].size : 0;
+        totalRostered += rostered;
+        totalAttended += attended;
+      });
+      const overallPct = totalRostered > 0 ? Math.round((totalAttended / totalRostered) * 100) : 0;
+
+      html += `<div class="dashboard-card" style="margin-bottom:16px;">
+        <h4>Session Turnout <span style="font-weight:400;color:var(--nhs-grey);font-size:13px;">— overall ${overallPct}% (${totalAttended}/${totalRostered})</span></h4>
+        <div style="overflow-x:auto;margin-top:10px;"><table style="width:100%;font-size:13px;border-collapse:collapse;">
+          <tr style="background:var(--nhs-bg);"><th style="padding:8px;text-align:left;">Session</th><th style="padding:8px;text-align:left;">Date</th><th style="padding:8px;text-align:center;">Rostered</th><th style="padding:8px;text-align:center;">Attended</th><th style="padding:8px;text-align:center;">Turnout</th></tr>`;
+      sessionsWithRota.forEach(s => {
+        const d = eventToDate(s);
+        const dateStr = d.toISOString().split('T')[0];
+        const rostered = rotaByDate[dateStr] ? rotaByDate[dateStr].size : 0;
+        const attended = attBySession[s.id] ? attBySession[s.id].size : 0;
+        const pct = rostered > 0 ? Math.round((attended / rostered) * 100) : 0;
+        const color = pct >= 75 ? 'var(--nhs-green)' : pct >= 50 ? 'var(--nhs-orange)' : 'var(--nhs-red)';
+        html += `<tr style="border-bottom:1px solid var(--nhs-pale-grey);">
+          <td style="padding:8px;font-weight:600;">${esc(s.topic||'TBD')}</td>
+          <td style="padding:8px;font-size:12px;">${esc(s.day||'')} ${esc(s.date||'')} ${esc(s.month||'')}</td>
+          <td style="padding:8px;text-align:center;">${rostered}</td>
+          <td style="padding:8px;text-align:center;">${attended}</td>
+          <td style="padding:8px;text-align:center;font-weight:700;color:${color};">${pct}%</td>
+        </tr>`;
+      });
+      html += '</table></div></div>';
+    }
 
     // Reason breakdown
     if (submitted.length > 0) {
