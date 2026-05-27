@@ -126,7 +126,7 @@ async function linkAdminToLearner() {
   };
   const email = (adminEmails[currentUser.username] || (currentUser.username + '@nbt.nhs.uk')).toLowerCase();
   try {
-    const data = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
+    const data = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=${LEARNER_FIELDS}`);
     if (data.length > 0) {
       currentLearner = data[0];
     } else {
@@ -530,7 +530,7 @@ async function doLearnerRegister() {
   if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) { showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return; }
 
   // Check for existing learner with same email (case-insensitive)
-  const existing = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
+  const existing = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=${LEARNER_FIELDS}`);
   if (existing.length > 0) {
     showToast('An account with this email already exists. Please log in instead.', 4000);
     return;
@@ -690,7 +690,7 @@ async function linkTeacherToLearner() {
   if (!currentTeacher) return;
   const email = currentTeacher.email.toLowerCase();
   try {
-    const data = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
+    const data = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=${LEARNER_FIELDS}`);
     if (data.length > 0) {
       currentLearner = data[0];
       sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
