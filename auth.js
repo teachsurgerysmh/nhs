@@ -1,6 +1,5 @@
 // Southmead Surgical Teaching — auth.js
-// v3.7.0 — Email-verified registration + reset. Single unified learner flow.
-// Admin authentication, learner authentication, registration, view toggle.
+// Admin authentication, learner authentication, registration, view toggle
 
 // ── Admin Auth ──
 // Password hashing moved server-side (authenticate Edge Function) — v3.6.8
@@ -25,6 +24,7 @@ async function doLogin() {
     await loadEvents();
     renderAll();
     switchView('adminDash');
+    // Start the guided tour after a short delay
     setTimeout(startDemoTour, 1200);
     return;
   }
@@ -46,7 +46,6 @@ async function doLogin() {
   } catch(e) {
     console.error('Login error:', e);
     logQI('admin_login', { metadata: { result: 'failed', username: user } });
-    if (window.logError) logError('warn','auth_failure','Admin login failed', { username: user, error: e.message });
     showToast(e.message || 'Login failed - check connection');
   }
 }
@@ -63,6 +62,7 @@ function endDemoMode() {
 }
 
 function doLogout() {
+  // Clean up demo state if active
   if (isDemoMode) {
     isDemoMode = false;
     sessionStorage.removeItem('sst_demo');
@@ -92,22 +92,15 @@ function setAdmin(val) {
   isAdmin = val;
   document.body.classList.toggle('is-admin', val);
   updateHeaderButtons();
-  const logTab = document.getElementById('logTab');
-  if (val && currentUser?.role === 'admin') {
-    logTab.style.cssText = '';
-  } else {
-    logTab.style.cssText = 'display:none !important;';
-  }
-  const errorLogTab = document.getElementById('errorLogTab');
-  if (errorLogTab) {
-    errorLogTab.style.cssText = (val && currentUser?.role === 'admin') ? '' : 'display:none !important;';
-  }
-  const qiDashTab = document.getElementById('qiDashTab');
-  if (qiDashTab) {
-    const u = (currentUser?.username || '').toLowerCase();
-    const isSuketu = val && (u === 'suketu' || u === 'suketubatra');
-    qiDashTab.style.cssText = isSuketu ? '' : 'display:none !important;';
-  }
+  // Deep analytics tabs — Suketu only (not managers, not demo)
+  const u = (currentUser?.username || '').toLowerCase();
+  const isSuketu = val && !isDemoMode && (u === 'suketu' || u === 'suketubatra');
+  const restrictedTabs = ['logTab', 'qiDashTab', 'errorLogTab', 'surveyResultsTab', 'inboxTab'];
+  restrictedTabs.forEach(tabId => {
+    const tab = document.getElementById(tabId);
+    if (tab) tab.style.cssText = isSuketu ? '' : 'display:none !important;';
+  });
+  // Auto-link admin to learner + teacher records
   if (val && currentUser) {
     linkAdminToLearner();
     linkAdminToTeacher();
@@ -116,6 +109,15 @@ function setAdmin(val) {
 
 async function linkAdminToLearner() {
   if (!currentUser) return;
+  if (isDemoMode) {
+    // Use synthetic demo learner — never query real DB
+    currentLearner = { id: 8001, name: 'Demo Admin', email: 'demo@nbt.nhs.uk', grade: 'Consultant', placement: 'Admin', verified: true };
+    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    document.body.classList.add('is-learner');
+    updateHeaderButtons();
+    return;
+  }
+  // Admin email mapping
   const adminEmails = {
     suketu: 'Suketu.Batra@nbt.nhs.uk',
     ilgin: 'Ilgin.Kilic@nbt.nhs.uk',
@@ -128,6 +130,8 @@ async function linkAdminToLearner() {
     if (data.length > 0) {
       currentLearner = data[0];
     } else {
+      // Create a learner record for this admin
+      // Find matching contact for auto-link
       let adminContactId = null;
       try {
         const contactMatch = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=id`);
@@ -146,6 +150,7 @@ async function linkAdminToLearner() {
     }
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     document.body.classList.add('is-learner');
+    // Show My Dashboard tab for admins
     updateHeaderButtons();
   } catch(e) {
     console.warn('Could not link admin to learner:', e);
@@ -154,6 +159,12 @@ async function linkAdminToLearner() {
 
 async function linkAdminToTeacher() {
   if (!currentUser) return;
+  if (isDemoMode) {
+    currentTeacher = { id: 9001, name: 'Demo Teacher', email: 'demo@nhs.net', specialty: 'General Surgery', is_manager: true };
+    sessionStorage.setItem('sst_teacher', JSON.stringify(currentTeacher));
+    updateHeaderButtons();
+    return;
+  }
   const adminEmails = {
     suketu: 'Suketu.Batra@nbt.nhs.uk',
     ilgin: 'Ilgin.Kilic@nbt.nhs.uk',
@@ -184,6 +195,7 @@ function updateHeaderButtons() {
   const dashboardTab = document.getElementById('dashboardTab');
   const teacherDashTab = document.getElementById('teacherDashTab');
 
+  // Hide all first
   [loginBtn, logoutBtn, learnerLoginBtn, learnerLogoutBtn, teacherLoginBtn, teacherLogoutBtn].forEach(b => { if(b) b.style.display = 'none'; });
   [adminBadge, learnerBadge, teacherBadge].forEach(b => { if(b) b.classList.remove('show'); });
   if (dashboardTab) dashboardTab.style.display = 'none';
@@ -194,11 +206,13 @@ function updateHeaderButtons() {
     logoutBtn.textContent = 'Admin Logout';
     adminBadge.classList.add('show');
     if (dashboardTab) dashboardTab.style.display = '';
+    // Show teacher dashboard tab if admin is also a teacher
     if (currentTeacher && teacherDashTab) {
       teacherDashTab.style.display = '';
       teacherBadge.classList.add('show');
       teacherBadge.textContent = currentTeacher.name.split(' ').pop();
     }
+    // Show learner badge if admin is also a learner
     if (currentLearner) {
       learnerBadge.classList.add('show');
       learnerBadge.textContent = currentLearner.name.split(' ')[0];
@@ -208,6 +222,7 @@ function updateHeaderButtons() {
     teacherBadge.classList.add('show');
     teacherBadge.textContent = currentTeacher.name.split(' ').pop();
     if (teacherDashTab) teacherDashTab.style.display = '';
+    // If also a learner, show learner dashboard tab too
     if (currentLearner && dashboardTab) {
       dashboardTab.style.display = '';
       learnerBadge.classList.add('show');
@@ -218,6 +233,7 @@ function updateHeaderButtons() {
     learnerBadge.classList.add('show');
     learnerBadge.textContent = currentLearner.name.split(' ')[0];
     if (dashboardTab) dashboardTab.style.display = '';
+    // If also a teacher, show teacher dashboard tab too
     if (currentTeacher && teacherDashTab) {
       teacherDashTab.style.display = '';
       teacherBadge.classList.add('show');
@@ -231,17 +247,19 @@ function updateHeaderButtons() {
 }
 
 function checkSession() {
-  restoreAuthToken();
+  restoreAuthToken(); // Restore JWT from sessionStorage
   const stored = sessionStorage.getItem('sst_user');
   if (stored) {
     try {
       currentUser = JSON.parse(stored);
       setAdmin(true);
+      // Restore demo mode if it was active
       if (sessionStorage.getItem('sst_demo') === 'true') {
         isDemoMode = true;
         document.getElementById('demoBanner').style.display = 'block';
         document.querySelector('.header').style.top = '36px';
         document.querySelector('.nav-bar').style.top = 'calc(72px + 36px)';
+        // Show resume tour button if tour was in progress
         if (demoTourCurrentStep > 0) {
           document.getElementById('resumeTourBtn').style.display = 'inline-block';
         }
@@ -258,16 +276,12 @@ function openLearnerLoginModal() {
   document.getElementById('learnerPin').value = '';
   openModal('learnerLoginModal');
   setTimeout(() => document.getElementById('learnerEmail').focus(), 100);
-  if (window.logInteraction) logInteraction('open_learner_login', {});
 }
 
 function showLearnerLoginForm() {
   document.getElementById('learnerLoginForm').style.display = '';
   document.getElementById('learnerRegisterForm').style.display = 'none';
   document.getElementById('learnerPinDisplay').style.display = 'none';
-  const fp = document.getElementById('forgotPasswordForm'); if (fp) fp.style.display = 'none';
-  const vc = document.getElementById('verifyCodeForm'); if (vc) vc.style.display = 'none';
-  const ns = document.getElementById('newSetPasswordForm'); if (ns) ns.style.display = 'none';
   document.getElementById('learnerModalTitle').textContent = 'Learner Login';
 }
 
@@ -275,11 +289,7 @@ function showLearnerRegister() {
   document.getElementById('learnerLoginForm').style.display = 'none';
   document.getElementById('learnerRegisterForm').style.display = '';
   document.getElementById('learnerPinDisplay').style.display = 'none';
-  const fp = document.getElementById('forgotPasswordForm'); if (fp) fp.style.display = 'none';
-  const vc = document.getElementById('verifyCodeForm'); if (vc) vc.style.display = 'none';
-  const ns = document.getElementById('newSetPasswordForm'); if (ns) ns.style.display = 'none';
   document.getElementById('learnerModalTitle').textContent = 'Learner Registration';
-  if (window.logInteraction) logInteraction('open_learner_register', {});
 }
 
 async function doLearnerLogin() {
@@ -289,10 +299,7 @@ async function doLearnerLogin() {
   try {
     const result = await callAuth({ action: 'login', type: 'learner', email, password: pin });
     if (result.needs_setup) {
-      // Account exists but no password yet — go through verified setup flow
-      showToast('Welcome — let\'s verify your email and set a password');
-      window._verifyFlow = { mode: 'setup_existing', email, name: result.user?.name || '' };
-      await sendVerificationCode(email, 'register');
+      showSetupPinForm(result.user, pin);
       return;
     }
     if (result.access_token) setAuthToken(result.access_token);
@@ -306,279 +313,176 @@ async function doLearnerLogin() {
     showToast('Welcome, ' + learner.name + '!');
     updateHeaderButtons();
     handleLearnerURLParams();
-  } catch(e) {
-    console.error('Learner login error:', e);
-    if (window.logError) logError('warn','auth_failure','Learner login failed', { email, error: e.message, not_found: !!e._notFound });
-    // Detect "account not found" → offer to register with email verification
-    if (e._notFound || (e.message && /Account not found/i.test(e.message))) {
-      offerRegistrationForUnknownEmail(email);
-      return;
-    }
-    showToast(e.message || 'Login failed');
-  }
+  } catch(e) { console.error('Learner login error:', e); showToast(e.message || 'Login failed'); }
 }
 
-// When login finds no account, slide into the registration form pre-filled.
-function offerRegistrationForUnknownEmail(email) {
-  showLearnerRegister();
-  const e = document.getElementById('regEmail'); if (e) e.value = email;
-  showToast('No account found — let\'s create one. Fill in your details below.', 4000);
-}
-
-// ============================================================
-// REGISTRATION VIA EMAIL VERIFICATION
-// Step 1: collect profile details → request code
-// Step 2: enter 6-digit code from email
-// Step 3: set password (atomic create+verify)
-// ============================================================
-async function doLearnerRegister() {
-  const name = document.getElementById('regName').value.trim();
-  const email = document.getElementById('regEmail').value.trim().toLowerCase();
-  const grade = document.getElementById('regGrade').value;
-  const placement = document.getElementById('regPlacement').value;
-  const placementStart = document.getElementById('regPlacementStart').value;
-  const placementEnd = document.getElementById('regPlacementEnd').value;
-  const rotationBlock = document.getElementById('regRotationBlock').value;
-
-  if (!name || !email || !grade || !placement) { showToast('Please fill in all required fields'); return; }
-  if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) {
-    showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return;
-  }
-
-  // Stash profile fields — they'll be sent with register_with_code
-  window._verifyFlow = {
-    mode: 'register_new', email, name, grade, placement,
-    placementStart, placementEnd, rotationBlock
-  };
-  await sendVerificationCode(email, 'register');
-}
-
-// Sends the 6-digit code and shifts the modal to the code-entry view.
-async function sendVerificationCode(email, purpose) {
-  try {
-    const result = await callAuth({ action: 'request_email_code', type: 'learner', email, purpose });
-    if (result.already_registered) {
-      showToast('An account already exists for this email. Please log in instead.', 4000);
-      showLearnerLoginForm();
-      const f = document.getElementById('learnerEmail'); if (f) f.value = email;
-      return;
-    }
-    logQI('email_code_requested', { actor_type: 'learner', actor_email: email, metadata: { purpose, sent: !!result.sent } });
-    if (window.logInteraction) logInteraction('email_code_requested', { email, purpose, sent: !!result.sent });
-    showVerifyCodeForm(email, purpose, result.ttl_minutes || 15);
-  } catch(e) {
-    console.error('Request code failed:', e);
-    if (window.logError) logError('warn','auth_failure','Verification code request failed', { email, error: e.message });
-    showToast(e.message || 'Could not send verification code. Please try again.');
-  }
-}
-
-function showVerifyCodeForm(email, purpose, ttlMin) {
-  document.getElementById('learnerLoginForm').style.display = 'none';
-  document.getElementById('learnerRegisterForm').style.display = 'none';
-  document.getElementById('learnerPinDisplay').style.display = 'none';
-  const fp = document.getElementById('forgotPasswordForm'); if (fp) fp.style.display = 'none';
-  const ns = document.getElementById('newSetPasswordForm'); if (ns) ns.style.display = 'none';
-  document.getElementById('learnerModalTitle').textContent =
-    purpose === 'reset' ? 'Reset Password — Verify Email' : 'Verify Email';
-
-  let vc = document.getElementById('verifyCodeForm');
-  if (!vc) {
-    vc = document.createElement('div');
-    vc.id = 'verifyCodeForm';
-    document.getElementById('learnerModalBody').appendChild(vc);
-  }
-  vc.style.display = '';
-  vc.innerHTML = `
-    <div style="background:#e0f5fa;border-left:3px solid var(--nhs-aqua);padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:14px;font-size:13px;color:#231f20;">
-      We've sent a 6-digit code to <strong>${esc(email)}</strong>. It expires in ${ttlMin} minutes.<br>
-      Check your inbox (and spam folder).
+function showSetupPinForm(learner, attemptedPin) {
+  const body = document.getElementById('learnerLoginForm');
+  body.innerHTML = `
+    <div style="text-align:center;padding:10px 0;">
+      <div style="font-size:36px;margin-bottom:8px;">👋</div>
+      <h3 style="color:var(--nhs-dark-blue);margin-bottom:4px;">Welcome, ${esc(learner.name)}!</h3>
+      <p style="color:var(--nhs-grey);font-size:13px;margin-bottom:16px;">Your account has been pre-created. Set a 6-digit PIN to get started.</p>
     </div>
-    <label>6-digit code</label>
-    <input type="text" id="verifyCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="e.g. 123456" style="font-size:20px;letter-spacing:6px;text-align:center;">
-    <div style="margin-top:14px;text-align:center;">
-      <button class="btn btn-green" id="verifyCodeBtn" onclick="doVerifyCode()" style="width:100%;">Verify Code</button>
-    </div>
-    <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--nhs-grey);">
-      Didn't receive it? <a href="#" onclick="resendVerificationCode('${esc(email)}','${esc(purpose)}');return false;">Resend code</a>
-    </div>
-    <div style="margin-top:8px;text-align:center;font-size:12px;color:var(--nhs-grey);">
-      <a href="#" onclick="showLearnerLoginForm();return false;">Back to login</a>
-    </div>`;
-  setTimeout(() => document.getElementById('verifyCode')?.focus(), 100);
-}
-
-async function resendVerificationCode(email, purpose) {
-  try {
-    await callAuth({ action: 'request_email_code', type: 'learner', email, purpose });
-    showToast('Code resent. Check your inbox.');
-  } catch(e) {
-    showToast(e.message || 'Could not resend code');
-  }
-}
-
-async function doVerifyCode() {
-  const flow = window._verifyFlow || {};
-  const code = (document.getElementById('verifyCode').value || '').trim();
-  if (!code || code.length < 4) { showToast('Enter the 6-digit code'); return; }
-  const email = flow.email;
-  const purpose = flow.mode === 'reset' ? 'reset' : 'register';
-  try {
-    const result = await callAuth({ action: 'verify_email_code', type: 'learner', email, code, purpose });
-    if (!result.verification_token) { showToast('Could not verify code'); return; }
-    flow.verification_token = result.verification_token;
-    window._verifyFlow = flow;
-    if (window.logInteraction) logInteraction('email_code_verified', { email, purpose });
-    showSetPasswordForm(email, purpose);
-  } catch(e) {
-    if (window.logError) logError('warn','auth_failure','Email code verification failed', { email, error: e.message });
-    showToast(e.message || 'Code incorrect or expired');
-  }
-}
-
-function showSetPasswordForm(email, purpose) {
-  const vc = document.getElementById('verifyCodeForm'); if (vc) vc.style.display = 'none';
-  document.getElementById('learnerModalTitle').textContent =
-    purpose === 'reset' ? 'Reset Password' : 'Set a Password';
-  let ns = document.getElementById('newSetPasswordForm');
-  if (!ns) {
-    ns = document.createElement('div');
-    ns.id = 'newSetPasswordForm';
-    document.getElementById('learnerModalBody').appendChild(ns);
-  }
-  ns.style.display = '';
-  ns.innerHTML = `
-    <div style="background:#e6f4ea;border-left:3px solid var(--nhs-green);padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:14px;font-size:13px;color:#231f20;">
-      ✓ Email verified. Set your password to ${purpose === 'reset' ? 'reset your account' : 'complete sign-up'}.
-    </div>
-    <label>New password (min 6 characters)</label>
-    <input type="password" id="newPwd1" placeholder="Choose a password" autocomplete="new-password">
+    <label>Choose a password</label>
+    <input type="password" id="setupPin1" placeholder="Enter password" style="margin-bottom:8px;">
     <label>Confirm password</label>
-    <input type="password" id="newPwd2" placeholder="Re-enter password" autocomplete="new-password">
-    <div style="margin-top:14px;text-align:center;">
-      <button class="btn btn-green" onclick="doFinishVerifiedFlow()" style="width:100%;">${purpose === 'reset' ? 'Reset Password' : 'Create Account'}</button>
-    </div>`;
-  setTimeout(() => document.getElementById('newPwd1')?.focus(), 100);
+    <input type="password" id="setupPin2" placeholder="Confirm password">
+    <label style="margin-top:12px;">Grade</label>
+    <select id="setupGrade"><option value="FY1">FY1</option><option value="FY2">FY2</option><option value="CT1">CT1</option><option value="CT2">CT2</option><option value="ST3">ST3</option><option value="ST4">ST4</option><option value="ST5">ST5</option><option value="ST6">ST6</option><option value="ST7">ST7</option><option value="ST8">ST8</option><option value="Registrar">Registrar</option><option value="Consultant">Consultant</option><option value="Other">Other</option></select>
+    <label>Placement / Firm</label>
+    <select id="setupPlacement"><option value="">-- Select --</option><option value="UGI">UGI</option><option value="LGI / Colorectal">LGI / Colorectal</option><option value="Transplant">Transplant</option><option value="Vascular">Vascular</option><option value="Other">Other</option></select>
+    <label>Rotation Block</label>
+    <select id="setupRotation" onchange="onSetupRotationChange()"><option value="">-- Select --</option><option value="aug_dec">Aug – Dec</option><option value="dec_apr">Dec – Apr</option><option value="apr_aug">Apr – Aug</option></select>
+    <input type="hidden" id="setupStart" value="">
+    <input type="hidden" id="setupEnd" value="">
+    <div style="margin-top:16px;text-align:center;">
+      <button class="btn btn-green" onclick="completeAccountSetup(${learner.id})">Set Up Account</button>
+    </div>
+  `;
 }
 
-async function doFinishVerifiedFlow() {
-  const flow = window._verifyFlow || {};
-  const p1 = document.getElementById('newPwd1').value.trim();
-  const p2 = document.getElementById('newPwd2').value.trim();
-  if (!p1 || p1.length < 6) { showToast('Password must be at least 6 characters'); return; }
-  if (p1 !== p2) { showToast('Passwords do not match'); return; }
+function onSetupRotationChange() {
+  const block = document.getElementById('setupRotation').value;
+  if (!block) return;
+  const now = new Date();
+  const yr = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  const blocks = {
+    aug_dec: { start: yr + '-08-01', end: yr + '-12-31' },
+    dec_apr: { start: yr + '-12-01', end: (yr+1) + '-04-30' },
+    apr_aug: { start: (yr+1) + '-04-01', end: (yr+1) + '-08-31' }
+  };
+  const d = blocks[block];
+  if (d) { document.getElementById('setupStart').value = d.start; document.getElementById('setupEnd').value = d.end; }
+}
+
+async function completeAccountSetup(learnerId) {
+  const pin1 = document.getElementById('setupPin1').value.trim();
+  const pin2 = document.getElementById('setupPin2').value.trim();
+  const grade = document.getElementById('setupGrade').value;
+  const placement = document.getElementById('setupPlacement').value;
+  const rotation = document.getElementById('setupRotation').value;
+  const pStart = document.getElementById('setupStart').value;
+  const pEnd = document.getElementById('setupEnd').value;
+
+  if (!pin1 || pin1.length < 4) { showToast('Password must be at least 4 characters'); return; }
+  if (pin1 !== pin2) { showToast('PINs do not match'); return; }
+  if (!placement) { showToast('Please select a placement'); return; }
+
   try {
-    if (flow.mode === 'reset') {
-      await callAuth({
-        action: 'reset_password', type: 'learner',
-        email: flow.email, new_password: p1,
-        verification_token: flow.verification_token
-      });
-      logQI('password_reset', { actor_type: 'learner', actor_email: flow.email, metadata: { who: 'learner', verified: true } });
-      showToast('Password reset! You can now log in.');
-      showLearnerLoginForm();
-      const ef = document.getElementById('learnerEmail'); if (ef) ef.value = flow.email;
-      window._verifyFlow = null;
-      return;
-    }
-    // register_new OR setup_existing — both use register_with_code
-    const payload = {
-      action: 'register_with_code', type: 'learner',
-      email: flow.email, password: p1,
-      verification_token: flow.verification_token,
-      name: flow.name, grade: flow.grade, placement: flow.placement,
-      placement_start: flow.placementStart || null,
-      placement_end: flow.placementEnd || null,
-      rotation_block: flow.rotationBlock || null,
-    };
-    const result = await callAuth(payload);
-    if (result.access_token) setAuthToken(result.access_token);
-    currentLearner = result.user;
+    // Set password via server-side Edge Function
+    const authResult = await callAuth({ action: 'setup', type: 'learner', email: document.getElementById('learnerEmail')?.value?.trim()?.toLowerCase() || '', password: pin1 });
+    if (authResult.access_token) setAuthToken(authResult.access_token);
+    // Update profile fields directly (non-sensitive data)
+    const updates = { verified: true, grade, placement, rotation_block: rotation || null };
+    if (pStart) updates.placement_start = pStart;
+    if (pEnd) updates.placement_end = pEnd;
+    await sbUpdate('learners', learnerId, updates);
+
+    currentLearner = { ...authResult.user, ...updates };
     sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
-    logQI('learner_register', { metadata: { grade: flow.grade, placement: flow.placement, rotation_block: flow.rotationBlock || null, verified: true } });
-    if (window.logInteraction) logInteraction('learner_registered', { email: flow.email });
-    closeModal('learnerLoginModal');
-    showToast('Welcome, ' + (currentLearner.name || 'colleague') + '! Your account is ready.');
-    updateHeaderButtons();
-    window._verifyFlow = null;
-    handleLearnerURLParams();
+
+    // Show success with PIN reminder
+    document.getElementById('learnerLoginForm').innerHTML = `
+      <div style="text-align:center;padding:20px;">
+        <div style="font-size:36px;margin-bottom:8px;">✅</div>
+        <h3 style="color:var(--nhs-green);">Account Set Up!</h3>
+        <p style="color:var(--nhs-grey);font-size:13px;margin-top:8px;">Your password has been set. Use it with your email to log in next time.</p>
+        <button class="btn btn-green" style="margin-top:16px;" onclick="closeModal('learnerLoginModal');location.reload();">Continue</button>
+      </div>`;
   } catch(e) {
-    console.error('Finish verified flow failed:', e);
-    if (window.logError) logError('error','auth_failure','Verified registration/reset failed', { email: flow.email, mode: flow.mode, error: e.message });
-    showToast(e.message || 'Could not complete. Please try again.');
+    console.error('Account setup error:', e);
+    showToast('Setup failed. Please try again.');
   }
 }
 
-// ============================================================
-// FORGOT PASSWORD — now via verification code
-// ============================================================
 function showForgotPassword() {
   document.getElementById('learnerLoginForm').style.display = 'none';
   document.getElementById('learnerRegisterForm').style.display = 'none';
   document.getElementById('learnerPinDisplay').style.display = 'none';
-  const vc = document.getElementById('verifyCodeForm'); if (vc) vc.style.display = 'none';
-  const ns = document.getElementById('newSetPasswordForm'); if (ns) ns.style.display = 'none';
   document.getElementById('learnerModalTitle').textContent = 'Reset Password';
-  let fp = document.getElementById('forgotPasswordForm');
-  if (!fp) {
-    fp = document.createElement('div');
-    fp.id = 'forgotPasswordForm';
-    document.getElementById('learnerModalBody').appendChild(fp);
+  // Create forgot password form
+  let fpDiv = document.getElementById('forgotPasswordForm');
+  if (!fpDiv) {
+    fpDiv = document.createElement('div');
+    fpDiv.id = 'forgotPasswordForm';
+    document.getElementById('learnerModalBody').appendChild(fpDiv);
   }
-  fp.style.display = '';
-  fp.innerHTML = `
-    <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">Enter your NHS email. We'll send a 6-digit verification code so we know it's really you.</p>
+  fpDiv.style.display = '';
+  fpDiv.innerHTML = `
+    <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">Enter your NHS email to reset your password.</p>
     <label>NHS Email</label>
-    <input type="email" id="fpEmail" placeholder="name@nhs.net or name@nbt.nhs.uk" autocomplete="email">
+    <input type="email" id="fpEmail" placeholder="name@nhs.net or name@nbt.nhs.uk">
+    <div id="fpNewFields" style="display:none;margin-top:12px;">
+      <label>New Password</label>
+      <input type="password" id="fpNewPin1" placeholder="Enter new password">
+      <label>Confirm Password</label>
+      <input type="password" id="fpNewPin2" placeholder="Confirm new password">
+    </div>
     <div style="margin-top:14px;text-align:center;">
-      <button class="btn btn-green" id="fpSubmitBtn" onclick="handleForgotPassword()" style="width:100%;">Send Verification Code</button>
+      <button class="btn btn-green" id="fpSubmitBtn" onclick="handleForgotPassword()" style="width:100%;">Verify Email</button>
     </div>
     <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--nhs-grey);">
-      <a href="#" onclick="showLearnerLoginForm();return false;">Back to login</a>
+      <a href="#" onclick="showLearnerLoginForm();document.getElementById('forgotPasswordForm').style.display='none';return false;">Back to login</a>
     </div>`;
-  setTimeout(() => document.getElementById('fpEmail')?.focus(), 100);
 }
 
 async function handleForgotPassword() {
-  const email = (document.getElementById('fpEmail').value || '').trim().toLowerCase();
+  const email = document.getElementById('fpEmail').value.trim().toLowerCase();
   if (!email) { showToast('Please enter your email'); return; }
-  if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) {
-    showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return;
-  }
-  window._verifyFlow = { mode: 'reset', email };
-  try {
-    await callAuth({ action: 'request_email_code', type: 'learner', email, purpose: 'reset' });
-    logQI('password_reset_requested', { actor_type: 'learner', actor_email: email });
-    if (window.logInteraction) logInteraction('password_reset_requested', { email });
-    // Note: response is intentionally identical for known/unknown email (don't leak existence).
-    document.getElementById('forgotPasswordForm').style.display = 'none';
-    showVerifyCodeForm(email, 'reset', 15);
-  } catch(e) {
-    if (window.logError) logError('warn','auth_failure','Forgot-password code request failed', { email, error: e.message });
-    showToast(e.message || 'Could not send code. Please try again.');
+  const newFields = document.getElementById('fpNewFields');
+  if (newFields.style.display === 'none') {
+    // Step 1: verify email exists (server-side)
+    try {
+      const result = await callAuth({ action: 'verify_email', type: 'learner', email });
+      newFields.style.display = '';
+      document.getElementById('fpEmail').setAttribute('readonly', true);
+      document.getElementById('fpSubmitBtn').textContent = 'Reset Password';
+      document.getElementById('fpSubmitBtn').setAttribute('onclick', `doResetPassword('${email}', ${result.id})`);
+      showToast('Email verified! Set your new password.');
+    } catch(e) { showToast('No account found with that email'); }
   }
 }
 
-// ============================================================
-// ADMIN/LEARNER VIEW TOGGLE
-// ============================================================
+async function doResetPassword(email, learnerId) {
+  const p1 = document.getElementById('fpNewPin1').value.trim();
+  const p2 = document.getElementById('fpNewPin2').value.trim();
+  if (!p1 || p1.length < 4) { showToast('Password must be at least 4 characters'); return; }
+  if (p1 !== p2) { showToast('Passwords do not match'); return; }
+  try {
+    await callAuth({ action: 'reset_password', type: 'learner', email, new_password: p1 });
+    logQI('password_reset', { actor_type: 'learner', actor_email: email, metadata: { who: 'learner' } });
+    showToast('Password reset! You can now log in.');
+    document.getElementById('forgotPasswordForm').style.display = 'none';
+    showLearnerLoginForm();
+    document.getElementById('learnerEmail').value = email;
+  } catch(e) { showToast('Reset failed. Try again.'); }
+}
+
+// ── Admin/Learner View Toggle ──
+
 let adminViewAsLearner = false;
+
 function toggleAdminLearnerView() {
   adminViewAsLearner = !adminViewAsLearner;
   if (adminViewAsLearner) {
+    // Switch to learner view
     document.body.classList.remove('is-admin');
     document.body.classList.add('is-learner');
     document.getElementById('adminBadge').textContent = 'Learner View';
     document.getElementById('adminBadge').style.background = 'var(--nhs-green)';
     document.getElementById('viewToggleBtn').textContent = 'Admin View';
+    // Hide admin nav tabs
     document.querySelectorAll('.nav-tab[data-view="drafts"], .nav-tab[data-view="all"], .nav-tab[data-view="inbox"], .nav-tab[data-view="approvals"]').forEach(t => t.style.display = 'none');
   } else {
+    // Switch back to admin view
     document.body.classList.add('is-admin');
     document.body.classList.remove('is-learner');
     document.getElementById('adminBadge').textContent = 'Admin';
     document.getElementById('adminBadge').style.background = '';
     document.getElementById('viewToggleBtn').textContent = 'Learner View';
+    // Show admin nav tabs
     document.querySelectorAll('.nav-tab[data-view="drafts"], .nav-tab[data-view="all"], .nav-tab[data-view="inbox"], .nav-tab[data-view="approvals"]').forEach(t => t.style.display = '');
   }
   switchView('list');
@@ -589,7 +493,12 @@ function onRotationBlockChange() {
   const block = document.getElementById('regRotationBlock').value;
   const startField = document.getElementById('regPlacementStart');
   const endField = document.getElementById('regPlacementEnd');
-  if (!block) { startField.removeAttribute('readonly'); endField.removeAttribute('readonly'); return; }
+  if (!block) {
+    startField.removeAttribute('readonly');
+    endField.removeAttribute('readonly');
+    return;
+  }
+  // Determine academic year: if current month >= August, year starts this year; else last year
   const now = new Date();
   const academicYearStart = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
   const blocks = {
@@ -603,6 +512,72 @@ function onRotationBlockChange() {
     endField.value = dates.end;
     startField.setAttribute('readonly', true);
     endField.setAttribute('readonly', true);
+  }
+}
+
+// ── Learner Registration ──
+
+async function doLearnerRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim().toLowerCase();
+  const grade = document.getElementById('regGrade').value;
+  const placement = document.getElementById('regPlacement').value;
+  const placementStart = document.getElementById('regPlacementStart').value;
+  const placementEnd = document.getElementById('regPlacementEnd').value;
+  const rotationBlock = document.getElementById('regRotationBlock').value;
+
+  if (!name || !email || !grade || !placement) { showToast('Please fill in all required fields'); return; }
+  if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) { showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return; }
+
+  // Check for existing learner with same email (case-insensitive)
+  const existing = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=*`);
+  if (existing.length > 0) {
+    showToast('An account with this email already exists. Please log in instead.', 4000);
+    return;
+  }
+
+  // Generate 6-digit PIN
+  const pin = String(Math.floor(100000 + Math.random() * 900000));
+
+  try {
+    // Register without password first, then set password server-side
+    const result = await sbInsert('learners', {
+      name, email, grade, specialty: '', placement,
+      placement_start: placementStart || null,
+      placement_end: placementEnd || null,
+      rotation_block: rotationBlock || null,
+      pin_code: null, verified: true
+    });
+    // Set password server-side
+    await callAuth({ action: 'setup', type: 'learner', email, password: pin });
+    currentLearner = result[0];
+    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    setLearnerUI(true);
+    logQI('learner_register', { metadata: { grade, placement, rotation_block: rotationBlock || null } });
+
+    // Auto-link to contact if email matches
+    try {
+      const contactMatch = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
+      if (contactMatch.length > 0) {
+        await sbUpdate('learners', currentLearner.id, { contact_id: contactMatch[0].id });
+        currentLearner.contact_id = contactMatch[0].id;
+        sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+      }
+    } catch(linkErr) { console.warn('Contact link skipped:', linkErr); }
+
+    // Show PIN
+    document.getElementById('learnerLoginForm').style.display = 'none';
+    document.getElementById('learnerRegisterForm').style.display = 'none';
+    document.getElementById('learnerPinDisplay').style.display = '';
+    document.getElementById('generatedPin').textContent = pin;
+    document.getElementById('learnerModalTitle').textContent = 'Registration Complete';
+  } catch(e) {
+    console.error('Registration error:', e);
+    if (e.message && e.message.includes('409')) {
+      showToast('An account with this email already exists. Please login.');
+    } else {
+      showToast('Registration failed. Please try again.');
+    }
   }
 }
 
@@ -620,6 +595,7 @@ function doLearnerLogout() {
 function setLearnerUI(loggedIn) {
   document.body.classList.toggle('is-learner', loggedIn);
   updateHeaderButtons();
+  // Update sessions tab label
   updateSessionsTabLabel();
 }
 
@@ -638,26 +614,36 @@ function handleLearnerURLParams() {
   const params = new URLSearchParams(window.location.search);
   const attendId = params.get('attend') || window._pendingAttend;
   const feedbackId = params.get('feedback') || window._pendingFeedback;
+  // Clear stored params
   delete window._pendingAttend;
   delete window._pendingFeedback;
-  if (attendId && currentLearner) { markSelfAttendance(parseInt(attendId)); }
-  if (feedbackId && currentLearner) { openFeedbackModal(parseInt(feedbackId)); }
+  if (attendId && currentLearner) {
+    markSelfAttendance(parseInt(attendId));
+  }
+  if (feedbackId && currentLearner) {
+    openFeedbackModal(parseInt(feedbackId));
+  }
 }
 
-// ============================================================
-// TEACHER AUTH (unchanged from v3.6.10 — teachers are admin-created)
-// ============================================================
-function openTeacherLoginModal() { showTeacherLoginForm(); openModal('teacherLoginModal'); }
+// ── Teacher Auth ──
+
+function openTeacherLoginModal() {
+  showTeacherLoginForm();
+  openModal('teacherLoginModal');
+}
+
 function showTeacherLoginForm() {
   document.getElementById('teacherLoginForm').style.display = '';
   document.getElementById('teacherSetupForm').style.display = 'none';
   document.getElementById('teacherModalTitle').textContent = 'Teacher Login';
 }
+
 function showTeacherSetup() {
   document.getElementById('teacherLoginForm').style.display = 'none';
   document.getElementById('teacherSetupForm').style.display = '';
   document.getElementById('teacherModalTitle').textContent = 'Set Up Teacher Account';
 }
+
 async function doTeacherLogin() {
   const email = document.getElementById('teacherEmail').value.trim().toLowerCase();
   const pin = document.getElementById('teacherPin').value.trim();
@@ -675,12 +661,9 @@ async function doTeacherLogin() {
     updateHeaderButtons();
     showToast(`Welcome, ${teacher.name}!`);
     switchView('teacherDash');
-  } catch(e) {
-    console.error('Teacher login failed:', e);
-    if (window.logError) logError('warn','auth_failure','Teacher login failed', { email, error: e.message });
-    showToast(e.message || 'Login failed');
-  }
+  } catch(e) { console.error('Teacher login failed:', e); showToast(e.message || 'Login failed'); }
 }
+
 async function doTeacherSetup() {
   const email = document.getElementById('teacherSetupEmail').value.trim().toLowerCase();
   const pin = document.getElementById('teacherSetupPin').value.trim();
@@ -700,12 +683,9 @@ async function doTeacherSetup() {
     updateHeaderButtons();
     showToast(`Account set up! Welcome, ${teacher.name}!`);
     switchView('teacherDash');
-  } catch(e) {
-    console.error('Teacher setup failed:', e);
-    if (window.logError) logError('warn','auth_failure','Teacher setup failed', { email, error: e.message });
-    showToast(e.message || 'Setup failed');
-  }
+  } catch(e) { console.error('Teacher setup failed:', e); showToast(e.message || 'Setup failed'); }
 }
+
 async function linkTeacherToLearner() {
   if (!currentTeacher) return;
   const email = currentTeacher.email.toLowerCase();
@@ -718,6 +698,7 @@ async function linkTeacherToLearner() {
     }
   } catch(e) { console.warn('Could not link teacher to learner:', e); }
 }
+
 async function linkLearnerToTeacher() {
   if (!currentLearner) return;
   const email = currentLearner.email.toLowerCase();
@@ -729,6 +710,7 @@ async function linkLearnerToTeacher() {
     }
   } catch(e) { console.warn('Could not link learner to teacher:', e); }
 }
+
 function doTeacherLogout() {
   if (currentTeacher) logQI('teacher_logout');
   currentTeacher = null;
@@ -741,24 +723,31 @@ function doTeacherLogout() {
   if (currentView === 'teacherDash') switchView('list');
   showToast('Logged out');
 }
+
 function checkTeacherSession() {
   const stored = sessionStorage.getItem('sst_teacher');
   if (stored) {
-    try { currentTeacher = JSON.parse(stored); updateHeaderButtons(); } catch(e) { sessionStorage.removeItem('sst_teacher'); }
+    try {
+      currentTeacher = JSON.parse(stored);
+      updateHeaderButtons();
+    } catch(e) { sessionStorage.removeItem('sst_teacher'); }
   }
 }
+
 function isManager() {
   if (isAdmin) return true;
   if (currentTeacher && currentTeacher.is_manager) return true;
   if (currentTeacher && MANAGERS.includes(currentTeacher.email.toLowerCase())) return true;
   return false;
 }
+
 function isTeacherForSession(sessionId) {
   if (!currentTeacher) return false;
   const ev = events.find(e => e.id === sessionId);
   if (!ev) return false;
   return ev.teacherEmail && ev.teacherEmail.toLowerCase() === currentTeacher.email.toLowerCase();
 }
+
 function canMarkAttendance(sessionId) {
   if (isAdmin) return true;
   if (isManager()) return true;

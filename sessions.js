@@ -43,7 +43,7 @@ function switchView(view) {
   document.querySelectorAll('.nav-dropdown-item').forEach(t => t.classList.toggle('active', t.dataset.view === view));
   // Highlight "More" button if a dropdown view is active
   const moreBtn = document.querySelector('.nav-more-btn');
-  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','roster','absences','siteFeedback','surveyResults','qiDash','log','errorLog'];
+  const dropdownViews = ['all','ideas','requests','feedback','approvals','attendanceChart','roster','absences','siteFeedback','surveyResults','errorLog','qiDash','log'];
   // Close nav dropdown on any view switch
   const dd = document.getElementById('navDropdown');
   if (dd) dd.classList.remove('show');
@@ -70,6 +70,7 @@ function switchView(view) {
   document.getElementById('absenceLandingView').style.display = 'none';
   document.getElementById('surveyView').style.display = 'none';
   document.getElementById('surveyResultsView').style.display = 'none';
+  const errorLogEl = document.getElementById('errorLogView'); if (errorLogEl) errorLogEl.style.display = 'none';
   const qiDashEl = document.getElementById('qiDashView'); if (qiDashEl) qiDashEl.style.display = 'none';
   const filtersBar = document.getElementById('filtersBar');
   const statsBar = document.getElementById('statsBar');
@@ -149,14 +150,14 @@ function switchView(view) {
     document.getElementById('surveyResultsView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     renderSurveyResults();
+  } else if (view === 'errorLog') {
+    document.getElementById('errorLogView').style.display = 'block';
+    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
+    if (typeof loadErrorLog === 'function') loadErrorLog();
   } else if (view === 'qiDash') {
     document.getElementById('qiDashView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     loadQIDashboard();
-  } else if (view === 'errorLog') {
-    document.getElementById('errorLogView').style.display = 'block';
-    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
-    loadErrorLog();
   } else {
     document.getElementById('listView').style.display = 'block';
     filtersBar.style.display = '';
