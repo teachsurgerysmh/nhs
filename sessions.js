@@ -628,7 +628,7 @@ async function populateTeacherPicker(selectId) {
   try {
     let contacts = window._contactsData || [];
     if (!contacts.length) {
-      contacts = await sbGet('contacts', 'order=name.asc&select=*');
+      contacts = await sbGet('contacts', `order=name.asc&select=${CONTACT_FIELDS}`);
       window._contactsData = contacts;
     }
     const sel = document.getElementById(selectId);
@@ -709,7 +709,7 @@ function onTeacherPick(inputEl, emailFieldId) {
 
 async function ensureContactsLoaded() {
   if (!window._contactsData || !window._contactsData.length) {
-    try { window._contactsData = await sbGet('contacts', 'order=name.asc&select=*'); } catch(e) { window._contactsData = []; }
+    try { window._contactsData = await sbGet('contacts', `order=name.asc&select=${CONTACT_FIELDS}`); } catch(e) { window._contactsData = []; }
   }
 }
 
@@ -1152,7 +1152,7 @@ async function loadContacts() {
   const container = document.getElementById('contactsView');
   container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading contacts...</div>';
   try {
-    const data = await sbGet('contacts', 'order=name.asc&select=*');
+    const data = await sbGet('contacts', `order=name.asc&select=${CONTACT_FIELDS}`);
     let html = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">';
     html += '<h3 style="color:var(--nhs-dark-blue);margin:0;">Contacts Directory</h3>';
     html += '<div style="display:flex;gap:10px;align-items:center;">';

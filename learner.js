@@ -1945,7 +1945,7 @@ function openAddLearnerToRosterModal() {
 
 async function findDuplicateLearners() {
   try {
-    const learners = await sbGet('learners', 'select=id,name,email,grade,pin_code,contact_id');
+    const learners = await sbGet('learners', 'select=id,name,email,grade,contact_id');
     // Group by lowercase email OR same contact_id
     const byKey = {};
     learners.forEach(l => {

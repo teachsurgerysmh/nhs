@@ -41,7 +41,8 @@ async function handleActionParams() {
   // which may not include unpublished sessions for non-admin users)
   let evData;
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/schedule?id=eq.${sessionId}&select=*`, {
+    const ACTION_SCHEDULE_COLS = 'id,day,date,month,year,time,room,topic,teacher,backup_teacher,status,published';
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/schedule?id=eq.${sessionId}&select=${ACTION_SCHEDULE_COLS}`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
     });
     const rows = await response.json();
@@ -50,9 +51,9 @@ async function handleActionParams() {
       evData = {
         id: row.id, day: row.day || '', date: row.date || '', month: row.month || '',
         year: row.year || 2026, time: row.time || '', room: row.room || '',
-        topic: row.topic || '', teacher: row.teacher || '', teacherEmail: row.teacher_email || '',
+        topic: row.topic || '', teacher: row.teacher || '',
         status: row.status || 'tbd', published: row.published !== false,
-        notes: row.notes || '', backupTeacher: row.backup_teacher || '',
+        backupTeacher: row.backup_teacher || '',
       };
     }
   } catch(e) { console.error('Failed to fetch session:', e); }

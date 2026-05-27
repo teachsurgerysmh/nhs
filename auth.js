@@ -173,7 +173,7 @@ async function linkAdminToTeacher() {
   const email = (adminEmails[currentUser.username] || '').toLowerCase();
   if (!email) return;
   try {
-    const data = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
+    const data = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=${CONTACT_FIELDS}`);
     if (data.length > 0) {
       currentTeacher = data[0];
       sessionStorage.setItem('sst_teacher', JSON.stringify(data[0]));
@@ -557,7 +557,7 @@ async function doLearnerRegister() {
 
     // Auto-link to contact if email matches
     try {
-      const contactMatch = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
+      const contactMatch = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=${CONTACT_FIELDS}`);
       if (contactMatch.length > 0) {
         await sbUpdate('learners', currentLearner.id, { contact_id: contactMatch[0].id });
         currentLearner.contact_id = contactMatch[0].id;
@@ -703,8 +703,8 @@ async function linkLearnerToTeacher() {
   if (!currentLearner) return;
   const email = currentLearner.email.toLowerCase();
   try {
-    const data = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=*`);
-    if (data.length > 0 && data[0].pin_code) {
+    const data = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=${CONTACT_FIELDS}`);
+    if (data.length > 0) {
       currentTeacher = data[0];
       sessionStorage.setItem('sst_teacher', JSON.stringify(data[0]));
     }
