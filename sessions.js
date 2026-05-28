@@ -1116,11 +1116,18 @@ async function submitSessionRequest() {
   if (!slot) { showToast('Please select an available slot'); return; }
   if (!topic) { showToast('Please enter a topic'); return; }
   try {
-    await sbInsert('requests', { name, email, phone, topic, preferred_date: slot, message, status: 'pending' });
+    // Use return=minimal so anon users (no SELECT policy) don't get a 403 on the response body
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ name, email, phone, topic, preferred_date: slot, message, status: 'pending' })
+    });
+    if (!res.ok) throw new Error('Submit failed: HTTP ' + res.status);
     logQI('session_requested', { actor_email: email || null, actor_name: name || null, metadata: { topic, preferred_date: slot } });
+    logFlowStep('session_request_submitted', { name, email, topic, preferred_date: slot });
     closeModal('requestSessionModal');
     showToast("Request submitted! The teaching team will get back to you.");
-  } catch(e) { console.error('Submit request failed:', e); showToast('Failed to submit request'); }
+  } catch(e) { logError('submitSessionRequest', e); showToast('Failed to submit request'); }
 }
 
 async function loadRequests() {
@@ -1169,11 +1176,14 @@ function renderRequestCard(r) {
   </div>`;
 }
 
+let _pendingRequestData = null;
+
 async function showRespondModal(id) {
   try {
     const data = await sbGet('requests', `id=eq.${id}&select=*`);
     if (data.length === 0) return;
     const r = data[0];
+    _pendingRequestData = r;
     document.getElementById('respondId').value = r.id;
     document.getElementById('respondMessage').value = '';
     document.getElementById('respondDetails').innerHTML = `<div style="background:var(--nhs-pale-grey);border-radius:8px;padding:14px;font-size:0.9rem;">
@@ -1183,7 +1193,7 @@ async function showRespondModal(id) {
       ${r.message ? '<div style="margin-top:6px;font-style:italic;color:#425563;">"' + esc(r.message) + '"</div>' : ''}
     </div>`;
     openModal('respondModal');
-  } catch(e) { console.error('Show respond modal failed:', e); }
+  } catch(e) { logError('showRespondModal', e); console.error('Show respond modal failed:', e); }
 }
 
 async function respondToRequest(response) {
@@ -1200,8 +1210,22 @@ async function respondToRequest(response) {
     closeModal('respondModal');
     showToast('Request ' + response + '!');
     logAction((response === 'accepted' ? 'Accepted' : 'Rejected') + ' session request', '#' + requestId);
+
+    // Auto-create contact if accepting and requester not already in contacts
+    if (response === 'accepted' && _pendingRequestData?.email) {
+      const r = _pendingRequestData;
+      try {
+        const existing = await sbGet('contacts', `email=eq.${encodeURIComponent(r.email)}&select=id`);
+        if (existing.length === 0) {
+          await sbInsert('contacts', { name: r.name, email: r.email, phone: r.phone || null, role: 'Volunteer Teacher', added_by: currentUser?.name || 'System' });
+          showToast(`Contact added: ${r.name}`);
+          logInteraction('auto_contact_created', { name: r.name, email: r.email, source: 'session_request' });
+        }
+      } catch(e) { logError('autoCreateContact', e); }
+    }
+
     loadRequests();
-  } catch(e) { console.error('Respond failed:', e); showToast('Failed to respond'); }
+  } catch(e) { logError('respondToRequest', e); showToast('Failed to respond'); }
 }
 
 // ===================== CONTACTS =====================

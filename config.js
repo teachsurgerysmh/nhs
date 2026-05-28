@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.7.4';
-const APP_BUILD = '2026-05-27g';
+const APP_VERSION = 'v3.7.5';
+const APP_BUILD = '2026-05-28a';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
 // ===================== SAFE COLUMN LISTS (exclude pin_code) =====================
@@ -312,3 +312,50 @@ function getBankHoliday(year, month, day) {
   const key = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
   return UK_BANK_HOLIDAYS[key] || null;
 }
+
+// ===================== ERROR/INTERACTION LOGGER =====================
+let _logBuf = [];
+let _logFlushTimer = null;
+
+function _logAnonHeaders() {
+  return { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+}
+
+function _logCtx() {
+  if (currentUser)        return { actor_type: 'admin',   actor_email: currentUser.username || currentUser.name, actor_id: currentUser.id || null };
+  if (currentLearner)     return { actor_type: 'learner', actor_email: currentLearner.email,   actor_id: currentLearner.id || null };
+  if (currentTeacher)     return { actor_type: 'teacher', actor_email: currentTeacher.email,   actor_id: currentTeacher.id || null };
+  return { actor_type: 'anon' };
+}
+
+function _logPush(entry) {
+  _logBuf.push({ ..._logCtx(), ...entry, app_version: APP_VERSION, client_ts: new Date().toISOString(), url: location.href.replace(location.search,''), user_agent: navigator.userAgent.slice(0,200) });
+  if (!_logFlushTimer) _logFlushTimer = setTimeout(_flushLog, 1500);
+}
+
+async function _flushLog() {
+  _logFlushTimer = null;
+  if (!_logBuf.length) return;
+  const batch = _logBuf.splice(0);
+  try { await fetch(`${SUPABASE_URL}/rest/v1/error_log`, { method: 'POST', headers: _logAnonHeaders(), body: JSON.stringify(batch) }); } catch(e) { /* intentionally silent */ }
+}
+
+document.addEventListener('pagehide', () => { if (_logBuf.length) _flushLog(); }, { capture: true });
+
+function logError(source, err, context) {
+  _logPush({ level: 'error', category: 'error', source, message: err?.message || String(err), stack: err?.stack || null, context: context || null });
+}
+function logInteraction(action, context) {
+  _logPush({ level: 'info', category: 'interaction', source: action, message: action, context: context || null });
+}
+function logFlowStep(step, context) {
+  _logPush({ level: 'info', category: 'flow', source: step, message: step, context: context || null });
+}
+
+// Capture unhandled JS errors globally
+window.addEventListener('error', e => {
+  logError('window.onerror', { message: e.message, stack: e.error?.stack || null }, { filename: e.filename, lineno: e.lineno });
+});
+window.addEventListener('unhandledrejection', e => {
+  logError('unhandledrejection', { message: String(e.reason), stack: e.reason?.stack || null }, null);
+});
