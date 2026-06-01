@@ -529,12 +529,20 @@ async function doLearnerRegister() {
   if (!name || !email || !grade || !placement) { showToast('Please fill in all required fields'); return; }
   if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) { showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return; }
 
-  // Check for existing learner with same email (case-insensitive)
-  const existing = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=${LEARNER_FIELDS}`);
-  if (existing.length > 0) {
-    showToast('An account with this email already exists. Please log in instead.', 4000);
-    return;
-  }
+  // Check for existing learner with same email (case-insensitive).
+  // anon can't SELECT learners directly (RLS) — use SECURITY DEFINER RPC,
+  // otherwise this guard silently passes and the INSERT fails on the unique
+  // email constraint with a confusing generic "Registration failed".
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/lookup_feedback_learner`, {
+      method: 'POST', headers, body: JSON.stringify({ email_val: email })
+    });
+    const existing = r.ok ? await r.json() : [];
+    if (existing.length > 0) {
+      showToast('An account with this email already exists. Please log in instead.', 4000);
+      return;
+    }
+  } catch(_) { /* non-fatal: fall through, the insert still guards via unique constraint */ }
 
   // Generate 6-digit PIN
   const pin = String(Math.floor(100000 + Math.random() * 900000));

@@ -579,7 +579,18 @@ async function requestTeacherForSession(sessionId) {
     try { contacts = await sbGet('contacts', `order=name.asc&select=${CONTACT_FIELDS}`); } catch(e) { contacts = []; }
   }
 
+  // If the session already has a teacher email not in contacts, prepend as a pre-checked option
   let html = '';
+  const sessionEmailLower = (ev.teacherEmail || '').toLowerCase().trim();
+  const contactEmails = contacts.map(c => (c.email || '').toLowerCase());
+  if (sessionEmailLower && !contactEmails.includes(sessionEmailLower)) {
+    const sessionName = ev.teacher || ev.teacherEmail;
+    html += `<label class="tr-contact" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;background:#e8f5e9;border:1px solid #c8e6c9;" data-role="" data-name="${esc(sessionName.toLowerCase())}" data-email="${esc(sessionEmailLower)}">
+      <input type="checkbox" class="tr-check" value="${esc(ev.teacherEmail)}" data-contact-name="${esc(ev.teacher || '')}" checked style="width:16px;height:16px;">
+      <span style="flex:1;">${esc(sessionName)}</span>
+      <span style="font-size:11px;color:#2e7d32;">on session (not yet a contact)</span>
+    </label>`;
+  }
   contacts.forEach(c => {
     if (!c.email) return; // Skip contacts without email
     html += `<label class="tr-contact" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;" data-role="${esc(c.role || '')}" data-name="${esc(c.name?.toLowerCase() || '')}" data-email="${esc(c.email?.toLowerCase() || '')}">

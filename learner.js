@@ -324,8 +324,9 @@ function setScaleRating(field, value) {
 async function resolveFeedbackToken(sessionId, token) {
   if (!token) return false;
   try {
-    // Use RPC function — anon can't SELECT feedback_tokens directly
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/validate_feedback_token`, {
+    // Single SECURITY DEFINER RPC — validates the token AND returns the learner.
+    // anon can't SELECT feedback_tokens or learners directly (RLS).
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_feedback_token`, {
       method: 'POST', headers, body: JSON.stringify({ token_val: token })
     });
     if (!res.ok) { showToast('Feedback link is invalid or expired'); return false; }
@@ -338,10 +339,11 @@ async function resolveFeedbackToken(sessionId, token) {
       showToast('Feedback already submitted for this session. Thank you!');
       return true; // Treat as handled so we don't fall through to login.
     }
-    // Hydrate the learner record so submitFeedback can use it.
-    const learners = await sbGet('learners', `id=eq.${row.learner_id}&select=${LEARNER_FIELDS}&limit=1`);
-    if (!learners || !learners.length) { showToast('Could not find your account'); return false; }
-    currentLearner = learners[0];
+    // Learner record comes back with the token — no separate (RLS-blocked) lookup.
+    currentLearner = {
+      id: row.l_id, name: row.l_name, email: row.l_email,
+      grade: row.l_grade, placement: row.l_placement, role: row.l_role, verified: row.l_verified
+    };
     window._magicLinkFeedbackToken = token; // remember it so submitFeedback can mark it used
     setLearnerUI(true);
     // Make sure events are loaded so openFeedbackModal can find the session.
@@ -374,11 +376,19 @@ async function doQuickFeedbackLookup() {
   if (!email) { showToast('Please enter your email'); return; }
   if (!sessionId) { showToast('Session reference lost. Please reopen the link.'); return; }
   try {
-    const rows = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=${LEARNER_FIELDS}&limit=1`);
+    // Feedback from anyone with a link: get-or-create the learner by email.
+    // SECURITY DEFINER RPC (anon has no direct SELECT/representation on learners).
+    // Unknown emails are auto-registered (verified=false, name derived from email).
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/ensure_feedback_learner`, {
+      method: 'POST', headers, body: JSON.stringify({ email_val: email })
+    });
+    const rows = res.ok ? await res.json() : [];
     if (!rows.length) {
-      showToast('Email not recognised. Please contact the teaching team to be added.');
+      try { logInteraction('quick_feedback_lookup_failed', { email, sessionId, status: res.status }); } catch(_) {}
+      showToast(res.status === 400 ? 'Please enter a valid email address.' : 'Could not start feedback. Please try again.');
       return;
     }
+    try { logInteraction('quick_feedback_learner_ready', { email, sessionId, learner_id: rows[0].id }); } catch(_) {}
     currentLearner = rows[0];
     setLearnerUI(true);
     closeModal('quickFeedbackModal');

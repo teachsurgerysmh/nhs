@@ -848,11 +848,22 @@ async function saveEvent() {
       logAction('Added session', evData.topic || evData.date);
       logQI('session_created', { session_id: newId || null, metadata: { topic: evData.topic, teacher: evData.teacher, status: evData.status, published: evData.published } });
     }
+    // Auto-create contact if teacher_email provided and not already in contacts
+    if (evData.teacher_email) {
+      try {
+        const emailEnc = encodeURIComponent(evData.teacher_email);
+        const existing = await sbGet('contacts', `email=eq.${emailEnc}&select=id`);
+        if (existing.length === 0) {
+          await sbInsert('contacts', { name: evData.teacher || evData.teacher_email, email: evData.teacher_email, role: 'Volunteer Teacher', added_by: currentUser?.name || 'System' });
+          logInteraction('auto_contact_created', { name: evData.teacher, email: evData.teacher_email, source: 'session_save' });
+        }
+      } catch(e) { logError('autoCreateContactOnSave', e); }
+    }
     await loadEvents();
     closeModal('eventModal');
     renderAll();
   } catch(e) {
-    console.error('Save failed:', e);
+    logError('saveEvent', e);
     showToast('Failed to save - check connection');
   }
 }
