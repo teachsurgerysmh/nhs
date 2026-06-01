@@ -306,6 +306,16 @@ async function init() {
   // Handle absence reason URL params (one-click from email)
   const hasAbsence = await handleAbsenceURLParams();
   if (hasAbsence) return;
+  // Direct link to the "Request a Teaching Session" modal (e.g. from cancellation email)
+  if (params.get('request') === '1') {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    try { if (!events.length) await loadEvents(); } catch(e) {}
+    const reqView = isAdmin ? 'adminDash' : (currentTeacher ? 'teacherDash' : 'list');
+    switchView(reqView);
+    history.replaceState({ view: reqView }, '', `?view=${encodeURIComponent(reqView)}`);
+    setTimeout(() => { try { showRequestSessionModal(); } catch(e) { console.warn('Request modal open failed:', e); } }, 300);
+    return;
+  }
   // Handle learner URL params
   const pendingAttend = params.get('attend');
   const pendingFeedback = params.get('feedback');
