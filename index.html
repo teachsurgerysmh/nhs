@@ -234,6 +234,15 @@
   </div>
 </div>
 
+<!-- Cancel Session Modal -->
+<div class="modal-overlay" id="cancelSessionModal" role="dialog" aria-modal="true" aria-label="Cancel Session">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header"><h3>Cancel Session</h3><button class="modal-close" onclick="closeModal('cancelSessionModal')">&times;</button></div>
+    <div class="modal-body" id="cancelSessionBody"></div>
+    <div class="modal-footer"><button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('cancelSessionModal')">Close</button></div>
+  </div>
+</div>
+
 <!-- Bulk Email Modal -->
 <div class="modal-overlay" id="bulkEmailModal" role="dialog" aria-modal="true" aria-label="Bulk Reminder">
   <div class="modal">

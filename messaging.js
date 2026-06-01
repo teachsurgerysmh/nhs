@@ -105,6 +105,150 @@ async function sendSessionEmail(id, type) {
   }
 }
 
+// ===================== CANCEL SESSION =====================
+function openCancelSessionModal(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) { showToast('Session not found'); return; }
+  const body = document.getElementById('cancelSessionBody');
+  const hasEmail = !!ev.teacherEmail;
+  body.innerHTML = `
+    <p style="margin:0 0 12px;font-size:14px;">You are about to cancel this teaching session:</p>
+    <table style="margin:0 0 16px;font-size:14px;">
+      <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${esc(ev.topic || 'TBD')}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Time:</td><td>${esc(ev.time || 'TBC')}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Teacher:</td><td>${esc(ev.teacher || '—')}</td></tr>
+    </table>
+    <label style="font-size:13px;font-weight:600;color:var(--nhs-dark-blue);">Reason for cancellation</label>
+    <textarea id="cancelReasonInput" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;font-family:inherit;margin-top:4px;" placeholder="e.g. Room double-booked by the fracture clinic — no alternative space available."></textarea>
+    <p style="font-size:12px;color:var(--nhs-grey);margin:8px 0 0;">
+      ${hasEmail
+        ? 'The teacher will receive a polite apology email with this reason and one-click links to claim another open slot.'
+        : '<span style="color:var(--nhs-orange);">No email on file for this teacher — the session will be cancelled but no email sent.</span>'}
+    </p>
+    <div style="margin-top:16px;text-align:center;">
+      <button class="btn btn-red" style="padding:11px 28px;font-size:14px;" onclick="confirmCancelSession(${ev.id})">${hasEmail ? 'Cancel Session & Notify Teacher' : 'Cancel Session'}</button>
+    </div>`;
+  openModal('cancelSessionModal');
+}
+
+async function confirmCancelSession(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) { showToast('Session not found'); return; }
+  const reason = (document.getElementById('cancelReasonInput')?.value || '').trim();
+  showToast('Cancelling session...');
+  try {
+    await sbUpdate('schedule', id, {
+      status: 'cancelled',
+      notes: reason || ev.notes || '',
+      last_edit_by: currentUser?.name || 'Unknown',
+      last_edit_at: new Date().toISOString()
+    });
+    logAction('Cancelled session', `${ev.topic || 'Session'} → ${ev.teacher || 'no teacher'}`);
+    logQI('session_cancelled', { session_id: id, metadata: { topic: ev.topic, teacher: ev.teacher, reason: reason || null } });
+    // Send the apology + re-book email if we have a teacher address
+    if (ev.teacherEmail) {
+      await sendCancellationEmail(id, reason);
+    }
+    closeModal('cancelSessionModal');
+    await loadEvents();
+    showToast(ev.teacherEmail ? 'Session cancelled and teacher notified.' : 'Session cancelled.');
+  } catch(e) {
+    console.error('Cancel failed:', e);
+    showToast('Failed to cancel session. Please try again.');
+  }
+}
+
+async function sendCancellationEmail(id, reason) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  const to = ev.teacherEmail;
+  if (!to) return;
+
+  // Find the next 5 open future slots (no teacher assigned, not cancelled)
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const openSlots = events
+    .filter(e => e.id !== id && e.status !== 'cancelled' && !e.teacher)
+    .filter(e => { const d = eventToDate(e); return d && d >= today; })
+    .sort((a, b) => eventToDate(a) - eventToDate(b))
+    .slice(0, 5);
+
+  const subject = `Teaching Session Cancelled: ${ev.topic || 'Session'} - ${ev.day} ${ev.date} ${ev.month} ${ev.year}`;
+
+  let slotsHtml = '';
+  if (openSlots.length === 0) {
+    slotsHtml = `<p style="margin:0 0 14px;">We don't have any open slots listed right now, but we'd love to find you another date — just reply to this email and we'll arrange one.</p>`;
+  } else {
+    slotsHtml = `<div style="border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">`;
+    openSlots.forEach((s, i) => {
+      const tok = (typeof generateActionToken === 'function') ? generateActionToken(s.id, to) : btoa(s.id + ':' + to);
+      const claimLink = `${SITE_URL}?action=claim&session=${s.id}&token=${encodeURIComponent(tok)}&topic=${encodeURIComponent(ev.topic || '')}&name=${encodeURIComponent(ev.teacher || '')}`;
+      const dateLabel = `${s.day} ${s.date} ${s.month}${s.year ? ' ' + s.year : ''}`;
+      const meta = `${s.room || 'Room TBC'} · slot open`;
+      const border = i < openSlots.length - 1 ? 'border-bottom:1px solid #eee;' : '';
+      slotsHtml += `<table role="presentation" width="100%" style="border-collapse:collapse;${border}"><tr>
+        <td style="padding:12px 16px;font-size:14px;color:#231f20;">
+          <div style="font-weight:bold;">${dateLabel}${s.time ? ' · ' + s.time : ''}</div>
+          <div style="font-size:12px;color:#768692;">${meta}</div>
+        </td>
+        <td style="padding:12px 16px;text-align:right;white-space:nowrap;">
+          <a href="${claimLink}" style="display:inline-block;padding:9px 16px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-size:13px;font-weight:bold;">Claim this slot</a>
+        </td>
+      </tr></table>`;
+    });
+    slotsHtml += `</div>`;
+  }
+
+  const reasonBlock = reason
+    ? `<div style="margin:0 0 18px;padding:12px 14px;background:#f0f4f5;border-left:3px solid #003087;">
+         <div style="font-size:12px;font-weight:bold;color:#4c6272;margin-bottom:3px;">REASON FOR CANCELLATION</div>
+         <div style="font-size:13px;color:#231f20;">${esc(reason)}</div>
+       </div>`
+    : '';
+
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+      <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
+    </div>
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;color:#231f20;font-size:14px;line-height:1.6;">
+      <p style="margin:0 0 12px;">Dear ${esc(ev.teacher || 'Colleague')},</p>
+      <p style="margin:0 0 12px;">We're very sorry, but we've had to <strong>cancel</strong> the teaching session below. We sincerely apologise for the short notice and any inconvenience caused.</p>
+      <table style="margin:0 0 16px;font-size:14px;border-collapse:collapse;width:100%;background:#fbeaf0;border-radius:8px;">
+        <tr><td style="padding:10px 16px 4px 16px;font-weight:bold;">Topic:</td><td style="padding:10px 16px 4px 0;text-decoration:line-through;color:#72243e;">${esc(ev.topic || 'TBD')}</td></tr>
+        <tr><td style="padding:4px 16px;font-weight:bold;">Date:</td><td style="padding:4px 16px 4px 0;text-decoration:line-through;color:#72243e;">${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</td></tr>
+        <tr><td style="padding:4px 16px 10px 16px;font-weight:bold;">Time:</td><td style="padding:4px 16px 10px 0;text-decoration:line-through;color:#72243e;">${esc(ev.time || 'TBC')}</td></tr>
+      </table>
+      ${reasonBlock}
+      <p style="margin:0 0 6px;font-weight:bold;">Your expertise is still very much needed.</p>
+      <p style="margin:0 0 14px;">We'd be grateful if you could share your knowledge on one of the upcoming open slots below. Just tap a date to claim it — no login required.</p>
+      ${slotsHtml}
+      <p style="margin:16px 0 4px;font-size:12px;color:#768692;text-align:center;">None of these work? Simply reply to this email and we'll find a date that suits you.</p>
+      <p style="margin:18px 0 0;">With thanks for your understanding,<br>Southmead Surgical Teaching Team</p>
+    </div>
+  </div>`;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ to: [to], subject, html })
+    });
+    const result = await res.json();
+    if (result.success) {
+      logAction('Sent cancellation email', `${ev.topic || 'Session'} → ${ev.teacher}`);
+      logQI('cancellation_sent', { session_id: id, metadata: { teacher_email: to, teacher_name: ev.teacher, topic: ev.topic, reason: reason || null, open_slots_offered: openSlots.length, channel: 'email' } });
+      trackSentEmail(id, to, subject, 'cancellation', ev.topic, ev.teacher, ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year);
+    } else {
+      console.warn('Cancellation email send failed:', result);
+      showToast('Session cancelled, but the email failed to send.');
+    }
+  } catch(e) {
+    console.warn('Cancellation email error:', e);
+    showToast('Session cancelled, but the email failed to send.');
+  }
+}
+
 function openBulkEmailModal() {
   const upcoming = events.filter(e => isFutureEvent(e) && e.status === 'upcoming' && e.teacher && e.published);
   const body = document.getElementById('bulkEmailBody');

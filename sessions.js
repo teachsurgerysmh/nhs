@@ -657,6 +657,9 @@ function showDetail(id) {
     if (isPastAdmin || ev.status === 'completed') {
       footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-green);color:var(--nhs-green);" onclick="closeModal('detailModal');openFeedbackRequestModal(${ev.id})">Request Feedback</button>`;
     }
+    if (ev.status !== 'cancelled' && !isPastAdmin) {
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-red);color:var(--nhs-red);" onclick="closeModal('detailModal');openCancelSessionModal(${ev.id})">Cancel Session</button>`;
+    }
   }
   // Teacher actions for past sessions
   if (canAttend && !isAdminView) {

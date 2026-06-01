@@ -72,9 +72,57 @@ async function handleActionParams() {
   } else if (action === 'reschedule') {
     handleRescheduleAction(evData, teacherEmail);
     return true;
+  } else if (action === 'claim') {
+    await handleClaimAction(evData, teacherEmail, params);
+    return true;
   }
 
   return false;
+}
+
+async function handleClaimAction(ev, teacherEmail, params) {
+  const carriedTopic = (params.get('topic') || '').trim();
+  const carriedName = (params.get('name') || '').trim();
+  const teacherName = carriedName || ev.teacher || 'Colleague';
+
+  // Guard: slot already taken by someone else
+  if (ev.teacher && ev.status !== 'cancelled') {
+    showActionLanding(
+      'Slot No Longer Available',
+      `<p>We're sorry — the slot on <strong>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</strong> has just been taken.</p>
+       <p>Please reply to your email or contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a> and we'll find you another date.</p>`,
+      'warning'
+    );
+    return;
+  }
+
+  try {
+    const update = {
+      teacher: teacherName,
+      teacher_email: teacherEmail,
+      teacher_confirmed: 'confirmed',
+      status: 'upcoming'
+    };
+    if (!ev.topic && carriedTopic) update.topic = carriedTopic;
+    await sbUpdate('schedule', ev.id, update);
+    logQI('slot_claimed', { actor_type: 'teacher', actor_email: teacherEmail, session_id: ev.id, metadata: { topic: ev.topic || carriedTopic, channel: 'email_token' }, source: 'email' });
+    showActionLanding(
+      'Slot Claimed — Thank You!',
+      `<p>Thank you, <strong>${esc(teacherName)}</strong>! You're confirmed to teach on:</p>
+       <table style="margin:16px 0;font-size:14px;">
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${esc(ev.topic || carriedTopic || 'TBD')}</td></tr>
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</td></tr>
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Time:</td><td>${esc(ev.time || 'TBC')}</td></tr>
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Room:</td><td>${esc(ev.room || 'TBC')}</td></tr>
+       </table>
+       <p>The teaching team will be in touch with any final details. Thank you for stepping in!</p>
+       <p style="color:var(--nhs-grey);font-size:13px;margin-top:16px;">If your plans change, please contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a>.</p>`,
+      'success'
+    );
+  } catch(e) {
+    console.error('Claim action failed:', e);
+    showActionLanding('Something Went Wrong', 'We could not record your claim. Please reply to your email or contact the teaching team.', 'error');
+  }
 }
 
 async function handleConfirmAction(ev, teacherEmail) {
