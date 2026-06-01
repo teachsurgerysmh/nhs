@@ -739,6 +739,17 @@ function trackSentEmail(sessionId, to, subject, type, topic, teacher, dateStr) {
       sent_by: entry.sentBy
     });
   } catch(e) { console.warn('DB email log failed:', e); }
+  // Keep the in-memory map fresh so the "last emailed" badge updates without a reload
+  try {
+    if (typeof reminderSends !== 'undefined') {
+      const k = String(sessionId);
+      if (!reminderSends[k]) reminderSends[k] = { count: 0, lastAt: null, lastType: '' };
+      reminderSends[k].count++;
+      reminderSends[k].lastAt = entry.sentAt;
+      reminderSends[k].lastType = type;
+    }
+    if (typeof renderEvents === 'function') renderEvents();
+  } catch(_) {}
 }
 
 function getEmailLog() {

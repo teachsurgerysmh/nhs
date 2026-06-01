@@ -4,7 +4,7 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.7.6';
+const APP_VERSION = 'v3.7.7';
 const APP_BUILD = '2026-06-01';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
@@ -262,6 +262,7 @@ async function loadEvents() {
       teacher: row.teacher || '',
       teacherEmail: row.teacher_email || '',
       status: row.status || 'tbd',
+      teacherConfirmed: row.teacher_confirmed || '',
       published: row.published !== false,
       notes: row.notes || '',
       lastEditBy: row.last_edit_by || '',
@@ -270,10 +271,29 @@ async function loadEvents() {
       backupTeacherEmail: row.backup_teacher_email || '',
     }));
     document.getElementById('offlineBanner').classList.remove('show');
+    if (isAdmin) { try { await loadReminderSends(); } catch(_) {} }
   } catch(e) {
     console.error('Failed to load events:', e);
     document.getElementById('offlineBanner').classList.add('show');
   }
+}
+
+// Map of session_id -> { count, lastAt, lastType } from email_log (teacher
+// reminder/confirmation emails). Admin only. Powers the "last emailed" badge.
+let reminderSends = {};
+async function loadReminderSends() {
+  try {
+    const rows = await sbGet('email_log', 'select=session_id,email_type,created_at&order=created_at.asc');
+    const map = {};
+    (rows || []).forEach(r => {
+      const k = String(r.session_id);
+      if (!map[k]) map[k] = { count: 0, lastAt: null, lastType: '' };
+      map[k].count++;
+      map[k].lastAt = r.created_at;   // asc order → last write is newest
+      map[k].lastType = r.email_type;
+    });
+    reminderSends = map;
+  } catch(e) { console.warn('Could not load email_log:', e); reminderSends = {}; }
 }
 
 // ── Modal Helpers & Toast ──

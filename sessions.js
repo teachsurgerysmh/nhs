@@ -291,7 +291,11 @@ function renderEvents() {
             </div>
             ${e.notes ? '<div class="card-notes">' + esc(e.notes) + '</div>' : ''}
           </div>
-          <span class="card-status status-pill-${e.status}">${e.status}</span>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="card-status status-pill-${e.status}">${e.status}</span>
+            ${teacherResponseBadge(e)}
+            ${reminderSentBadge(e)}
+          </div>
         </div>
         ${(isAdmin && e.lastEditBy) ? '<div class="last-edit-info">Last edited by ' + esc(e.lastEditBy) + (e.lastEditAt ? ' at ' + new Date(e.lastEditAt).toLocaleString() : '') + '</div>' : ''}
         ${e.status !== 'cancelled' && (e.status === 'completed' || (eventToDate(e) && eventToDate(e) < new Date())) ? '<div style="margin-top:8px;display:flex;gap:6px;">' + (currentLearner ? '<button class="btn btn-green" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();markSelfAttendance(' + e.id + ')">I Attended</button>' : '') + '<button class="btn btn-white" style="font-size:11px;padding:4px 10px;border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="event.stopPropagation();openFeedbackModal(' + e.id + ')">Give Feedback</button></div>' : ''}
@@ -303,6 +307,52 @@ function renderEvents() {
 }
 
 function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ===================== TEACHER RESPONSE BADGE =====================
+// Reflects schedule.teacher_confirmed — set when a teacher clicks the
+// confirm/decline/reschedule link in a reminder or confirmation email.
+// Admin/manager only. Returns '' when nothing meaningful to show.
+function teacherResponseBadge(ev, opts) {
+  if (!isAdmin) return '';
+  const tc = ev.teacherConfirmed;
+  const map = {
+    confirmed:            { label: 'Confirmed',    icon: '✅', bg: '#e6f4ea', col: '#009639' },
+    declined:             { label: 'Declined',     icon: '❌', bg: '#fbe9e7', col: '#da291c' },
+    reschedule_requested: { label: 'Reschedule requested', icon: '🔄', bg: '#fff4e5', col: '#ed8b00' },
+  };
+  let m = map[tc];
+  // No response yet: only nudge for an assigned, upcoming, future session
+  if (!m) {
+    const evDate = eventToDate(ev);
+    const future = evDate && evDate >= new Date();
+    if (!(ev.teacher && ev.status === 'upcoming' && future)) return '';
+    m = { label: 'Awaiting response', icon: '⏳', bg: '#f0f4f5', col: '#768692' };
+  }
+  const big = opts && opts.big;
+  const pad = big ? '4px 10px' : '2px 8px';
+  const fs = big ? '12px' : '11px';
+  return `<span title="Teacher email response" style="display:inline-block;padding:${pad};border-radius:12px;`
+    + `font-size:${fs};font-weight:600;background:${m.bg};color:${m.col};white-space:nowrap;">${m.icon} ${m.label}</span>`;
+}
+
+// ===================== LAST-EMAILED BADGE =====================
+// Reflects email_log — shows when the teacher was last emailed (confirmation/
+// reminder) and how many times. Admin/manager only. Returns '' if never sent.
+function reminderSentBadge(ev, opts) {
+  if (!isAdmin) return '';
+  const r = (typeof reminderSends !== 'undefined') ? reminderSends[String(ev.id)] : null;
+  if (!r || !r.lastAt) return '';
+  const d = new Date(r.lastAt);
+  const label = r.lastType === 'confirmation' ? 'Invite' : 'Reminder';
+  const when = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const extra = r.count > 1 ? ' ×' + r.count : '';
+  const big = opts && opts.big;
+  const pad = big ? '4px 10px' : '2px 8px';
+  const fs = big ? '12px' : '11px';
+  return `<span title="Last email to teacher: ${label} on ${esc(d.toLocaleString())} (${r.count} total)" `
+    + `style="display:inline-block;padding:${pad};border-radius:12px;font-size:${fs};font-weight:600;`
+    + `background:#eef2fb;color:#003087;white-space:nowrap;">📤 ${label} ${when}${extra}</span>`;
+}
 
 // ===================== CALENDAR =====================
 
@@ -555,6 +605,12 @@ function showDetail(id) {
     html += `<div class="detail-field"><div class="detail-label">Room</div><div class="detail-value">${esc(ev.room)}</div></div>`;
   }
   html += `<div class="detail-field"><div class="detail-label">Status</div><div class="detail-value"><span class="card-status status-pill-${ev.status}" style="font-size:12px;">${ev.status}</span>${!ev.published ? ' <span class="card-draft-badge">DRAFT</span>' : ''}</div></div>`;
+  if (isAdminView && ev.teacher) {
+    const respBadge = teacherResponseBadge(ev, { big: true });
+    if (respBadge) html += `<div class="detail-field"><div class="detail-label">Teacher Response</div><div class="detail-value">${respBadge}</div></div>`;
+    const sentBadge = reminderSentBadge(ev, { big: true });
+    if (sentBadge) html += `<div class="detail-field"><div class="detail-label">Last Emailed</div><div class="detail-value">${sentBadge}</div></div>`;
+  }
   if (ev.notes) {
     html += `<div class="detail-field"><div class="detail-label">Notes</div><div class="detail-value" style="color:var(--nhs-orange);font-style:italic;">${esc(ev.notes)}</div></div>`;
   }
