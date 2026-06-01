@@ -64,28 +64,41 @@ async function handleActionParams() {
   }
 
   if (action === 'confirm') {
-    await handleConfirmAction(evData, teacherEmail);
+    await handleConfirmAction(evData, teacherEmail, token);
     return true;
   } else if (action === 'decline') {
-    await handleDeclineAction(evData, teacherEmail);
+    await handleDeclineAction(evData, teacherEmail, token);
     return true;
   } else if (action === 'reschedule') {
-    handleRescheduleAction(evData, teacherEmail);
+    handleRescheduleAction(evData, teacherEmail, token);
+    return true;
+  } else if (action === 'cancel') {
+    await handleCancelAction(evData, teacherEmail, token);
     return true;
   } else if (action === 'claim') {
-    await handleClaimAction(evData, teacherEmail, params);
+    await handleClaimAction(evData, teacherEmail, params, token);
     return true;
   }
 
   return false;
 }
 
-async function handleClaimAction(ev, teacherEmail, params) {
+// Calls a token-validated SECURITY DEFINER RPC. Needed because anon visitors
+// (teachers clicking email links) cannot UPDATE schedule directly under RLS.
+async function callSessionRpc(fn, body) {
+  return fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+async function handleClaimAction(ev, teacherEmail, params, token) {
   const carriedTopic = (params.get('topic') || '').trim();
   const carriedName = (params.get('name') || '').trim();
   const teacherName = carriedName || ev.teacher || 'Colleague';
 
-  // Guard: slot already taken by someone else
+  // Guard: slot already taken by someone else (local snapshot — RPC re-checks server-side)
   if (ev.teacher && ev.status !== 'cancelled') {
     showActionLanding(
       'Slot No Longer Available',
@@ -97,14 +110,17 @@ async function handleClaimAction(ev, teacherEmail, params) {
   }
 
   try {
-    const update = {
-      teacher: teacherName,
-      teacher_email: teacherEmail,
-      teacher_confirmed: 'confirmed',
-      status: 'upcoming'
-    };
-    if (!ev.topic && carriedTopic) update.topic = carriedTopic;
-    await sbUpdate('schedule', ev.id, update);
+    const res = await callSessionRpc('claim_session_via_token', { p_session_id: Number(ev.id), p_token: token, p_name: teacherName, p_topic: carriedTopic });
+    if (!res.ok) {
+      let msg = ''; try { const j = await res.json(); msg = j.message || j.error || ''; } catch(_) {}
+      if (msg.indexOf('already_taken') !== -1) {
+        showActionLanding('Slot No Longer Available', `<p>We're sorry — the slot on <strong>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</strong> has just been taken.</p><p>Please reply to your email or contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a> and we'll find you another date.</p>`, 'warning');
+        return;
+      }
+      console.warn('claim_session_via_token failed:', res.status, msg);
+      showActionLanding('Something Went Wrong', 'We could not record your claim. Please reply to your email or contact the teaching team.', 'error');
+      return;
+    }
     logQI('slot_claimed', { actor_type: 'teacher', actor_email: teacherEmail, session_id: ev.id, metadata: { topic: ev.topic || carriedTopic, channel: 'email_token' }, source: 'email' });
     showActionLanding(
       'Slot Claimed — Thank You!',
@@ -125,9 +141,14 @@ async function handleClaimAction(ev, teacherEmail, params) {
   }
 }
 
-async function handleConfirmAction(ev, teacherEmail) {
+async function handleConfirmAction(ev, teacherEmail, token) {
   try {
-    await sbUpdate('schedule', ev.id, { teacher_confirmed: 'confirmed' });
+    const res = await callSessionRpc('set_teacher_confirmed', { p_session_id: Number(ev.id), p_token: token, p_value: 'confirmed' });
+    if (!res.ok) {
+      console.warn('set_teacher_confirmed (confirm) failed:', res.status);
+      showActionLanding('Could Not Record', 'We could not record your response automatically. Please reply to your email or contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a>.', 'error');
+      return;
+    }
     logQI('invitation_confirmed', { actor_type: 'teacher', actor_email: teacherEmail, session_id: ev.id, metadata: { topic: ev.topic, channel: 'email_token' }, source: 'email' });
     showActionLanding(
       'Attendance Confirmed',
@@ -148,9 +169,14 @@ async function handleConfirmAction(ev, teacherEmail) {
   }
 }
 
-async function handleDeclineAction(ev, teacherEmail) {
+async function handleDeclineAction(ev, teacherEmail, token) {
   try {
-    await sbUpdate('schedule', ev.id, { teacher_confirmed: 'declined' });
+    const res = await callSessionRpc('set_teacher_confirmed', { p_session_id: Number(ev.id), p_token: token, p_value: 'declined' });
+    if (!res.ok) {
+      console.warn('set_teacher_confirmed (decline) failed:', res.status);
+      showActionLanding('Could Not Record', 'We could not record your response automatically. Please reply to your email or contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a>.', 'error');
+      return;
+    }
     logQI('invitation_declined', { actor_type: 'teacher', actor_email: teacherEmail, session_id: ev.id, metadata: { topic: ev.topic, channel: 'email_token' }, source: 'email' });
     showActionLanding(
       'Response Recorded',
@@ -169,7 +195,47 @@ async function handleDeclineAction(ev, teacherEmail) {
   }
 }
 
-function handleRescheduleAction(ev, teacherEmail) {
+async function handleCancelAction(ev, teacherEmail, token) {
+  // The schedule update must happen server-side: anon visitors cannot UPDATE
+  // schedule under RLS. self_cancel_session (SECURITY DEFINER RPC) validates the
+  // token and flips the row to cancelled with the service role.
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/self_cancel_session`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_session_id: Number(ev.id), p_token: token })
+    });
+    if (!res.ok) {
+      let msg = '';
+      try { const j = await res.json(); msg = j.message || j.error || ''; } catch(_) {}
+      console.warn('self_cancel_session failed:', res.status, msg);
+      showActionLanding('Could Not Cancel', 'We could not cancel this session automatically. Please reply to your confirmation email or contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a> and we will sort it out.', 'error');
+      return;
+    }
+
+    logQI('session_cancelled', { actor_type: 'teacher', actor_email: teacherEmail, session_id: ev.id, metadata: { topic: ev.topic, channel: 'email_token', self_cancel: true }, source: 'email' });
+
+    // Fire both emails in real time (admin alert + teacher confirmation). Non-blocking on failure.
+    try { if (typeof sendSelfCancelAdminNotice === 'function') await sendSelfCancelAdminNotice(ev, teacherEmail); } catch(e) { console.warn('admin notice failed', e); }
+    try { if (typeof sendSelfCancelTeacherEmail === 'function') await sendSelfCancelTeacherEmail(ev, teacherEmail); } catch(e) { console.warn('teacher cancel email failed', e); }
+
+    showActionLanding(
+      'Session Cancelled',
+      `<p>Thank you for letting us know, <strong>${esc(ev.teacher || 'Colleague')}</strong>. Your session has been cancelled:</p>
+       <table style="margin:16px 0;font-size:14px;">
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${esc(ev.topic || 'TBD')}</td></tr>
+         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</td></tr>
+       </table>
+       <p>We'd still love to have you teach — we've emailed you the next available dates, or you can <a href="${SITE_URL}?request=1">see all open slots here</a>.</p>`,
+      'warning'
+    );
+  } catch(e) {
+    console.error('Cancel action failed:', e);
+    showActionLanding('Could Not Cancel', 'Something went wrong cancelling this session. Please reply to your confirmation email or contact the teaching team.', 'error');
+  }
+}
+
+function handleRescheduleAction(ev, teacherEmail, token) {
   // Generate available slots (reuse logic from showRequestSessionModal)
   const today = new Date(); today.setHours(0,0,0,0);
   const DAYNAMES = ['Sun','Mon','Tues','Wed','Thurs','Fri','Sat'];
@@ -216,7 +282,7 @@ function handleRescheduleAction(ev, teacherEmail) {
         <textarea id="rescheduleMessage" rows="2" style="width:100%;padding:9px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;font-family:inherit;margin-top:4px;" placeholder="Any additional details..."></textarea>
       </div>
       <div style="margin-top:16px;text-align:center;">
-        <button class="btn btn-green" style="padding:12px 32px;font-size:14px;" data-sid="${ev.id}" data-teacher="${esc(ev.teacher || '')}" data-topic="${esc(ev.topic || '')}" data-email="${esc(teacherEmail)}" onclick="submitRescheduleRequest(+this.dataset.sid, this.dataset.teacher, this.dataset.topic, this.dataset.email)">Submit Reschedule Request</button>
+        <button class="btn btn-green" style="padding:12px 32px;font-size:14px;" data-sid="${ev.id}" data-teacher="${esc(ev.teacher || '')}" data-topic="${esc(ev.topic || '')}" data-email="${esc(teacherEmail)}" data-token="${esc(token || '')}" onclick="submitRescheduleRequest(+this.dataset.sid, this.dataset.teacher, this.dataset.topic, this.dataset.email, this.dataset.token)">Submit Reschedule Request</button>
       </div>`;
   }
 
@@ -241,7 +307,7 @@ function selectRescheduleSlot(el, index) {
   selectedRescheduleSlot = el.dataset.slot;
 }
 
-async function submitRescheduleRequest(sessionId, teacher, topic, teacherEmail) {
+async function submitRescheduleRequest(sessionId, teacher, topic, teacherEmail, token) {
   if (!selectedRescheduleSlot) { showToast('Please select a new slot'); return; }
   const message = document.getElementById('rescheduleMessage')?.value?.trim() || '';
   try {
@@ -253,10 +319,12 @@ async function submitRescheduleRequest(sessionId, teacher, topic, teacherEmail) 
       message: `Reschedule request from ${teacher} for session "${topic}". Preferred new date: ${selectedRescheduleSlot}. ${message}`.trim(),
       status: 'pending'
     });
-    // Also update the session to note a reschedule was requested
+    // Flag the session as reschedule_requested (server-side; anon cannot UPDATE schedule)
     try {
-      await sbUpdate('schedule', sessionId, { teacher_confirmed: 'reschedule_requested' });
+      if (token) await callSessionRpc('set_teacher_confirmed', { p_session_id: Number(sessionId), p_token: token, p_value: 'reschedule_requested' });
     } catch(e) { /* non-critical */ }
+    // Notify the admins a reschedule request came in
+    try { if (typeof sendNewRequestAdminNotice === 'function') await sendNewRequestAdminNotice({ name: teacher, email: teacherEmail, topic, preferred_date: selectedRescheduleSlot, message, kind: 'reschedule' }); } catch(e) { /* non-critical */ }
     logQI('reschedule_requested', { actor_type: 'teacher', actor_email: teacherEmail, session_id: sessionId, metadata: { topic, preferred: selectedRescheduleSlot, message: message || null }, source: 'email' });
     showActionLanding(
       'Reschedule Request Submitted',
