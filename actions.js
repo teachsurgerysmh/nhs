@@ -63,24 +63,72 @@ async function handleActionParams() {
     return true;
   }
 
-  if (action === 'confirm') {
-    await handleConfirmAction(evData, teacherEmail, token);
-    return true;
-  } else if (action === 'decline') {
-    await handleDeclineAction(evData, teacherEmail, token);
-    return true;
-  } else if (action === 'reschedule') {
+  // Reschedule already renders a slot-picker the human must submit, so it is
+  // scanner-safe. Confirm/decline/cancel/claim mutate, so they MUST NOT run on
+  // page load — NHS email security (Mimecast) pre-fetches every link. Instead we
+  // show a confirmation page with a button the human clicks to actually proceed.
+  if (action === 'reschedule') {
     handleRescheduleAction(evData, teacherEmail, token);
     return true;
-  } else if (action === 'cancel') {
-    await handleCancelAction(evData, teacherEmail, token);
-    return true;
-  } else if (action === 'claim') {
-    await handleClaimAction(evData, teacherEmail, params, token);
+  } else if (action === 'confirm' || action === 'decline' || action === 'cancel' || action === 'claim') {
+    promptEmailAction(action, evData, teacherEmail, token, params);
     return true;
   }
 
   return false;
+}
+
+// Stores the pending email action until the human clicks the confirm button.
+let _pendingEmailAction = null;
+
+// Step 1: render a confirmation page (no DB change). Defeats link pre-fetchers.
+function promptEmailAction(action, ev, teacherEmail, token, params) {
+  const carriedName = (params.get('name') || '').trim();
+  const carriedTopic = (params.get('topic') || '').trim();
+
+  // For claim, if our local snapshot already shows the slot taken, say so now.
+  if (action === 'claim' && ev.teacher && ev.status !== 'cancelled') {
+    showActionLanding('Slot No Longer Available',
+      `<p>We're sorry — the slot on <strong>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</strong> has just been taken.</p>
+       <p>Please reply to your email or contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a> and we'll find you another date.</p>`, 'warning');
+    return;
+  }
+
+  _pendingEmailAction = { action, ev, teacherEmail, token, carriedName, carriedTopic };
+
+  const cfg = {
+    confirm:  { title: 'Confirm your attendance',  intro: 'Please confirm you can teach this session:',        btn: 'Yes, I can attend',        cls: 'btn-green', type: 'success' },
+    decline:  { title: 'Decline this session',      intro: 'Please confirm you are unable to teach this session:', btn: 'Yes, I cannot attend',     cls: 'btn-red',   type: 'warning' },
+    cancel:   { title: 'Cancel this session',        intro: 'Please confirm you want to cancel this session:',     btn: 'Yes, cancel this session', cls: 'btn-red',   type: 'warning' },
+    claim:    { title: 'Claim this slot',            intro: 'Please confirm you would like to teach this slot:',   btn: 'Yes, claim this slot',     cls: 'btn-green', type: 'success' }
+  }[action];
+
+  const displayTopic = ev.topic || carriedTopic || 'TBD';
+  showActionLanding(cfg.title,
+    `<p>${cfg.intro}</p>
+     <table style="margin:16px 0;font-size:14px;">
+       <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${esc(displayTopic)}</td></tr>
+       <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</td></tr>
+       <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Time:</td><td>${esc(ev.time || 'TBC')}</td></tr>
+       <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Room:</td><td>${esc(ev.room || 'TBC')}</td></tr>
+     </table>
+     <div style="margin-top:20px;text-align:center;">
+       <button id="confirmActionBtn" class="btn ${cfg.cls}" style="padding:12px 32px;font-size:14px;" onclick="runPendingEmailAction(this)">${cfg.btn}</button>
+     </div>
+     <p style="color:var(--nhs-grey);font-size:12px;text-align:center;margin-top:14px;">Not you, or clicked by mistake? You can safely close this page — nothing changes until you press the button above.</p>`,
+    cfg.type);
+}
+
+// Step 2: the human pressed the button — now actually perform the action.
+async function runPendingEmailAction(btn) {
+  const p = _pendingEmailAction;
+  if (!p) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Please wait...'; }
+  _pendingEmailAction = null;
+  if (p.action === 'confirm')      await performConfirmAction(p.ev, p.teacherEmail, p.token);
+  else if (p.action === 'decline') await performDeclineAction(p.ev, p.teacherEmail, p.token);
+  else if (p.action === 'cancel')  await performCancelAction(p.ev, p.teacherEmail, p.token);
+  else if (p.action === 'claim')   await performClaimAction(p.ev, p.teacherEmail, p.token, p.carriedName, p.carriedTopic);
 }
 
 // Calls a token-validated SECURITY DEFINER RPC. Needed because anon visitors
@@ -93,22 +141,9 @@ async function callSessionRpc(fn, body) {
   });
 }
 
-async function handleClaimAction(ev, teacherEmail, params, token) {
-  const carriedTopic = (params.get('topic') || '').trim();
-  const carriedName = (params.get('name') || '').trim();
-  const teacherName = carriedName || ev.teacher || 'Colleague';
-
-  // Guard: slot already taken by someone else (local snapshot — RPC re-checks server-side)
-  if (ev.teacher && ev.status !== 'cancelled') {
-    showActionLanding(
-      'Slot No Longer Available',
-      `<p>We're sorry — the slot on <strong>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</strong> has just been taken.</p>
-       <p>Please reply to your email or contact <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a> and we'll find you another date.</p>`,
-      'warning'
-    );
-    return;
-  }
-
+async function performClaimAction(ev, teacherEmail, token, carriedName, carriedTopic) {
+  carriedTopic = (carriedTopic || '').trim();
+  const teacherName = (carriedName || '').trim() || ev.teacher || 'Colleague';
   try {
     const res = await callSessionRpc('claim_session_via_token', { p_session_id: Number(ev.id), p_token: token, p_name: teacherName, p_topic: carriedTopic });
     if (!res.ok) {
@@ -141,7 +176,7 @@ async function handleClaimAction(ev, teacherEmail, params, token) {
   }
 }
 
-async function handleConfirmAction(ev, teacherEmail, token) {
+async function performConfirmAction(ev, teacherEmail, token) {
   try {
     const res = await callSessionRpc('set_teacher_confirmed', { p_session_id: Number(ev.id), p_token: token, p_value: 'confirmed' });
     if (!res.ok) {
@@ -169,7 +204,7 @@ async function handleConfirmAction(ev, teacherEmail, token) {
   }
 }
 
-async function handleDeclineAction(ev, teacherEmail, token) {
+async function performDeclineAction(ev, teacherEmail, token) {
   try {
     const res = await callSessionRpc('set_teacher_confirmed', { p_session_id: Number(ev.id), p_token: token, p_value: 'declined' });
     if (!res.ok) {
@@ -195,7 +230,7 @@ async function handleDeclineAction(ev, teacherEmail, token) {
   }
 }
 
-async function handleCancelAction(ev, teacherEmail, token) {
+async function performCancelAction(ev, teacherEmail, token) {
   // The schedule update must happen server-side: anon visitors cannot UPDATE
   // schedule under RLS. self_cancel_session (SECURITY DEFINER RPC) validates the
   // token and flips the row to cancelled with the service role.

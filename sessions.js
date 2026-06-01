@@ -1200,6 +1200,8 @@ async function submitSessionRequest() {
     if (!res.ok) throw new Error('Submit failed: HTTP ' + res.status);
     logQI('session_requested', { actor_email: email || null, actor_name: name || null, metadata: { topic, preferred_date: slot } });
     logFlowStep('session_request_submitted', { name, email, topic, preferred_date: slot });
+    // Alert the admins in real time
+    try { if (typeof sendNewRequestAdminNotice === 'function') await sendNewRequestAdminNotice({ name, email, phone, topic, preferred_date: slot, message }); } catch(e) { /* non-critical */ }
     closeModal('requestSessionModal');
     showToast("Request submitted! The teaching team will get back to you.");
   } catch(e) { logError('submitSessionRequest', e); showToast('Failed to submit request'); }

@@ -259,7 +259,7 @@ async function sendRequestConfirmationEmail(sessionId, ev, note) {
   if (!to) return false;
   const tok = (typeof generateActionToken === 'function') ? generateActionToken(sessionId, to) : btoa(sessionId + ':' + to);
   const rescheduleLink = `${SITE_URL}?action=reschedule&session=${sessionId}&token=${encodeURIComponent(tok)}`;
-  const cancelLink = `${SITE_URL}?action=decline&session=${sessionId}&token=${encodeURIComponent(tok)}`;
+  const cancelLink = `${SITE_URL}?action=cancel&session=${sessionId}&token=${encodeURIComponent(tok)}`;
   const attendUrl = `${SITE_URL}?attend=${sessionId}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(attendUrl)}`;
   const dateStr = `${ev.day || ''} ${ev.date || ''} ${ev.month || ''} ${ev.year || ''}`.trim();
@@ -297,7 +297,7 @@ async function sendRequestConfirmationEmail(sessionId, ev, note) {
     </div>
   </div>`;
 
-  const plain = `Dear ${ev.teacher || 'Colleague'},\n\n${ev.topic ? 'Regarding your request: ' + ev.topic + '\n' : ''}We're pleased to confirm your teaching session request has been accepted.\n\n${note ? note + '\n\n' : ''}Topic: ${ev.topic || 'TBD'}\nDate: ${dateStr || 'TBC'}\nTime: ${ev.time || 'TBC'}\nRoom: ${ev.room || 'TBC'}\n\nMark attendance: ${attendUrl}\nReschedule: ${rescheduleLink}\nCancel: ${cancelLink}\n\nBest regards,\nSouthmead Surgical Teaching Team`;
+  const plain = `Dear ${ev.teacher || 'Colleague'},\n\n${ev.topic ? 'Regarding your request: ' + ev.topic + '\n' : ''}We're pleased to confirm your teaching session request has been accepted.\n\n${note ? note + '\n\n' : ''}Topic: ${ev.topic || 'TBD'}\nDate: ${dateStr || 'TBC'}\nTime: ${ev.time || 'TBC'}\nRoom: ${ev.room || 'TBC'}\n\nMark attendance: ${attendUrl}\nReschedule: ${rescheduleLink}\nCancel this session: ${cancelLink}\n\nBest regards,\nSouthmead Surgical Teaching Team`;
 
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
@@ -396,6 +396,152 @@ async function sendRequestDeclineEmail(r, note) {
     console.warn('Request decline email failed:', result);
     return false;
   } catch(e) { logError('sendRequestDeclineEmail', e); console.warn('Request decline email error:', e); return false; }
+}
+
+// Where real-time admin alerts go (self-cancellations + new session requests)
+const ADMIN_ALERT_EMAILS = ['work.suketu@gmail.com', 'Ilgin.Kilic@nbt.nhs.uk'];
+
+// Real-time alert to admins when someone submits a new session request (or reschedule).
+async function sendNewRequestAdminNotice(req) {
+  if (!req) return false;
+  const isReschedule = req.kind === 'reschedule';
+  const subject = isReschedule
+    ? `New reschedule request: ${req.topic || 'Session'}`
+    : `New session request: ${req.topic || 'Session'}`;
+  const rows = [
+    ['Name', req.name],
+    ['Email', req.email],
+    ['Phone', req.phone],
+    ['Topic', req.topic],
+    ['Preferred date', req.preferred_date],
+    ['Message', req.message]
+  ].filter(r => r[1]);
+  const rowsHtml = rows.map(r => `<tr><td style="padding:6px 16px 6px 16px;font-weight:bold;vertical-align:top;">${esc(r[0])}:</td><td style="padding:6px 16px 6px 0;">${esc(String(r[1]))}</td></tr>`).join('');
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+      <h2 style="color:white;margin:0;font-size:18px;">${isReschedule ? 'New Reschedule Request' : 'New Session Request'}</h2>
+    </div>
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;font-size:14px;line-height:1.6;">
+      <p style="margin:0 0 12px;">A ${isReschedule ? 'reschedule' : 'new teaching session'} request has just come in:</p>
+      <table style="margin:0 0 16px;font-size:14px;border-collapse:collapse;width:100%;background:#eaf3de;border-radius:8px;">${rowsHtml}</table>
+      <p style="margin:0;"><a href="${SITE_URL}" style="color:#003087;font-weight:bold;">Open the teaching app to respond &rarr;</a></p>
+    </div>
+  </div>`;
+  const plain = `A ${isReschedule ? 'reschedule' : 'new session'} request has come in:\n\n${rows.map(r => r[0] + ': ' + r[1]).join('\n')}\n\nOpen the app to respond: ${SITE_URL}`;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ to: ADMIN_ALERT_EMAILS, subject, html, text: plain })
+    });
+    const result = await res.json().catch(() => ({}));
+    return !!result.success;
+  } catch(e) { logError('sendNewRequestAdminNotice', e); return false; }
+}
+
+// Real-time alert to the admin when a teacher self-cancels from the email link.
+async function sendSelfCancelAdminNotice(ev, teacherEmail) {
+  const dateStr = `${ev.day || ''} ${ev.date || ''} ${ev.month || ''} ${ev.year || ''}`.trim();
+  const when = new Date().toLocaleString('en-GB');
+  const subject = `Session CANCELLED by teacher: ${ev.topic || 'Session'} - ${dateStr}`.trim();
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#da291c;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+      <h2 style="color:white;margin:0;font-size:18px;">Session Cancelled by Teacher</h2>
+    </div>
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;font-size:14px;line-height:1.6;">
+      <p style="margin:0 0 12px;"><strong>${esc(ev.teacher || 'A teacher')}</strong> has just cancelled their session using the link in their confirmation email.</p>
+      <table style="margin:0 0 16px;font-size:14px;border-collapse:collapse;width:100%;background:#fbeaf0;border-radius:8px;">
+        <tr><td style="padding:10px 16px 4px 16px;font-weight:bold;">Topic:</td><td style="padding:10px 16px 4px 0;">${esc(ev.topic || 'TBD')}</td></tr>
+        <tr><td style="padding:4px 16px;font-weight:bold;">Date:</td><td style="padding:4px 16px 4px 0;">${esc(dateStr || 'TBC')}</td></tr>
+        <tr><td style="padding:4px 16px;font-weight:bold;">Time:</td><td style="padding:4px 16px 4px 0;">${esc(ev.time || 'TBC')}</td></tr>
+        <tr><td style="padding:4px 16px;font-weight:bold;">Room:</td><td style="padding:4px 16px 4px 0;">${esc(ev.room || 'TBC')}</td></tr>
+        <tr><td style="padding:4px 16px;font-weight:bold;">Teacher:</td><td style="padding:4px 16px 4px 0;">${esc(ev.teacher || '')}${teacherEmail ? ' (' + esc(teacherEmail) + ')' : ''}</td></tr>
+        <tr><td style="padding:4px 16px 10px 16px;font-weight:bold;">Cancelled at:</td><td style="padding:4px 16px 10px 0;">${esc(when)}</td></tr>
+      </table>
+      <p style="margin:0;">The session is now marked <strong>cancelled</strong> on the calendar. You may want to find replacement cover.</p>
+      <p style="margin:14px 0 0;"><a href="${SITE_URL}" style="color:#003087;font-weight:bold;">Open the teaching app &rarr;</a></p>
+    </div>
+  </div>`;
+  const plain = `${ev.teacher || 'A teacher'} has cancelled their session via the email link.\n\nTopic: ${ev.topic || 'TBD'}\nDate: ${dateStr || 'TBC'}\nTime: ${ev.time || 'TBC'}\nRoom: ${ev.room || 'TBC'}\nTeacher: ${ev.teacher || ''} ${teacherEmail || ''}\nCancelled at: ${when}\n\nThe session is now marked cancelled on the calendar.`;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ to: ADMIN_ALERT_EMAILS, subject, html, text: plain })
+    });
+    const result = await res.json().catch(() => ({}));
+    return !!result.success;
+  } catch(e) { logError('sendSelfCancelAdminNotice', e); return false; }
+}
+
+// Cancellation confirmation to the teacher who self-cancelled. Cancellation-style:
+// apology-free but warm, encourages re-booking with the next open slots + full link.
+async function sendSelfCancelTeacherEmail(ev, teacherEmail) {
+  const to = teacherEmail;
+  if (!to) return false;
+  const dateStr = `${ev.day || ''} ${ev.date || ''} ${ev.month || ''} ${ev.year || ''}`.trim();
+  const subject = 'Your teaching session has been cancelled';
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const openSlots = (typeof events !== 'undefined' ? events : [])
+    .filter(e => e.id !== ev.id && e.status !== 'cancelled' && !e.teacher)
+    .filter(e => { const d = eventToDate(e); return d && d >= today; })
+    .sort((a, b) => eventToDate(a) - eventToDate(b))
+    .slice(0, 5);
+
+  let slotsHtml = '';
+  if (openSlots.length > 0) {
+    slotsHtml = `<div style="border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;margin:0 0 14px;">`;
+    openSlots.forEach((s, i) => {
+      const tok = (typeof generateActionToken === 'function') ? generateActionToken(s.id, to) : btoa(s.id + ':' + to);
+      const claimLink = `${SITE_URL}?action=claim&session=${s.id}&token=${encodeURIComponent(tok)}&topic=${encodeURIComponent(ev.topic || s.topic || '')}&name=${encodeURIComponent(ev.teacher || '')}`;
+      const dateLabel = `${s.day} ${s.date} ${s.month}${s.year ? ' ' + s.year : ''}`;
+      const border = i < openSlots.length - 1 ? 'border-bottom:1px solid #eee;' : '';
+      slotsHtml += `<table role="presentation" width="100%" style="border-collapse:collapse;${border}"><tr>
+        <td style="padding:12px 16px;font-size:14px;color:#231f20;">
+          <div style="font-weight:bold;">${esc(dateLabel)}${s.time ? ' &middot; ' + esc(s.time) : ''}</div>
+          <div style="font-size:12px;color:#768692;">${esc(s.room || 'Room TBC')} &middot; slot open</div>
+        </td>
+        <td style="padding:12px 16px;text-align:right;white-space:nowrap;">
+          <a href="${claimLink}" style="display:inline-block;padding:9px 16px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-size:13px;font-weight:bold;">Claim this slot</a>
+        </td>
+      </tr></table>`;
+    });
+    slotsHtml += `</div>`;
+  }
+
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+      <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
+    </div>
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;font-size:14px;line-height:1.6;">
+      <p style="margin:0 0 12px;">Dear ${esc(ev.teacher || 'Colleague')},</p>
+      <p style="margin:0 0 12px;">Your teaching session has been cancelled as requested:</p>
+      <table style="margin:0 0 16px;font-size:14px;border-collapse:collapse;width:100%;background:#fbeaf0;border-radius:8px;">
+        <tr><td style="padding:10px 16px 4px 16px;font-weight:bold;">Topic:</td><td style="padding:10px 16px 4px 0;text-decoration:line-through;color:#72243e;">${esc(ev.topic || 'TBD')}</td></tr>
+        <tr><td style="padding:4px 16px;font-weight:bold;">Date:</td><td style="padding:4px 16px 4px 0;text-decoration:line-through;color:#72243e;">${esc(dateStr || 'TBC')}</td></tr>
+        <tr><td style="padding:4px 16px 10px 16px;font-weight:bold;">Time:</td><td style="padding:4px 16px 10px 0;text-decoration:line-through;color:#72243e;">${esc(ev.time || 'TBC')}</td></tr>
+      </table>
+      <p style="margin:0 0 6px;font-weight:bold;">Your expertise is still very much needed.</p>
+      <p style="margin:0 0 14px;">${openSlots.length > 0 ? "If you'd like to teach on another date, just tap one of the open slots below to claim it - no login required." : "We'd love to find you another date - just reply to this email and we'll arrange one."}</p>
+      ${slotsHtml}
+      <p style="margin:16px 0 4px;font-size:13px;text-align:center;"><a href="${SITE_URL}?request=1" style="color:#003087;font-weight:bold;">See all available dates &amp; request a session &rarr;</a></p>
+      <p style="margin:6px 0 4px;font-size:12px;color:#768692;text-align:center;">Or simply reply to this email and we'll find a date that suits you.</p>
+      <p style="margin:18px 0 0;">With thanks,<br>Southmead Surgical Teaching Team</p>
+    </div>
+  </div>`;
+  const plain = `Dear ${ev.teacher || 'Colleague'},\n\nYour teaching session has been cancelled as requested:\nTopic: ${ev.topic || 'TBD'}\nDate: ${dateStr || 'TBC'}\nTime: ${ev.time || 'TBC'}\n\nYour expertise is still very much needed - browse open dates and request another session here: ${SITE_URL}?request=1\nOr simply reply to this email.\n\nWith thanks,\nSouthmead Surgical Teaching Team`;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ to: [to], subject, html, text: plain })
+    });
+    const result = await res.json().catch(() => ({}));
+    return !!result.success;
+  } catch(e) { logError('sendSelfCancelTeacherEmail', e); return false; }
 }
 
 function openBulkEmailModal() {
