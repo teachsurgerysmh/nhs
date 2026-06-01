@@ -45,7 +45,7 @@ async function sendSessionEmail(id, type) {
       <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
       <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
     </div>
-    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;">
       <p>Dear ${ev.teacher || 'Colleague'},</p>
       <p>${isConfirm ? 'Thank you for agreeing to teach. Please find the details of your session below:' : 'This is a friendly reminder about your upcoming teaching session:'}</p>
       <table style="margin:16px 0;font-size:14px;border-collapse:collapse;">
@@ -211,7 +211,7 @@ async function sendCancellationEmail(id, reason) {
       <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
       <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
     </div>
-    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;color:#231f20;font-size:14px;line-height:1.6;">
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;font-size:14px;line-height:1.6;">
       <p style="margin:0 0 12px;">Dear ${esc(ev.teacher || 'Colleague')},</p>
       <p style="margin:0 0 12px;">We're very sorry, but we've had to <strong>cancel</strong> the teaching session below. We sincerely apologise for the short notice and any inconvenience caused.</p>
       <table style="margin:0 0 16px;font-size:14px;border-collapse:collapse;width:100%;background:#fbeaf0;border-radius:8px;">
@@ -223,7 +223,8 @@ async function sendCancellationEmail(id, reason) {
       <p style="margin:0 0 6px;font-weight:bold;">Your expertise is still very much needed.</p>
       <p style="margin:0 0 14px;">We'd be grateful if you could share your knowledge on one of the upcoming open slots below. Just tap a date to claim it — no login required.</p>
       ${slotsHtml}
-      <p style="margin:16px 0 4px;font-size:12px;color:#768692;text-align:center;">None of these work? Simply reply to this email and we'll find a date that suits you.</p>
+      <p style="margin:16px 0 4px;font-size:13px;text-align:center;"><a href="${SITE_URL}?request=1" style="color:#003087;font-weight:bold;">See all available dates &amp; request a session &rarr;</a></p>
+      <p style="margin:6px 0 4px;font-size:12px;color:#768692;text-align:center;">None of these work? Simply reply to this email and we'll find a date that suits you.</p>
       <p style="margin:18px 0 0;">With thanks for your understanding,<br>Southmead Surgical Teaching Team</p>
     </div>
   </div>`;
@@ -247,6 +248,154 @@ async function sendCancellationEmail(id, reason) {
     console.warn('Cancellation email error:', e);
     showToast('Session cancelled, but the email failed to send.');
   }
+}
+
+// ===================== SESSION REQUEST RESPONSES =====================
+// Confirmation email sent when a session request is ACCEPTED. The admin's typed
+// note goes in verbatim. Includes an attendance QR + working reschedule/cancel
+// buttons that update the newly-created schedule row in real time (action tokens).
+async function sendRequestConfirmationEmail(sessionId, ev, note) {
+  const to = ev.teacher_email || ev.teacherEmail;
+  if (!to) return false;
+  const tok = (typeof generateActionToken === 'function') ? generateActionToken(sessionId, to) : btoa(sessionId + ':' + to);
+  const rescheduleLink = `${SITE_URL}?action=reschedule&session=${sessionId}&token=${encodeURIComponent(tok)}`;
+  const cancelLink = `${SITE_URL}?action=decline&session=${sessionId}&token=${encodeURIComponent(tok)}`;
+  const attendUrl = `${SITE_URL}?attend=${sessionId}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(attendUrl)}`;
+  const dateStr = `${ev.day || ''} ${ev.date || ''} ${ev.month || ''} ${ev.year || ''}`.trim();
+  const subject = `Teaching Session Confirmed: ${ev.topic || 'Session'} - ${ev.day || ''} ${ev.date || ''} ${ev.month || ''} ${ev.year || ''}`.trim();
+  const noteHtml = note ? esc(note).replace(/\n/g, '<br>') : '';
+
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+      <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
+    </div>
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;font-size:14px;line-height:1.6;">
+      <p style="margin:0 0 12px;">Dear ${esc(ev.teacher || 'Colleague')},</p>
+      ${ev.topic ? '<p style="font-size:13px;color:#4c6272;margin:0 0 12px;">Regarding your request: <strong>' + esc(ev.topic) + '</strong></p>' : ''}
+      <p style="margin:0 0 14px;">We're pleased to confirm your teaching session request has been accepted.</p>
+      ${noteHtml ? '<div style="margin:0 0 18px;padding:14px 16px;background:#f0f4f5;border-radius:8px;white-space:normal;">' + noteHtml + '</div>' : ''}
+      <table style="margin:0 0 16px;font-size:14px;border-collapse:collapse;width:100%;background:#eaf3de;border-radius:8px;">
+        <tr><td style="padding:10px 16px 4px 16px;font-weight:bold;">Topic:</td><td style="padding:10px 16px 4px 0;">${esc(ev.topic || 'TBD')}</td></tr>
+        <tr><td style="padding:4px 16px;font-weight:bold;">Date:</td><td style="padding:4px 16px 4px 0;">${esc(dateStr || 'TBC')}</td></tr>
+        <tr><td style="padding:4px 16px;font-weight:bold;">Time:</td><td style="padding:4px 16px 4px 0;">${esc(ev.time || 'TBC')}</td></tr>
+        <tr><td style="padding:4px 16px 10px 16px;font-weight:bold;">Room:</td><td style="padding:4px 16px 10px 0;">${esc(ev.room || 'TBC')}</td></tr>
+      </table>
+      <div style="margin:18px 0;text-align:center;padding:16px;background:#f0f4f5;border-radius:8px;">
+        <p style="margin:0 0 6px;font-weight:bold;font-size:14px;">Attendance QR code</p>
+        <p style="margin:0 0 12px;font-size:12px;color:#4c6272;">Display this at your session for learners to scan and mark their attendance.</p>
+        <img src="${qrSrc}" alt="Attendance QR Code" style="width:180px;height:180px;display:block;margin:0 auto;">
+        <p style="margin:10px 0 0;font-size:12px;color:#231f20;word-break:break-all;">Or share this link:<br><a href="${attendUrl}" style="color:#003087;">${attendUrl}</a></p>
+      </div>
+      <p style="margin:18px 0 8px;text-align:center;font-weight:bold;">Need to make a change?</p>
+      <div style="margin:0 0 8px;text-align:center;">
+        <a href="${rescheduleLink}" style="display:inline-block;padding:11px 22px;background:#ed8b00;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">Reschedule</a>
+        <a href="${cancelLink}" style="display:inline-block;padding:11px 22px;background:#da291c;color:white;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;margin:0 6px 8px;">Cancel</a>
+      </div>
+      <p style="margin:14px 0 0;">Best regards,<br>Southmead Surgical Teaching Team</p>
+    </div>
+  </div>`;
+
+  const plain = `Dear ${ev.teacher || 'Colleague'},\n\n${ev.topic ? 'Regarding your request: ' + ev.topic + '\n' : ''}We're pleased to confirm your teaching session request has been accepted.\n\n${note ? note + '\n\n' : ''}Topic: ${ev.topic || 'TBD'}\nDate: ${dateStr || 'TBC'}\nTime: ${ev.time || 'TBC'}\nRoom: ${ev.room || 'TBC'}\n\nMark attendance: ${attendUrl}\nReschedule: ${rescheduleLink}\nCancel: ${cancelLink}\n\nBest regards,\nSouthmead Surgical Teaching Team`;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ to: [to], subject, html, text: plain })
+    });
+    const result = await res.json().catch(() => ({}));
+    if (result.success) {
+      logAction('Sent request confirmation', `${ev.topic || 'Session'} -> ${to}`);
+      logQI('invitation_sent', { session_id: sessionId, metadata: { teacher_email: to, teacher_name: ev.teacher, topic: ev.topic, channel: 'email', email_type: 'request_confirmation' } });
+      trackSentEmail(sessionId, to, subject, 'confirmation', ev.topic, ev.teacher, dateStr);
+      return true;
+    }
+    console.warn('Request confirmation email failed:', result);
+    return false;
+  } catch(e) { logError('sendRequestConfirmationEmail', e); console.warn('Request confirmation email error:', e); return false; }
+}
+
+// Decline email sent when a session request is REJECTED. Styled like the session
+// cancellation email: apology, the admin's note, and an invite to find another date.
+async function sendRequestDeclineEmail(r, note) {
+  const to = r && r.email;
+  if (!to) return false;
+  const subject = 'Your Southmead Surgical Teaching request - update';
+
+  // Next 5 open future slots (no teacher assigned, not cancelled) — with claim buttons
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const openSlots = (typeof events !== 'undefined' ? events : [])
+    .filter(e => e.status !== 'cancelled' && !e.teacher)
+    .filter(e => { const d = eventToDate(e); return d && d >= today; })
+    .sort((a, b) => eventToDate(a) - eventToDate(b))
+    .slice(0, 5);
+
+  let slotsHtml = '';
+  if (openSlots.length > 0) {
+    slotsHtml = `<div style="border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;margin:0 0 14px;">`;
+    openSlots.forEach((s, i) => {
+      const tok = (typeof generateActionToken === 'function') ? generateActionToken(s.id, to) : btoa(s.id + ':' + to);
+      const claimLink = `${SITE_URL}?action=claim&session=${s.id}&token=${encodeURIComponent(tok)}&topic=${encodeURIComponent(r.topic || s.topic || '')}&name=${encodeURIComponent(r.name || '')}`;
+      const dateLabel = `${s.day} ${s.date} ${s.month}${s.year ? ' ' + s.year : ''}`;
+      const border = i < openSlots.length - 1 ? 'border-bottom:1px solid #eee;' : '';
+      slotsHtml += `<table role="presentation" width="100%" style="border-collapse:collapse;${border}"><tr>
+        <td style="padding:12px 16px;font-size:14px;color:#231f20;">
+          <div style="font-weight:bold;">${esc(dateLabel)}${s.time ? ' &middot; ' + esc(s.time) : ''}</div>
+          <div style="font-size:12px;color:#768692;">${esc(s.room || 'Room TBC')} &middot; slot open</div>
+        </td>
+        <td style="padding:12px 16px;text-align:right;white-space:nowrap;">
+          <a href="${claimLink}" style="display:inline-block;padding:9px 16px;background:#009639;color:white;text-decoration:none;border-radius:6px;font-size:13px;font-weight:bold;">Claim this slot</a>
+        </td>
+      </tr></table>`;
+    });
+    slotsHtml += `</div>`;
+  }
+
+  const noteBlock = note
+    ? `<div style="margin:0 0 18px;padding:12px 14px;background:#f0f4f5;border-left:3px solid #003087;">
+         <div style="font-size:12px;font-weight:bold;color:#4c6272;margin-bottom:3px;">A NOTE FROM THE TEAM</div>
+         <div style="font-size:13px;color:#231f20;">${esc(note).replace(/\n/g, '<br>')}</div>
+       </div>`
+    : '';
+
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
+      <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
+    </div>
+    <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;font-size:14px;line-height:1.6;">
+      <p style="margin:0 0 12px;">Dear ${esc(r.name || 'Colleague')},</p>
+      ${r.topic ? '<p style="font-size:13px;color:#4c6272;margin:0 0 12px;">Regarding your request: <strong>' + esc(r.topic) + '</strong></p>' : ''}
+      <p style="margin:0 0 12px;">Thank you for your teaching session request. We're sorry that on this occasion we're unable to take it forward.</p>
+      ${noteBlock}
+      <p style="margin:0 0 6px;font-weight:bold;">Your expertise is still very much needed.</p>
+      <p style="margin:0 0 14px;">${openSlots.length > 0 ? "We'd be grateful if you could teach on one of the upcoming open slots below. Just tap a date to claim it — no login required." : "We'd love to find you another date — just reply to this email and we'll arrange one."}</p>
+      ${slotsHtml}
+      <p style="margin:16px 0 4px;font-size:13px;text-align:center;"><a href="${SITE_URL}?request=1" style="color:#003087;font-weight:bold;">See all available dates &amp; request a session &rarr;</a></p>
+      <p style="margin:6px 0 4px;font-size:12px;color:#768692;text-align:center;">None of these work? Simply reply to this email and we'll find a date that suits you.</p>
+      <p style="margin:18px 0 0;">With thanks for your understanding,<br>Southmead Surgical Teaching Team</p>
+    </div>
+  </div>`;
+
+  const plain = `Dear ${r.name || 'Colleague'},\n\nThank you for your teaching session request. We're sorry that on this occasion we're unable to take it forward.${note ? '\n\n' + note : ''}\n\nWe'd still love to have you teach - browse open dates and request another session here: ${SITE_URL}?request=1\nOr simply reply to this email.\n\nWith thanks for your understanding,\nSouthmead Surgical Teaching Team`;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ to: [to], subject, html, text: plain })
+    });
+    const result = await res.json().catch(() => ({}));
+    if (result.success) {
+      logAction('Sent request decline', to);
+      logQI('request_response_sent', { metadata: { email: to, status: 'rejected', channel: 'email', topic: r.topic || null } });
+      return true;
+    }
+    console.warn('Request decline email failed:', result);
+    return false;
+  } catch(e) { logError('sendRequestDeclineEmail', e); console.warn('Request decline email error:', e); return false; }
 }
 
 function openBulkEmailModal() {
@@ -635,7 +784,7 @@ async function sendFeedbackEmails() {
         <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
         <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
       </div>
-      <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+      <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;">
         <p>Dear ${learner?.name || 'Colleague'},</p>
         <p>Please take a moment to provide feedback for the teaching session below, delivered by <strong>${teacher}</strong>:</p>
         <table style="margin:16px 0;font-size:14px;">
@@ -804,7 +953,7 @@ async function sendTeacherRequestEmails() {
         <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:60px;width:auto;margin-bottom:8px;">
         <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
       </div>
-      <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+      <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;">
         <p>Dear ${r.name || 'Colleague'},</p>
         <p>We are looking for a teacher for the following session and would like to invite you:</p>
         <table style="margin:16px 0;font-size:14px;border-collapse:collapse;">
@@ -1274,7 +1423,7 @@ async function sendGmailReply(toEmail, subject) {
       <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:48px;width:auto;margin-bottom:6px;">
       <h3 style="color:white;margin:0;font-size:16px;">Southmead Surgical Teaching</h3>
     </div>
-    <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+    <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;">
       <p>${replyText.replace(/\n/g, '<br>')}</p>
       <p style="color:#768692;font-size:13px;margin-top:16px;">Best regards,<br>Southmead Surgical Teaching Team</p>
     </div>
@@ -1372,7 +1521,7 @@ async function sendInboxReply(sessionId, toEmail, topic) {
       <img src="${LOGO_URL}" alt="Southmead Surgical Teaching" style="height:48px;width:auto;margin-bottom:6px;">
       <h3 style="color:white;margin:0;font-size:16px;">Southmead Surgical Teaching</h3>
     </div>
-    <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+    <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;">
       <p>${replyText.replace(/\n/g, '<br>')}</p>
       <p style="color:#768692;font-size:13px;margin-top:16px;">Best regards,<br>Southmead Surgical Teaching Team</p>
     </div>

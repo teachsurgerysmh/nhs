@@ -901,11 +901,31 @@ async function saveEvent() {
       if (evData.status === 'completed') logQI('session_completed', { session_id: editingEventId, metadata: { topic: evData.topic } });
     } else {
       evData.event_id = 'EVT' + Date.now();
+      if (_acceptingRequest) evData.teacher_confirmed = 'confirmed';
       const inserted = await sbInsert('schedule', evData);
       const newId = inserted && inserted[0] && inserted[0].id;
       showToast('Session added');
       logAction('Added session', evData.topic || evData.date);
       logQI('session_created', { session_id: newId || null, metadata: { topic: evData.topic, teacher: evData.teacher, status: evData.status, published: evData.published } });
+
+      // Came from accepting a session request: mark it accepted + email the requester
+      if (_acceptingRequest) {
+        const req = _acceptingRequest;
+        _acceptingRequest = null;
+        try {
+          await sbUpdate('requests', req.id, {
+            status: 'accepted',
+            responded_by: currentUser?.name || 'Unknown',
+            response_note: req.note,
+            responded_at: new Date().toISOString()
+          });
+          logAction('Accepted session request', '#' + req.id);
+          if (newId && !isDemoMode && typeof sendRequestConfirmationEmail === 'function') {
+            const ok = await sendRequestConfirmationEmail(newId, { ...evData, id: newId }, req.note);
+            showToast(ok ? ('Confirmation emailed to ' + (req.name || 'requester')) : 'Session saved, but confirmation email FAILED - email ' + (req.email || 'requester') + ' manually');
+          }
+        } catch(e) { logError('acceptRequestOnSave', e); }
+      }
     }
     // Auto-create contact if teacher_email provided and not already in contacts
     if (evData.teacher_email) {
@@ -1111,45 +1131,30 @@ function showRequestSessionModal(preselectedSlot) {
   // Populate available slots dropdown
   const sel = document.getElementById('reqSlot');
   const today = new Date(); today.setHours(0,0,0,0);
-  // Generate ALL future Tues/Wed dates through end of academic year
-  const DAYNAMES = ['Sun','Mon','Tues','Wed','Thurs','Fri','Sat'];
-  const endDate = new Date(today.getFullYear() + 1, 11, 31); // rolling to end of next year
-  const allSlots = [];
-  const d = new Date(today);
-  while (d <= endDate) {
-    const dow = d.getDay();
-    if (dow === 2 || dow === 3) { // Tues or Wed
-      const bankHol = getBankHoliday(d.getFullYear(), d.getMonth(), d.getDate());
-      if (bankHol) { d.setDate(d.getDate() + 1); continue; } // skip bank holidays
-      const dateStr = getOrdinal(d.getDate());
-      const monthStr = MONTHS[d.getMonth()];
-      const yearStr = String(d.getFullYear());
-      const dayName = DAYNAMES[dow];
-      // Check if there's already a fully-booked event on this date
-      const existing = events.filter(e => {
-        const ed = eventToDate(e);
-        return ed && ed.getTime() === d.getTime();
-      });
-      const fullyBooked = existing.length > 0 && existing.every(e => e.topic && e.teacher && e.status !== 'cancelled');
-      if (!fullyBooked) {
-        const partial = existing.find(e => e.status !== 'cancelled');
-        const info = partial ? (partial.topic ? ` [Topic: ${partial.topic}]` : partial.teacher ? ` [Teacher: ${partial.teacher}]` : '') : '';
-        const time = partial?.time || '';
-        const room = partial?.room || '';
-        allSlots.push({ dayName, dateStr, monthStr, yearStr, time, room, info });
-      }
-    }
-    d.setDate(d.getDate() + 1);
-  }
+  // Only REAL open slots: scheduled sessions that are not cancelled and have no
+  // teacher assigned yet — each shown with its actual time + room.
+  const allSlots = events
+    .filter(e => e.status !== 'cancelled' && !e.teacher)
+    .filter(e => { const ed = eventToDate(e); return ed && ed >= today; })
+    .sort((a, b) => eventToDate(a) - eventToDate(b))
+    .map(e => ({
+      dayName: e.day || '',
+      dateStr: e.date || '',
+      monthStr: e.month || '',
+      yearStr: e.year ? String(e.year) : '',
+      time: e.time || '',
+      room: e.room || '',
+      info: e.topic ? ` [Topic: ${e.topic}]` : ''
+    }));
 
-  sel.innerHTML = '<option value="">-- Choose an available date --</option>';
+  sel.innerHTML = '<option value="">-- Choose an available slot --</option>';
   allSlots.forEach(s => {
-    const label = `${s.dayName} ${s.dateStr} ${s.monthStr} ${s.yearStr}${s.time ? ' (' + s.time + ')' : ''}${s.room ? ' - ' + s.room : ''}${s.info}`;
+    const label = `${s.dayName} ${s.dateStr} ${s.monthStr} ${s.yearStr}${s.time ? ' (' + s.time + ')' : ''}${s.room ? ' - ' + s.room : ''}${s.info}`.trim();
     sel.innerHTML += `<option value="${label}">${label}</option>`;
   });
 
   if (allSlots.length === 0) {
-    sel.innerHTML = '<option value="">No available slots right now</option>';
+    sel.innerHTML = '<option value="">No open slots right now - use the message box below</option>';
   }
 
   // Pre-select if clicked from calendar
@@ -1266,34 +1271,80 @@ async function showRespondModal(id) {
   } catch(e) { logError('showRespondModal', e); console.error('Show respond modal failed:', e); }
 }
 
+// Holds the request being accepted while the admin fills in the Add Session form.
+// saveEvent() reads this to mark the request accepted + send the confirmation email.
+let _acceptingRequest = null;
+
+// Best-effort parse of a free-text preferred date into the schedule fields.
+function prefillDateFromPreferred(pref) {
+  if (!pref) return;
+  const d = new Date(pref);
+  if (!isNaN(d.getTime()) && /\d/.test(pref)) {
+    try {
+      document.getElementById('evDate').value = d.getDate();
+      document.getElementById('evMonth').value = MONTHS[d.getMonth()];
+      document.getElementById('evYear').value = d.getFullYear();
+      const days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat'];
+      document.getElementById('evDay').value = days[d.getDay()];
+    } catch(e) { /* field may not accept value — leave for admin */ }
+  } else {
+    const notes = document.getElementById('evNotes');
+    if (notes) notes.value = (notes.value ? notes.value + '\n' : '') + 'Requested preferred date: ' + pref;
+  }
+}
+
 async function respondToRequest(response) {
   const requestId = document.getElementById('respondId').value;
   const responseNote = document.getElementById('respondMessage').value.trim();
   if (!requestId) return;
+  const r = _pendingRequestData;
+
+  // ACCEPT → hand off to the Add Session form. The schedule row, the request
+  // status update and the confirmation email are all completed on Save.
+  if (response === 'accepted') {
+    _acceptingRequest = {
+      id: requestId,
+      note: responseNote,
+      name: r?.name || '',
+      email: r?.email || '',
+      phone: r?.phone || '',
+      topic: r?.topic || ''
+    };
+    closeModal('respondModal');
+    await openAddModal();
+    document.getElementById('eventModalTitle').textContent = 'Confirm Request - Add Session';
+    document.getElementById('evTopic').value = r?.topic || '';
+    document.getElementById('evTeacher').value = r?.name || '';
+    document.getElementById('evTeacherEmail').value = r?.email || '';
+    prefillDateFromPreferred(r?.preferred_date);
+    showToast('Set the date, time & room, then Save to confirm and email ' + (r?.name || 'the requester'));
+    return;
+  }
+
+  // REJECT → mark rejected + send the decline email (cancellation-style).
   try {
     await sbUpdate('requests', requestId, {
-      status: response,
+      status: 'rejected',
       responded_by: currentUser?.name || 'Unknown',
       response_note: responseNote,
       responded_at: new Date().toISOString()
     });
-    closeModal('respondModal');
-    showToast('Request ' + response + '!');
-    logAction((response === 'accepted' ? 'Accepted' : 'Rejected') + ' session request', '#' + requestId);
 
-    // Auto-create contact if accepting and requester not already in contacts
-    if (response === 'accepted' && _pendingRequestData?.email) {
-      const r = _pendingRequestData;
-      try {
-        const existing = await sbGet('contacts', `email=eq.${encodeURIComponent(r.email)}&select=id`);
-        if (existing.length === 0) {
-          await sbInsert('contacts', { name: r.name, email: r.email, phone: r.phone || null, role: 'Volunteer Teacher', added_by: currentUser?.name || 'System' });
-          showToast(`Contact added: ${r.name}`);
-          logInteraction('auto_contact_created', { name: r.name, email: r.email, source: 'session_request' });
-        }
-      } catch(e) { logError('autoCreateContact', e); }
+    let emailed = false, emailAttempted = false;
+    if (r?.email && !isDemoMode) {
+      emailAttempted = true;
+      emailed = await sendRequestDeclineEmail(r, responseNote);
     }
 
+    closeModal('respondModal');
+    if (emailAttempted && !emailed) {
+      showToast('Request declined, but the email FAILED to send - contact ' + r.email + ' manually');
+    } else if (emailed) {
+      showToast('Request declined and email sent to ' + r.name);
+    } else {
+      showToast('Request declined! (no email on file for requester)');
+    }
+    logAction('Rejected session request', '#' + requestId);
     loadRequests();
   } catch(e) { logError('respondToRequest', e); showToast('Failed to respond'); }
 }
