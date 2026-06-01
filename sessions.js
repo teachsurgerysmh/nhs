@@ -384,13 +384,26 @@ function renderCalendar() {
     if (bankHol) {
       html += `<div style="font-size:10px;color:#d5281b;font-weight:600;padding:1px 4px;background:#fde8e8;border-radius:3px;margin-bottom:2px;line-height:1.2;">${esc(bankHol)}</div>`;
     }
+    let publicAvailableShown = false;
     dayEvents.forEach(e => {
-      if (!isAdmin && (!e.published || e.status === 'cancelled' || e.status === 'tbd')) return;
+      const isOpenSlot = e.status !== 'cancelled' && !(e.teacher && String(e.teacher).trim());
+      if (!isAdmin) {
+        if (e.status === 'cancelled' || !e.published) return;
+        // Open slot (no teacher) → render as a clickable "Available" chip with time/room
+        if (isOpenSlot) {
+          const meta = [e.time, e.room].filter(Boolean).join(' · ');
+          const slotLabel = `${e.day} ${e.date} ${e.month} ${e.year}`;
+          html += `<div class="cal-empty-slot" onclick="event.stopPropagation();openRequestForSlot('${esc(slotLabel)}')" title="Request this slot">+ Available${meta ? ' · ' + esc(meta) : ''}</div>`;
+          publicAvailableShown = true;
+          return;
+        }
+        if (e.status === 'tbd') return; // tbd without a real session → don't show
+      }
       const label = e.topic || e.teacher || e.status;
       html += `<div class="cal-event status-${e.status}" onclick="event.stopPropagation();showDetail(${e.id})" title="${esc(label)}">${esc(label)}</div>`;
     });
-    // Show clickable "available" slot on empty Tue/Wed
-    if ((hasEmptySlot || isEmptyTueWed) && cellDate >= today) {
+    // Show clickable "available" slot on empty Tue/Wed (skip if we already drew real open slots)
+    if ((hasEmptySlot || isEmptyTueWed) && cellDate >= today && !publicAvailableShown) {
       const ordinal = getOrdinal(d);
       const slotLabel = `${dayOfWeek === 2 ? 'Tues' : 'Wed'} ${ordinal} ${MONTHS[calMonth]} ${calYear}`;
       if (isAdmin) {
