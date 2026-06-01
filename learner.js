@@ -467,10 +467,11 @@ async function submitFeedback() {
     // Mark the magic-link token as used so the same email can't submit twice.
     if (window._magicLinkFeedbackToken) {
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/feedback_tokens?token=eq.${encodeURIComponent(window._magicLinkFeedbackToken)}`, {
-          method: 'PATCH',
+        // Mark used via SECURITY DEFINER RPC (anon has no direct UPDATE on feedback_tokens).
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/mark_feedback_token_used`, {
+          method: 'POST',
           headers: { ...headers, 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ used_at: new Date().toISOString() })
+          body: JSON.stringify({ token_val: window._magicLinkFeedbackToken })
         });
       } catch(te) { console.warn('Token redeem failed:', te); }
       delete window._magicLinkFeedbackToken;

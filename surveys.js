@@ -474,7 +474,7 @@ async function saveSurveyAnswer(qId) {
       method: 'POST',
       headers: {
         ...headers,
-        'Prefer': 'resolution=merge-duplicates,return=representation'
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
       },
       body: JSON.stringify({
         form_type: surveyState.formType,
@@ -626,7 +626,7 @@ async function handleSurveyEmailClick() {
         method: 'POST',
         headers: {
           ...headers,
-          'Prefer': 'resolution=merge-duplicates,return=representation'
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
         },
         body: JSON.stringify({
           form_type: formType,
