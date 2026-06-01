@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.8.5';
-const APP_BUILD = '2026-06-01';
+const APP_VERSION = 'v3.9.0';
+const APP_BUILD = '2026-06-02';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
 // ===================== SAFE COLUMN LISTS (exclude pin_code) =====================
@@ -176,8 +176,10 @@ async function getOrCreateFeedbackToken(sessionId, learnerId) {
   }
 }
 
-function feedbackUrlWithToken(sessionId, token) {
-  return SITE_URL + '?feedback=' + sessionId + (token ? '&token=' + encodeURIComponent(token) : '');
+function feedbackUrlWithToken(sessionId, token, src) {
+  return SITE_URL + '?feedback=' + sessionId
+    + (token ? '&token=' + encodeURIComponent(token) : '')
+    + (src ? '&src=' + encodeURIComponent(src) : '');
 }
 
 // ── Date Helpers ──

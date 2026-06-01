@@ -325,6 +325,7 @@ async function init() {
     if (pendingAttend) window._pendingAttend = pendingAttend;
     if (pendingFeedback) window._pendingFeedback = pendingFeedback;
     if (pendingFeedbackToken) window._pendingFeedbackToken = pendingFeedbackToken;
+    if (params.get('src')) window._feedbackSource = params.get('src'); // QI: which intervention prompted this feedback
     // Clean URL without reloading
     window.history.replaceState({}, document.title, window.location.pathname);
     // Magic-link path: token resolves to a learner identity — no login modal.

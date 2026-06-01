@@ -63,8 +63,8 @@ async function sendSessionEmail(id, type) {
       <div style="margin:20px 0;text-align:center;padding:16px;background:#f0f4f5;border-radius:8px;">
         <p style="margin:0 0 8px;font-weight:bold;font-size:14px;">Session Feedback QR Code</p>
         <p style="margin:0 0 12px;font-size:12px;color:#4c6272;">Display at the end of your session for learners to scan and submit feedback</p>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&amp;data=${encodeURIComponent(SITE_URL + '?feedback=' + ev.id)}" alt="Feedback QR Code" style="width:180px;height:180px;display:block;margin:0 auto;">
-        <p style="margin:10px 0 0;font-size:12px;color:#231f20;word-break:break-all;">Or share this link directly:<br><a href="${SITE_URL}?feedback=${ev.id}" style="color:#003087;">${SITE_URL}?feedback=${ev.id}</a></p>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&amp;data=${encodeURIComponent(SITE_URL + '?feedback=' + ev.id + '&src=room_qr')}" alt="Feedback QR Code" style="width:180px;height:180px;display:block;margin:0 auto;">
+        <p style="margin:10px 0 0;font-size:12px;color:#231f20;word-break:break-all;">Or share this link directly:<br><a href="${SITE_URL}?feedback=${ev.id}&src=room_qr" style="color:#003087;">${SITE_URL}?feedback=${ev.id}</a></p>
         <p style="margin:8px 0 0;font-size:11px;color:#768692;">You can also log in to your Teacher Dashboard to view feedback and generate certificates</p>
       </div>
       ${isConfirm ? '<p>If you have any questions or need to make changes, please reply to this email.</p>' : '<p>If you can no longer attend, please let us know as soon as possible so we can arrange cover.</p>'}
@@ -917,11 +917,11 @@ async function sendFeedbackEmails() {
 
   for (const email of emails) {
     const learner = learnersByEmail[email.toLowerCase()];
-    let fbUrl = fallbackLink;
+    let fbUrl = fallbackLink + (fallbackLink.includes('?') ? '&' : '?') + 'src=email';
     if (learner) {
       try {
         const tok = await getOrCreateFeedbackToken(fbReqSessionId, learner.id);
-        if (tok) fbUrl = feedbackUrlWithToken(fbReqSessionId, tok);
+        if (tok) fbUrl = feedbackUrlWithToken(fbReqSessionId, tok, 'email');
       } catch(te) { console.warn('Token issue failed for', email, te); }
     }
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&amp;data=${encodeURIComponent(fbUrl)}`;
@@ -1273,7 +1273,9 @@ async function loadInbox() {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/read-inbox`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      // read-inbox is admin-only (server verifies the admin JWT). Send the
+      // logged-in admin's token, not the public anon key. apikey stays anon for gateway routing.
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ action: 'list', query: 'in:inbox OR in:sent subject:(Teaching OR Surgical OR Reminder OR Confirmation)', maxResults: 30 })
     });
     const data = await res.json();
@@ -1429,7 +1431,8 @@ async function selectGmailThread(threadId, index) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/read-inbox`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      // admin-only: send the logged-in admin's JWT (server verifies user_role:'admin')
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ action: 'thread', threadId })
     });
     const data = await res.json();

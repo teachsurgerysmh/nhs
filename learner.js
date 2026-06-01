@@ -213,10 +213,10 @@ async function autoSendFeedbackRequests(sessionId, learnerIds) {
     const emails = [];
     // Send one personalised email per recipient (each carries its own magic-link token).
     for (const r of recipients) {
-      let fbUrl = SITE_URL + '?feedback=' + sessionId;
+      let fbUrl = SITE_URL + '?feedback=' + sessionId + '&src=email';
       try {
         const tok = await getOrCreateFeedbackToken(sessionId, r.id);
-        if (tok) fbUrl = feedbackUrlWithToken(sessionId, tok);
+        if (tok) fbUrl = feedbackUrlWithToken(sessionId, tok, 'email');
       } catch(te) { console.warn('Token issue failed for learner', r.id, te); }
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&amp;data=${encodeURIComponent(fbUrl)}`;
       const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
@@ -451,7 +451,9 @@ async function submitFeedback() {
     } catch(e) { /* RLS blocks anon read of qi_events — that's fine, just don't compute */ }
     logQI('feedback_submitted', {
       session_id: sessionId,
+      source: window._feedbackSource || (currentLearner ? 'app' : 'qr'),
       metadata: {
+        src: window._feedbackSource || (currentLearner ? 'app' : 'qr'),
         anonymous: data.anonymous,
         ratings: { overall: data.rating_overall, content: data.rating_content_useful, structured: data.rating_structured, presentation: data.rating_presentation, delivery: data.rating_delivery, applicable: data.rating_applicable },
         good_aspects_len: (data.good_aspects || '').length,
@@ -459,6 +461,7 @@ async function submitFeedback() {
         hours_after_first_request: hoursAfterRequest
       }
     });
+    window._feedbackSource = null;
     closeModal('feedbackModal');
     showToast('Thank you for your feedback! Your attendance has been recorded.');
     // Mark the magic-link token as used so the same email can't submit twice.

@@ -595,7 +595,7 @@ function showDetail(id) {
   const evDateQR = eventToDate(ev);
   const isPastQR = evDateQR && evDateQR < new Date();
   if ((isAdminView || canAttend) && (isPastQR || ev.status === 'completed')) {
-    const fbUrl = encodeURIComponent(SITE_URL + '?feedback=' + ev.id);
+    const fbUrl = encodeURIComponent(SITE_URL + '?feedback=' + ev.id + '&src=room_qr');
     html += `<div style="text-align:center;margin:12px 0;padding:16px;background:var(--nhs-bg);border-radius:8px;">
       <div style="font-size:13px;font-weight:600;color:var(--nhs-dark-blue);margin-bottom:8px;">Feedback QR Code — display at end of session</div>
       <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=${fbUrl}" alt="Feedback QR" style="width:180px;height:180px;border-radius:4px;">

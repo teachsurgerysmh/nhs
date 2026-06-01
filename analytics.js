@@ -94,7 +94,7 @@ function logQILandingFromURL() {
   try {
     const p = new URLSearchParams(window.location.search);
     if (p.get('attend'))         logQI('qr_scan', { metadata: { kind: 'attendance', session_id: p.get('attend') }, session_id: parseInt(p.get('attend')) || null, source: 'qr' });
-    if (p.get('feedback'))       logQI('feedback_link_opened', { metadata: { kind: 'feedback', session_id: p.get('feedback') }, session_id: parseInt(p.get('feedback')) || null, source: 'qr' });
+    if (p.get('feedback'))     { const fbSrc = p.get('src') || 'qr'; window._feedbackSource = fbSrc; logQI('feedback_link_opened', { metadata: { kind: 'feedback', session_id: p.get('feedback'), src: fbSrc }, session_id: parseInt(p.get('feedback')) || null, source: fbSrc }); }
     if (p.get('survey_answer'))  logQI('survey_email_one_click', { metadata: { form: p.get('form'), q: p.get('q'), a: p.get('a') }, source: 'email' });
     if (p.get('action'))         logQI(`invitation_${p.get('action')}`.replace('invitation_reschedule','reschedule_requested'),
                                        { session_id: parseInt(p.get('session')) || null,
