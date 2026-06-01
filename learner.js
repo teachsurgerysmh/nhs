@@ -254,7 +254,7 @@ async function autoSendFeedbackRequests(sessionId, learnerIds) {
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
           body: JSON.stringify({ to: [r.email], subject: subjectLine, html })
         });
         emails.push(r.email);
@@ -779,7 +779,6 @@ async function loadAdminDashboard() {
       { icon: '📧', text: 'Bulk Remind',    action: "openBulkEmailModal()" },
       { icon: '💬', text: 'WhatsApp',       action: "openBulkWhatsAppModal()" },
       { icon: '📋', text: 'Export CSV',     action: "exportCSV()" },
-      { icon: '📥', text: 'Check Inbox',    action: "switchView('inbox')" },
       { icon: '👥', text: 'Contacts',       action: "switchView('contacts')" },
       { icon: '✅', text: 'Attendance',     action: "switchViewFromDropdown('attendanceChart')" },
       { icon: '📋', text: 'Roster',         action: "switchViewFromDropdown('roster')" },

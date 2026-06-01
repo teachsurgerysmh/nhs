@@ -116,10 +116,6 @@ function switchView(view) {
     document.getElementById('dashboardView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     loadDashboard();
-  } else if (view === 'inbox') {
-    document.getElementById('inboxView').style.display = 'block';
-    filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
-    loadInbox();
   } else if (view === 'siteFeedback') {
     document.getElementById('siteFeedbackView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';

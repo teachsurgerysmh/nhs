@@ -78,7 +78,7 @@ async function sendSessionEmail(id, type) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY),
         'apikey': SUPABASE_KEY
       },
       body: JSON.stringify({ to: [to], subject, html })
@@ -232,7 +232,7 @@ async function sendCancellationEmail(id, reason) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ to: [to], subject, html })
     });
     const result = await res.json();
@@ -302,7 +302,7 @@ async function sendRequestConfirmationEmail(sessionId, ev, note) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ to: [to], subject, html, text: plain })
     });
     const result = await res.json().catch(() => ({}));
@@ -384,7 +384,7 @@ async function sendRequestDeclineEmail(r, note) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ to: [to], subject, html, text: plain })
     });
     const result = await res.json().catch(() => ({}));
@@ -432,7 +432,7 @@ async function sendNewRequestAdminNotice(req) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ to: ADMIN_ALERT_EMAILS, subject, html, text: plain })
     });
     const result = await res.json().catch(() => ({}));
@@ -467,7 +467,7 @@ async function sendSelfCancelAdminNotice(ev, teacherEmail) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ to: ADMIN_ALERT_EMAILS, subject, html, text: plain })
     });
     const result = await res.json().catch(() => ({}));
@@ -536,7 +536,7 @@ async function sendSelfCancelTeacherEmail(ev, teacherEmail) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ to: [to], subject, html, text: plain })
     });
     const result = await res.json().catch(() => ({}));
@@ -630,7 +630,7 @@ async function sendWhatsAppReminder(id, mode) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({
         action: 'send_text',
         to: phone,
@@ -721,7 +721,7 @@ async function sendBulkWhatsApp() {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
         body: JSON.stringify({
           action: 'send_text', to: r.phone, text: msg,
           session_id: r.sessionId, to_name: r.name, sent_by: currentUser?.name || 'admin'
@@ -956,7 +956,7 @@ async function sendFeedbackEmails() {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
         body: JSON.stringify({ to: [email], subject, html })
       });
       const result = await res.json();
@@ -1122,7 +1122,7 @@ async function sendTeacherRequestEmails() {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
         body: JSON.stringify({ to: [r.email], subject, html })
       });
       const result = await res.json();
@@ -1541,7 +1541,7 @@ async function sendWhatsAppReply(phone, name) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({
         action: 'send_text', to: phone, text,
         to_name: name, sent_by: currentUser?.name || 'admin'
@@ -1582,7 +1582,7 @@ async function sendGmailReply(toEmail, subject) {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ to: [toEmail], subject: reSubject, html })
     });
     const result = await res.json();
@@ -1682,7 +1682,7 @@ async function sendInboxReply(sessionId, toEmail, topic) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY),
         'apikey': SUPABASE_KEY
       },
       body: JSON.stringify({ to: [toEmail], subject, html })

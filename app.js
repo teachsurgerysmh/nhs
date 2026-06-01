@@ -29,12 +29,12 @@ const demoTourSteps = [
   },
   {
     title: 'Quick Actions',
-    text: 'One-click access to your most common tasks: add sessions, send reminders, check inbox, export data. Everything you need without navigating through tabs.',
+    text: 'One-click access to your most common tasks: add sessions, send reminders, export data. Everything you need without navigating through tabs.',
     target: '.quick-actions'
   },
   {
     title: 'Navigation Tabs',
-    text: 'The main tabs give you quick access to Sessions, Calendar, Drafts, Contacts, and Inbox. Click "More" to find additional views like Feedback, Approvals, Requests, and Attendance.',
+    text: 'The main tabs give you quick access to Sessions, Calendar, Drafts, and Contacts. Click "More" to find additional views like Feedback, Approvals, Requests, and Attendance.',
     target: '.nav-bar'
   },
   {
@@ -106,12 +106,6 @@ const demoTourSteps = [
     text: 'View feedback submitted by learners after sessions. Each response includes ratings and free-text comments. Use this to track teaching quality and identify areas for improvement.',
     target: '.nav-tab[data-view="feedback"]',
     action: () => switchView('feedback')
-  },
-  {
-    title: 'Email Inbox',
-    text: 'Read and reply to emails directly from this panel. Teacher replies to reminder emails appear as threaded conversations. You can also see WhatsApp message threads here.',
-    target: '.nav-tab[data-view="inbox"]',
-    action: () => switchView('inbox')
   },
   {
     title: 'Approvals Queue',
