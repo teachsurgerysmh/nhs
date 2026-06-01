@@ -1126,26 +1126,35 @@ function exportCSV() {
 // ===================== SESSION REQUESTS =====================
 
 // ===================== REQUESTS =====================
-function showRequestSessionModal(preselectedSlot) {
+async function showRequestSessionModal(preselectedSlot) {
   ['reqName','reqEmail','reqPhone','reqTopic','reqMessage'].forEach(id => document.getElementById(id).value = '');
-  // Populate available slots dropdown
   const sel = document.getElementById('reqSlot');
+  sel.innerHTML = '<option value="">Loading available slots...</option>';
+  openModal('requestSessionModal');
   const today = new Date(); today.setHours(0,0,0,0);
+
   // Only REAL open slots: scheduled sessions that are not cancelled and have no
-  // teacher assigned yet — each shown with its actual time + room.
-  const allSlots = events
-    .filter(e => e.status !== 'cancelled' && !e.teacher)
-    .filter(e => { const ed = eventToDate(e); return ed && ed >= today; })
-    .sort((a, b) => eventToDate(a) - eventToDate(b))
-    .map(e => ({
-      dayName: e.day || '',
-      dateStr: e.date || '',
-      monthStr: e.month || '',
-      yearStr: e.year ? String(e.year) : '',
-      time: e.time || '',
-      room: e.room || '',
-      info: e.topic ? ` [Topic: ${e.topic}]` : ''
-    }));
+  // teacher assigned yet — each shown with its actual date + time + room.
+  // Fetch directly from the schedule (anon can read it) because open slots are
+  // usually unpublished drafts, so they are NOT in the published-only `events` array.
+  let openRows = [];
+  try {
+    const rows = await sbGet('schedule', 'select=id,day,date,month,year,time,room,topic,teacher,status&order=year.asc,id.asc');
+    openRows = rows
+      .filter(e => e.status !== 'cancelled' && !(e.teacher && String(e.teacher).trim()))
+      .filter(e => { const ed = eventToDate(e); return ed && ed >= today; })
+      .sort((a, b) => eventToDate(a) - eventToDate(b));
+  } catch(e) { logError('loadRequestSlots', e); }
+
+  const allSlots = openRows.map(e => ({
+    dayName: e.day || '',
+    dateStr: e.date || '',
+    monthStr: e.month || '',
+    yearStr: e.year ? String(e.year) : '',
+    time: e.time || '',
+    room: e.room || '',
+    info: e.topic ? ` [Topic: ${e.topic}]` : ''
+  }));
 
   sel.innerHTML = '<option value="">-- Choose an available slot --</option>';
   allSlots.forEach(s => {
@@ -1175,7 +1184,6 @@ function showRequestSessionModal(preselectedSlot) {
   };
   sel.dispatchEvent(new Event('change'));
 
-  openModal('requestSessionModal');
   setTimeout(() => document.getElementById('reqName').focus(), 100);
 }
 
