@@ -442,7 +442,18 @@ async function submitFeedback() {
     improve_aspects: document.getElementById('feedbackImproveAspects').value.trim()
   };
   try {
-    await sbInsert('feedback', data);
+    // Insert feedback with return=minimal — anon (QR / quick / magic-link submitters) has
+    // INSERT but no SELECT on feedback, so the default return=representation would 403.
+    if (isDemoMode) {
+      showDemoToast('Submit feedback');
+    } else {
+      const _fbRes = await fetch(`${SUPABASE_URL}/rest/v1/feedback`, {
+        method: 'POST',
+        headers: { ...headers, 'Prefer': 'return=minimal' },
+        body: JSON.stringify(data)
+      });
+      if (!_fbRes.ok) throw new Error('INSERT feedback failed: ' + _fbRes.status);
+    }
     // Compute "hours from feedback request → submission" if any feedback_request_sent event exists
     let hoursAfterRequest = null;
     try {
@@ -476,11 +487,15 @@ async function submitFeedback() {
       } catch(te) { console.warn('Token redeem failed:', te); }
       delete window._magicLinkFeedbackToken;
     }
-    // Auto-mark attendance if not already marked
+    // Auto-mark attendance via SECURITY DEFINER RPC (anon submitters have no INSERT on attendance).
+    // The RPC is idempotent (skips if already present and not removed).
     try {
-      const existing = await sbGet('attendance', `session_id=eq.${sessionId}&learner_id=eq.${currentLearner.id}`);
-      if (existing.length === 0) {
-        await sbInsert('attendance', { session_id: sessionId, learner_id: currentLearner.id, method: 'feedback', status: 'approved' });
+      if (!isDemoMode) {
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/record_feedback_attendance`, {
+          method: 'POST',
+          headers: { ...headers, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ p_session_id: sessionId, p_learner_id: currentLearner.id })
+        });
         logQI('attendance_via_feedback', { session_id: sessionId });
       }
     } catch(ae) { console.log('Auto-attendance skip:', ae); }
