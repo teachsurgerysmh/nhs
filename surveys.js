@@ -490,10 +490,16 @@ async function saveSurveyAnswer(qId) {
         p_source: 'web',
       })
     });
-    if (!res.ok) console.warn('Survey save warning:', res.status);
-    else logQI('baseline_survey_question_answered', { metadata: { form: surveyState.formType, q: qId, grade, placement } });
+    if (!res.ok) {
+      console.warn('Survey save warning:', res.status);
+      // Surface save failures immediately (was silent until v3.9.3) so an outage is visible in the Error Log.
+      try { logError('survey_save', `Survey answer save failed: HTTP ${res.status}`, { form: surveyState.formType, token: surveyState.token, question_id: qId, status: res.status, source: 'web' }); } catch(_) {}
+    } else {
+      logQI('baseline_survey_question_answered', { metadata: { form: surveyState.formType, q: qId, grade, placement } });
+    }
   } catch(e) {
     console.error('Survey save error:', e);
+    try { logError('survey_save', e, { form: surveyState.formType, token: surveyState.token, question_id: qId, source: 'web' }); } catch(_) {}
   }
 }
 
@@ -626,7 +632,7 @@ async function handleSurveyEmailClick() {
   // Save this single answer via SECURITY DEFINER RPC (keeps table write-only for anon)
   if (!isDemoMode) {
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_survey_answer`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_survey_answer`, {
         method: 'POST',
         headers: {
           ...headers,
@@ -640,7 +646,13 @@ async function handleSurveyEmailClick() {
           p_source: 'email',
         })
       });
-    } catch(e) { console.error('Email survey save error:', e); }
+      if (!res.ok) {
+        try { logError('survey_save', `Survey answer save failed: HTTP ${res.status}`, { form: formType, token, question_id: qId, status: res.status, source: 'email' }); } catch(_) {}
+      }
+    } catch(e) {
+      console.error('Email survey save error:', e);
+      try { logError('survey_save', e, { form: formType, token, question_id: qId, source: 'email' }); } catch(_) {}
+    }
   }
 
   // Show confirmation and link to full survey
@@ -689,7 +701,7 @@ async function renderSurveyResults() {
   let responses = [];
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/survey_responses?select=*&order=submitted_at.desc`, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      headers // global headers carry the admin JWT after login; survey_responses is authenticated-read only (anon key returns 0 rows under RLS)
     });
     responses = await res.json();
   } catch(e) {
@@ -978,7 +990,7 @@ function copySurveyEmailPlain() {
 async function exportSurveyCSV() {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/survey_responses?select=*&order=submitted_at.asc`, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      headers // global headers carry the admin JWT after login; survey_responses is authenticated-read only (anon key returns 0 rows under RLS)
     });
     const data = await res.json();
     if (!data.length) { showToast('No data to export'); return; }
