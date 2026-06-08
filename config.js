@@ -4,7 +4,7 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.9.7';
+const APP_VERSION = 'v3.9.8';
 const APP_BUILD = '2026-06-08';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
@@ -13,6 +13,31 @@ const LEARNER_FIELDS = 'id,name,email,grade,specialty,placement,placement_start,
 const CONTACT_FIELDS = 'id,name,role,email,phone,specialty,notes,added_by,created_at,is_manager';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;
+
+// ===================== AUTO-UPDATE CHECK =====================
+// There is no service worker, so phones (esp. Home-Screen/standalone or iOS Safari)
+// cache index.html and keep loading stale script versions. We poll a tiny version.json
+// (always fetched fresh); if the deployed build is newer than the running one, we force a
+// cache-busting reload so users get the latest without manually clearing cache.
+// version.json must be bumped to match APP_VERSION on every deploy.
+async function checkForAppUpdate() {
+  // Don't interrupt magic-link / one-click flows (feedback, attendance, survey, email actions)
+  if (/(?:feedback|attend|survey|action|absence_token|token)=/.test(location.search)) return;
+  try {
+    const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const latest = data && data.version;
+    if (!latest || latest === APP_VERSION) return;
+    // Reload at most once per detected version per tab session (prevents loops)
+    if (sessionStorage.getItem('sst_updated_to') === latest) return;
+    sessionStorage.setItem('sst_updated_to', latest);
+    try { showToast('Updating to ' + latest + '…', 2500); } catch (_) {}
+    setTimeout(() => { location.replace(location.pathname + '?appv=' + encodeURIComponent(latest)); }, 700);
+  } catch (_) { /* offline or no version.json — ignore */ }
+}
+window.addEventListener('load', () => setTimeout(checkForAppUpdate, 1500));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForAppUpdate(); });
 
 // ===================== DEMO MODE =====================
 let isDemoMode = false;
