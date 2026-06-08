@@ -1528,8 +1528,19 @@ async function loadTeacherDashboard() {
   const container = document.getElementById('teacherDashView');
   container.innerHTML = '<div style="text-align:center;padding:30px;"><div class="loading-spinner"></div> Loading dashboard...</div>';
   try {
-    const teacherEmail = currentTeacher.email.toLowerCase();
-    const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === teacherEmail);
+    // The public `events` array strips teacher_email (privacy), so we can't match the
+    // teacher's sessions from it. A logged-in teacher is authenticated, so fetch their
+    // own sessions directly by email (primary OR backup teacher) with full columns.
+    const eEnc = encodeURIComponent(currentTeacher.email);
+    let teacherRows = [];
+    try {
+      teacherRows = await sbGet('schedule', `or=(teacher_email.ilike.${eEnc},backup_teacher_email.ilike.${eEnc})&select=*&order=year.asc,id.asc`) || [];
+    } catch(e) { console.error('Teacher session load failed:', e); }
+    const teacherSessions = teacherRows.map(r => ({
+      id: r.id, topic: r.topic || '', day: r.day || '', date: r.date || '', month: r.month || '',
+      year: r.year || 2026, time: r.time || '', room: r.room || '', status: r.status || 'tbd',
+      teacherEmail: r.teacher_email || ''
+    }));
     const upcoming = teacherSessions.filter(e => isFutureEvent(e) && e.status !== 'cancelled');
     const completed = teacherSessions.filter(e => !isFutureEvent(e) || e.status === 'completed');
 
