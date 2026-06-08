@@ -556,6 +556,23 @@ function fbScoreBar(label, score, max=10) {
   return `<div class="score-bar"><span class="score-bar-label">${label}</span><div class="score-bar-track"><div class="score-bar-fill" style="width:${pct}%;background:${color};"></div></div><span class="score-bar-value" style="color:${color};">${score}/10</span></div>`;
 }
 
+// Fetch the logged-in teacher's own sessions by email (primary OR backup teacher),
+// with full columns. The public `events` array strips teacher_email for privacy, so it
+// CANNOT be used to match a teacher to their sessions — every teacher-side feature must
+// fetch directly. Authenticated read; only the teacher's own rows return.
+async function fetchTeacherSessions(teacherEmail) {
+  if (!teacherEmail) return [];
+  try {
+    const eEnc = encodeURIComponent(teacherEmail);
+    const rows = await sbGet('schedule', `or=(teacher_email.ilike.${eEnc},backup_teacher_email.ilike.${eEnc})&select=*&order=year.asc,id.asc`) || [];
+    return rows.map(r => ({
+      id: r.id, topic: r.topic || '', day: r.day || '', date: r.date || '', month: r.month || '',
+      year: r.year || 2026, time: r.time || '', room: r.room || '', status: r.status || 'tbd',
+      teacherEmail: r.teacher_email || ''
+    }));
+  } catch(e) { console.error('fetchTeacherSessions failed:', e); return []; }
+}
+
 async function loadFeedbackView(filterTeacher) {
   const container = document.getElementById(filterTeacher ? 'teacherDashView' : 'feedbackView');
   container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--nhs-grey);"><div class="loading-spinner"></div> Loading feedback...</div>';
@@ -567,7 +584,7 @@ async function loadFeedbackView(filterTeacher) {
 
     // If teacher view, filter to their sessions only
     if (filterTeacher) {
-      const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === filterTeacher.toLowerCase()).map(e => e.id);
+      const teacherSessions = (await fetchTeacherSessions(filterTeacher)).map(e => e.id);
       feedback = feedback.filter(f => teacherSessions.includes(f.session_id));
     }
 
@@ -683,7 +700,7 @@ function filterFeedbackCards() {
 // ===================== TEACHER FEEDBACK EXPORT =====================
 async function exportTeacherFeedbackCSV(teacherEmail) {
   const feedback = await sbGet('feedback', 'order=submitted_at.desc&select=*');
-  const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === teacherEmail.toLowerCase()).map(e => e.id);
+  const teacherSessions = (await fetchTeacherSessions(teacherEmail)).map(e => e.id);
   const filtered = feedback.filter(f => teacherSessions.includes(f.session_id));
   const rows = [['Session','Date','Overall','Content','Structured','Presentation','Delivery','Applicable','Good Aspects','Areas to Improve','Submitted']];
   filtered.forEach(f => {
@@ -1405,7 +1422,7 @@ async function generateCertificate() {
 async function generateTeacherCertificate() {
   if (!currentTeacher) return;
   try {
-    const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === currentTeacher.email.toLowerCase() && (e.status === 'completed' || eventToDate(e) < new Date()));
+    const teacherSessions = (await fetchTeacherSessions(currentTeacher.email)).filter(e => e.status === 'completed' || eventToDate(e) < new Date());
     teacherSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (da||0)-(db||0); });
     if (!teacherSessions.length) { showToast('No completed sessions found'); return; }
 
@@ -1611,7 +1628,7 @@ async function loadTeacherFeedbackSummary(teacherEmail) {
   if (!container) return;
   try {
     const feedback = await sbGet('feedback', 'order=submitted_at.desc&select=*');
-    const teacherSessions = events.filter(e => e.teacherEmail && e.teacherEmail.toLowerCase() === teacherEmail.toLowerCase()).map(e => e.id);
+    const teacherSessions = (await fetchTeacherSessions(teacherEmail)).map(e => e.id);
     const filtered = feedback.filter(f => teacherSessions.includes(f.session_id));
     // Log that teacher saw their own feedback — central QI metric ("did teachers look?")
     if (filtered.length) logQI('teacher_viewed_feedback', { metadata: { feedback_count: filtered.length, session_count: teacherSessions.length } });
