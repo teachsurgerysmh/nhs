@@ -470,20 +470,24 @@ async function saveSurveyAnswer(qId) {
   const placement = surveyState.answers['_placement'] || surveyState.answers['_specialty'] || '';
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/survey_responses`, {
+    // Saved via SECURITY DEFINER RPC (not a direct REST upsert). PostgREST's
+    // ON CONFLICT upsert requires anon SELECT+UPDATE RLS on survey_responses,
+    // which would expose all responses to the public anon key. The RPC keeps the
+    // table write-only for the public and performs the upsert server-side.
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_survey_answer`, {
       method: 'POST',
       headers: {
         ...headers,
-        'Prefer': 'resolution=merge-duplicates,return=minimal'
+        'Prefer': 'return=minimal'
       },
       body: JSON.stringify({
-        form_type: surveyState.formType,
-        respondent_token: surveyState.token,
-        question_id: qId,
-        answer: answer,
-        grade: grade,
-        placement: placement,
-        source: 'web',
+        p_form_type: surveyState.formType,
+        p_respondent_token: surveyState.token,
+        p_question_id: qId,
+        p_answer: answer,
+        p_grade: grade,
+        p_placement: placement,
+        p_source: 'web',
       })
     });
     if (!res.ok) console.warn('Survey save warning:', res.status);
@@ -619,21 +623,21 @@ async function handleSurveyEmailClick() {
     return true;
   }
 
-  // Save this single answer
+  // Save this single answer via SECURITY DEFINER RPC (keeps table write-only for anon)
   if (!isDemoMode) {
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/survey_responses`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_survey_answer`, {
         method: 'POST',
         headers: {
           ...headers,
-          'Prefer': 'resolution=merge-duplicates,return=minimal'
+          'Prefer': 'return=minimal'
         },
         body: JSON.stringify({
-          form_type: formType,
-          respondent_token: token,
-          question_id: qId,
-          answer: decodeURIComponent(answer),
-          source: 'email',
+          p_form_type: formType,
+          p_respondent_token: token,
+          p_question_id: qId,
+          p_answer: decodeURIComponent(answer),
+          p_source: 'email',
         })
       });
     } catch(e) { console.error('Email survey save error:', e); }

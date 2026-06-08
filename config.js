@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.9.2';
-const APP_BUILD = '2026-06-02';
+const APP_VERSION = 'v3.9.3';
+const APP_BUILD = '2026-06-08';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
 // ===================== SAFE COLUMN LISTS (exclude pin_code) =====================
