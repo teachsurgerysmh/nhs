@@ -317,7 +317,7 @@ function renderQuestionSection(section) {
       html += `<div class="survey-options">`;
       q.options.forEach(opt => {
         const sel = surveyState.answers[q.id] === opt ? 'selected' : '';
-        html += `<button class="survey-opt-btn ${sel}" onclick="selectSurveyAnswer('${q.id}', '${esc(opt)}', 'single', this)">${esc(opt)}</button>`;
+        html += `<button class="survey-opt-btn ${sel}" data-val="${esc(opt)}" onclick="selectSurveyAnswer('${q.id}', this.dataset.val, 'single', this)">${esc(opt)}</button>`;
       });
       if (q.other) {
         html += renderOtherInput(q.id);
@@ -329,7 +329,7 @@ function renderQuestionSection(section) {
       q.options.forEach(opt => {
         const answers = surveyState.answers[q.id] ? surveyState.answers[q.id].split('||') : [];
         const sel = answers.includes(opt) ? 'selected' : '';
-        html += `<button class="survey-opt-btn ${sel}" onclick="selectSurveyAnswer('${q.id}', '${esc(opt)}', 'multi', this)">${esc(opt)}</button>`;
+        html += `<button class="survey-opt-btn ${sel}" data-val="${esc(opt)}" onclick="selectSurveyAnswer('${q.id}', this.dataset.val, 'multi', this)">${esc(opt)}</button>`;
       });
       if (q.other) {
         html += renderOtherInput(q.id);

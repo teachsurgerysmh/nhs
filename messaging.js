@@ -1526,8 +1526,8 @@ function selectWhatsAppThread(phone) {
 
   // Reply box
   html += `<div style="padding:12px 20px;border-top:1px solid var(--nhs-pale-grey);display:flex;gap:8px;align-items:center;">
-    <input type="text" id="waReplyText" placeholder="Type a message..." style="flex:1;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:20px;font-size:13px;" onkeydown="if(event.key==='Enter')sendWhatsAppReply('${phone}','${esc(contactName)}')">
-    <button class="btn" style="background:#25D366;color:white;border:none;border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;" onclick="sendWhatsAppReply('${phone}','${esc(contactName)}')">➤</button>
+    <input type="text" id="waReplyText" placeholder="Type a message..." data-phone="${esc(phone)}" data-name="${esc(contactName)}" style="flex:1;padding:8px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:20px;font-size:13px;" onkeydown="if(event.key==='Enter')sendWhatsAppReply(this.dataset.phone,this.dataset.name)">
+    <button class="btn" data-phone="${esc(phone)}" data-name="${esc(contactName)}" style="background:#25D366;color:white;border:none;border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;" onclick="sendWhatsAppReply(this.dataset.phone,this.dataset.name)">➤</button>
   </div>`;
 
   mainEl.innerHTML = html;
