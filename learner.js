@@ -1548,7 +1548,8 @@ async function loadTeacherDashboard() {
     // The public `events` array strips teacher_email (privacy), so we can't match the
     // teacher's sessions from it. A logged-in teacher is authenticated, so fetch their
     // own sessions directly by email (primary OR backup teacher) with full columns.
-    const eEnc = encodeURIComponent(currentTeacher.email);
+    const teacherEmail = currentTeacher.email;
+    const eEnc = encodeURIComponent(teacherEmail);
     let teacherRows = [];
     try {
       teacherRows = await sbGet('schedule', `or=(teacher_email.ilike.${eEnc},backup_teacher_email.ilike.${eEnc})&select=*&order=year.asc,id.asc`) || [];
