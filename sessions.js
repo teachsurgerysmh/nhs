@@ -637,6 +637,9 @@ function showDetail(id) {
     </div>`;
   }
 
+  /* ---- Journal Club registrations (admin, loaded async) ---- */
+  html += `<div id="detailRegistrations"></div>`;
+
   /* ---- Attendance summary (loaded async) ---- */
   html += `<div id="detailAttendanceSummary"></div>`;
 
@@ -649,6 +652,9 @@ function showDetail(id) {
 
   /* Load attendance summary */
   loadDetailAttendance(ev.id);
+
+  /* Load journal club registrations (admin only, journal club event only) */
+  loadJournalClubRegistrations(ev);
 
   /* ---- Footer buttons ---- */
   let footerHtml = '';
@@ -732,6 +738,68 @@ async function quickAssignTeacher(sessionId, selectEl) {
     closeModal('detailModal');
     showDetail(sessionId);
   } catch(e) { console.error('Quick assign failed:', e); showToast('Failed to assign teacher'); }
+}
+
+// ===================== JOURNAL CLUB REGISTRATIONS (admin) =====================
+const JC_EVENT_KEY = 'gi_journal_club_2026_07_14';
+function isJournalClubEvent(ev) {
+  return ev && typeof ev.topic === 'string' && /journal club/i.test(ev.topic);
+}
+async function loadJournalClubRegistrations(ev) {
+  const container = document.getElementById('detailRegistrations');
+  if (!container) return;
+  const isAdminView = isAdmin && !adminViewAsLearner;
+  if (!isAdminView || !isJournalClubEvent(ev)) { container.innerHTML = ''; return; }
+  container.innerHTML = '<div class="detail-field"><div class="detail-label">Registrations</div><div class="detail-value" style="color:var(--nhs-grey);font-size:13px;">Loading&hellip;</div></div>';
+  try {
+    const regs = await sbGet('journal_club_registrations', `event_key=eq.${JC_EVENT_KEY}&order=created_at.asc&select=full_name,email,role,grade,dietary,created_at`);
+    window._jcRegs = regs || [];
+    let html = `<div class="detail-field"><div class="detail-label">Registrations (${regs.length})</div>`;
+    if (regs.length === 0) {
+      html += `<div class="detail-value" style="color:var(--nhs-grey);font-size:13px;">No registrations yet.</div></div>`;
+      container.innerHTML = html;
+      return;
+    }
+    html += `<div style="overflow-x:auto;margin-top:4px;"><table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="text-align:left;color:var(--nhs-grey);border-bottom:1px solid var(--nhs-pale-grey);">
+        <th style="padding:6px 8px;">#</th><th style="padding:6px 8px;">Name</th><th style="padding:6px 8px;">Email</th><th style="padding:6px 8px;">Role</th><th style="padding:6px 8px;">Grade/Spec</th><th style="padding:6px 8px;">Dietary</th><th style="padding:6px 8px;">When</th>
+      </tr></thead><tbody>`;
+    regs.forEach((r, i) => {
+      const when = r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '';
+      html += `<tr style="border-bottom:1px solid var(--nhs-bg);">
+        <td style="padding:6px 8px;color:var(--nhs-grey);">${i + 1}</td>
+        <td style="padding:6px 8px;font-weight:600;">${esc(r.full_name || '')}</td>
+        <td style="padding:6px 8px;"><a href="mailto:${esc(r.email || '')}" style="color:var(--nhs-blue);">${esc(r.email || '')}</a></td>
+        <td style="padding:6px 8px;">${esc(r.role || '')}</td>
+        <td style="padding:6px 8px;">${esc(r.grade || '')}</td>
+        <td style="padding:6px 8px;">${esc(r.dietary || '')}</td>
+        <td style="padding:6px 8px;color:var(--nhs-grey);white-space:nowrap;">${when}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:0.8rem;padding:6px 12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="exportJournalClubRegistrations()">Export CSV</button>
+        <button class="btn btn-outline" style="font-size:0.8rem;padding:6px 12px;color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="loadJournalClubRegistrations(events.find(e=>e.id===${ev.id}))">Refresh</button>
+      </div></div>`;
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<div class="detail-field"><div class="detail-label">Registrations</div><div class="detail-value" style="color:var(--nhs-red);font-size:13px;">Could not load registrations (${esc(String(e && e.message || e))}).</div></div>`;
+  }
+}
+function exportJournalClubRegistrations() {
+  const regs = window._jcRegs || [];
+  if (!regs.length) { alert('No registrations to export.'); return; }
+  const cols = ['full_name', 'email', 'role', 'grade', 'dietary', 'created_at'];
+  const head = ['Name', 'Email', 'Role', 'Grade/Specialty', 'Dietary', 'Registered'];
+  const csvEsc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  let csv = head.join(',') + '\n';
+  regs.forEach(r => { csv += cols.map(c => csvEsc(r[c])).join(',') + '\n'; });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'journal_club_registrations.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 async function loadDetailAttendance(sessionId) {
