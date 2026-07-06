@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register · SMH GI Surgery Journal Club — July 2026</title>
+<meta name="description" content="Register for the inaugural Southmead GI Surgery Journal Club. For surgical residents and consultants. Two emergency general surgery papers for discussion.">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --nhs-blue: #003087;
+  --nhs-bright: #005eb8;
+  --cyan: #41b6e6;
+  --bg: #0f0f1a;
+  --card: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.09);
+}
+
+body {
+  background: var(--bg);
+  color: #fff;
+  font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 0 60px; }
+
+/* HERO */
+.hero {
+  background: linear-gradient(145deg, #003087 0%, #001a4d 60%, #0a0a18 100%);
+  padding: 48px 32px 40px;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(65,182,230,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(65,182,230,0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.hero-inner { position: relative; z-index: 1; }
+.overline {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--cyan); margin-bottom: 14px;
+}
+.pill {
+  display: inline-block;
+  background: rgba(65,182,230,0.15);
+  border: 1px solid rgba(65,182,230,0.4);
+  color: var(--cyan);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; padding: 7px 16px; border-radius: 100px;
+  margin-bottom: 18px;
+}
+.hero-title {
+  font-size: 46px; font-weight: 700; line-height: 1.02;
+  letter-spacing: -1.5px; margin-bottom: 12px;
+}
+.hero-title .dim { color: rgba(255,255,255,0.35); }
+.hero-sub { font-size: 16px; color: rgba(255,255,255,0.55); }
+
+.chips { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 24px; }
+.chip {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; padding: 10px 16px; text-align: left;
+}
+.chip .lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 3px;
+}
+.chip .val { font-size: 13px; font-weight: 700; }
+
+.support { margin-top: 26px; }
+.support .lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.22em;
+  text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 10px;
+}
+.support svg {
+  height: 30px; width: auto; border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+
+.accent-bar { height: 3px; background: linear-gradient(90deg, var(--cyan), var(--nhs-blue), transparent); }
+
+/* SECTIONS */
+.section { padding: 34px 32px 0; }
+.section-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--cyan); margin-bottom: 16px;
+}
+.lead { font-size: 15px; color: rgba(255,255,255,0.7); margin-bottom: 18px; }
+
+.paper-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 20px; display: flex; gap: 16px;
+  align-items: flex-start; margin-bottom: 12px;
+}
+.paper-num {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--nhs-blue);
+  border: 1px solid rgba(65,182,230,0.3); display: flex; align-items: center;
+  justify-content: center; font-size: 13px; font-weight: 700; color: var(--cyan);
+  flex-shrink: 0;
+}
+.paper-tag {
+  display: inline-block; background: rgba(65,182,230,0.12); color: var(--cyan);
+  font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 4px; margin-bottom: 8px;
+}
+.paper-title { font-size: 15px; font-weight: 700; margin-bottom: 5px; }
+.paper-meta { font-size: 12px; color: rgba(255,255,255,0.45); }
+
+.note {
+  margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.55);
+  background: rgba(65,182,230,0.07); border: 1px solid rgba(65,182,230,0.18);
+  border-radius: 10px; padding: 14px 16px;
+}
+
+/* PROGRAMME */
+.prog { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.prog-item {
+  display: flex; align-items: center; gap: 14px; padding: 13px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02);
+  font-size: 14px;
+}
+.prog-item:last-child { border-bottom: none; }
+.prog-item:nth-child(odd) { background: rgba(255,255,255,0.035); }
+.prog-time { color: var(--cyan); font-weight: 700; width: 52px; flex-shrink: 0; }
+.prog-label { flex: 1; }
+.prog-note { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+/* FORM */
+.form-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 26px 24px;
+}
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+  color: rgba(255,255,255,0.75); margin-bottom: 6px;
+}
+.field label .req { color: var(--cyan); }
+.field .hint { font-weight: 400; color: rgba(255,255,255,0.4); font-size: 11px; }
+.field input, .field select, .field textarea {
+  width: 100%; background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14); border-radius: 8px;
+  padding: 11px 13px; color: #fff; font-size: 14px; font-family: inherit;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--cyan); background: rgba(255,255,255,0.09);
+}
+.field select option { background: #12122a; color: #fff; }
+.field textarea { resize: vertical; min-height: 60px; }
+.row2 { display: flex; gap: 14px; }
+.row2 .field { flex: 1; }
+
+.btn-submit {
+  width: 100%; background: linear-gradient(135deg, var(--nhs-bright), var(--nhs-blue));
+  color: #fff; border: none; border-radius: 8px; padding: 14px;
+  font-size: 15px; font-weight: 700; cursor: pointer; letter-spacing: 0.02em;
+  transition: opacity 0.2s, transform 0.1s; margin-top: 4px;
+}
+.btn-submit:hover { opacity: 0.92; }
+.btn-submit:active { transform: translateY(1px); }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.form-msg { margin-top: 14px; font-size: 14px; border-radius: 8px; padding: 12px 14px; display: none; }
+.form-msg.ok { display: block; background: rgba(0,153,80,0.14); border: 1px solid rgba(0,153,80,0.4); color: #4ade80; }
+.form-msg.err { display: block; background: rgba(218,41,28,0.14); border: 1px solid rgba(218,41,28,0.4); color: #fca5a5; }
+
+.fallback {
+  margin-top: 18px; font-size: 12px; color: rgba(255,255,255,0.4); text-align: center;
+}
+.fallback a { color: var(--cyan); text-decoration: none; }
+.fallback a:hover { text-decoration: underline; }
+
+.success-panel { display: none; text-align: center; padding: 10px 4px; }
+.success-panel .tick {
+  width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px;
+  background: rgba(0,153,80,0.15); border: 2px solid rgba(0,153,80,0.5);
+  display: flex; align-items: center; justify-content: center; font-size: 28px; color: #4ade80;
+}
+.success-panel h3 { font-size: 20px; margin-bottom: 8px; }
+.success-panel p { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 6px; }
+
+.foot {
+  padding: 30px 32px 0; text-align: center;
+  font-size: 12px; color: rgba(255,255,255,0.35);
+}
+.foot strong { color: rgba(255,255,255,0.6); }
+.foot a { color: var(--cyan); text-decoration: none; }
+
+@media (max-width: 560px) {
+  .hero-title { font-size: 36px; }
+  .row2 { flex-direction: column; gap: 0; }
+  .section, .hero, .foot { padding-left: 20px; padding-right: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="overline">Southmead Surgical Teaching presents</div>
+      <div class="pill">Inaugural Session</div>
+      <div class="hero-title">GI Surgery<br><span class="dim">Journal Club</span></div>
+      <div class="hero-sub">Evidence-based discussion for surgical residents &amp; consultants</div>
+
+      <div class="chips">
+        <div class="chip"><div class="lbl">Date</div><div class="val">Tuesday 14th July 2026</div></div>
+        <div class="chip"><div class="lbl">Time</div><div class="val">6:00 – 8:00 pm</div></div>
+        <div class="chip"><div class="lbl">Venue</div><div class="val">The Kingston Arms, Bristol</div></div>
+      </div>
+
+      <div class="support">
+        <div class="lbl">Supported by</div>
+        <svg viewBox="0 0 340 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Medtronic">
+          <rect width="340" height="96" rx="8" fill="#ffffff"/>
+          <text x="170" y="64" text-anchor="middle" font-family="Arial, 'Helvetica Neue', Helvetica, sans-serif" font-weight="700" font-size="54" letter-spacing="-1.5" fill="#170F5F">Medtronic</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="accent-bar"></div>
+
+  <!-- PAPERS -->
+  <div class="section">
+    <div class="section-label">Papers for Discussion</div>
+    <div class="lead">Two emergency general surgery (EGS) papers will be discussed. The full papers and pre-reading are shared with registered attendees ahead of the session.</div>
+
+    <div class="paper-card">
+      <div class="paper-num">1</div>
+      <div>
+        <span class="paper-tag">Emergency General Surgery</span>
+        <div class="paper-title">EGS Paper 1 — to be confirmed</div>
+        <div class="paper-meta">A recent, practice-relevant paper on the management of an acute general surgical presentation. Title and reference circulated to registrants before the session.</div>
+      </div>
+    </div>
+
+    <div class="paper-card">
+      <div class="paper-num">2</div>
+      <div>
+        <span class="paper-tag">Emergency General Surgery</span>
+        <div class="paper-title">EGS Paper 2 — to be confirmed</div>
+        <div class="paper-meta">A second contemporary EGS paper selected for discussion. Title and reference circulated to registrants before the session.</div>
+      </div>
+    </div>
+
+    <div class="note">📄 Register below and we'll email you both papers, the pre-reading and joining details closer to the date.</div>
+  </div>
+
+  <!-- PROGRAMME -->
+  <div class="section">
+    <div class="section-label">Programme</div>
+    <div class="prog">
+      <div class="prog-item"><div class="prog-time">18:00</div><div class="prog-label">Welcome &amp; Introductions</div><div class="prog-note">Drinks &amp; networking</div></div>
+      <div class="prog-item"><div class="prog-time">18:15</div><div class="prog-label">Paper 1 — EGS discussion</div><div class="prog-note">Registrar led</div></div>
+      <div class="prog-item"><div class="prog-time">18:50</div><div class="prog-label">Paper 2 — EGS discussion</div><div class="prog-note">SHO led</div></div>
+      <div class="prog-item"><div class="prog-time">19:25</div><div class="prog-label">Dinner &amp; Discussion</div><div class="prog-note">Private dining room</div></div>
+    </div>
+  </div>
+
+  <!-- REGISTRATION -->
+  <div class="section">
+    <div class="section-label">Register to Attend</div>
+    <div class="form-card">
+
+      <form id="regForm" novalidate>
+        <div class="field">
+          <label for="fullName">Full name <span class="req">*</span></label>
+          <input type="text" id="fullName" name="fullName" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="email">Email <span class="req">*</span> <span class="hint">— we'll send the papers &amp; joining details here</span></label>
+          <input type="email" id="email" name="email" autocomplete="email" required>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="role">Role</label>
+            <select id="role" name="role">
+              <option value="">Select…</option>
+              <option value="Resident">Surgical resident</option>
+              <option value="Consultant">Consultant</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="grade">Grade / Specialty <span class="hint">(optional)</span></label>
+            <input type="text" id="grade" name="grade" placeholder="e.g. ST5, CT1, Consultant UGI">
+          </div>
+        </div>
+        <div class="field">
+          <label for="dietary">Dietary requirements <span class="hint">(optional — dinner is provided)</span></label>
+          <input type="text" id="dietary" name="dietary" placeholder="e.g. Vegetarian, no nuts">
+        </div>
+
+        <button type="submit" class="btn-submit" id="submitBtn">Register</button>
+        <div class="form-msg" id="formMsg"></div>
+      </form>
+
+      <div class="success-panel" id="successPanel">
+        <div class="tick">✓</div>
+        <h3>You're registered</h3>
+        <p>Thanks for registering for the GI Surgery Journal Club.</p>
+        <p>We'll email the two EGS papers, pre-reading and final joining details to the address you gave, closer to <strong>Tuesday 14th July</strong>.</p>
+      </div>
+
+      <div class="fallback">
+        Trouble with the form? You can also register via our
+        <a href="https://forms.gle/smhgisurgeryjournaclub2026" target="_blank" rel="noopener">Google Form</a>.
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="foot">
+    <p><strong>Contact:</strong> <a href="mailto:suketu.batra@nbt.nhs.uk">suketu.batra@nbt.nhs.uk</a></p>
+    <p style="margin-top:6px;">Organised by Mr Nitin Arvind &amp; Suketu Batra &nbsp;·&nbsp; Supported by Medtronic</p>
+    <p style="margin-top:14px;"><a href="./">← Back to Southmead Surgical Teaching</a></p>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var SUPABASE_URL = 'https://rufihxjquwrluaenmbaa.supabase.co';
+  var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1ZmloeGpxdXdybHVhZW5tYmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyOTg4NDMsImV4cCI6MjA5Mzg3NDg0M30.6o8GrCPcQ__JjrGLUiqQwdgWcM1Qk_02TvLvTOwUjyg';
+
+  var form = document.getElementById('regForm');
+  var btn = document.getElementById('submitBtn');
+  var msg = document.getElementById('formMsg');
+  var successPanel = document.getElementById('successPanel');
+
+  function showErr(text) {
+    msg.className = 'form-msg err';
+    msg.textContent = text;
+  }
+
+  function validEmail(e) {
+    return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+  }
+
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    msg.className = 'form-msg';
+    msg.textContent = '';
+
+    var name = document.getElementById('fullName').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var role = document.getElementById('role').value;
+    var grade = document.getElementById('grade').value.trim();
+    var dietary = document.getElementById('dietary').value.trim();
+
+    if (!name) { showErr('Please enter your full name.'); return; }
+    if (!validEmail(email)) { showErr('Please enter a valid email address.'); return; }
+
+    btn.disabled = true;
+    var original = btn.textContent;
+    btn.textContent = 'Registering…';
+
+    fetch(SUPABASE_URL + '/rest/v1/rpc/journal_club_register', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        p_full_name: name,
+        p_email: email,
+        p_role: role || null,
+        p_grade: grade || null,
+        p_specialty: null,
+        p_dietary: dietary || null,
+        p_source: 'web'
+      })
+    })
+    .then(function (res) {
+      if (res.ok) {
+        form.style.display = 'none';
+        successPanel.style.display = 'block';
+        successPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        return res.text().then(function (t) {
+          throw new Error(t || ('HTTP ' + res.status));
+        });
+      }
+    })
+    .catch(function (err) {
+      btn.disabled = false;
+      btn.textContent = original;
+      showErr("Sorry — we couldn't submit your registration just now. Please try again, or use the Google Form link below.");
+      console.error('Registration error:', err);
+    });
+  });
+})();
+</script>
+</body>
+</html>
