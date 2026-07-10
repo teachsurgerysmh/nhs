@@ -216,7 +216,7 @@ body {
 
       <div class="chips">
         <div class="chip"><div class="lbl">Date</div><div class="val">Tuesday 14th July 2026</div></div>
-        <div class="chip"><div class="lbl">Time</div><div class="val">6:00 – 8:00 pm</div></div>
+        <div class="chip"><div class="lbl">Time</div><div class="val">6:00 – 8:30 pm</div></div>
         <div class="chip"><div class="lbl">Venue</div><div class="val">The Kensington Arms, Bristol</div></div>
       </div>
 
@@ -234,14 +234,14 @@ body {
   <!-- PAPERS -->
   <div class="section">
     <div class="section-label">Papers for Discussion</div>
-    <div class="lead">Two emergency general surgery (EGS) papers will be discussed. The full papers and pre-reading are shared with registered attendees ahead of the session.</div>
+    <div class="lead">Two emergency general surgery (EGS) papers will be discussed. Full PDFs and pre-reading are emailed to registered attendees ahead of the session.</div>
 
     <div class="paper-card">
       <div class="paper-num">1</div>
       <div>
         <span class="paper-tag">Emergency General Surgery</span>
-        <div class="paper-title">EGS Paper 1 — to be confirmed</div>
-        <div class="paper-meta">A recent, practice-relevant paper on the management of an acute general surgical presentation. Title and reference circulated to registrants before the session.</div>
+        <div class="paper-title">Percutaneous cholecystostomy vs cholecystectomy in acute cholecystitis</div>
+        <div class="paper-meta">Systematic review &amp; meta-analysis · World J Emerg Surg 2025 · Presented by Mohammed Barghash · <a href="https://doi.org/10.1186/s13017-025-00622-6" target="_blank" rel="noopener" style="color:var(--cyan);text-decoration:none;">View paper ↗</a></div>
       </div>
     </div>
 
@@ -249,8 +249,8 @@ body {
       <div class="paper-num">2</div>
       <div>
         <span class="paper-tag">Emergency General Surgery</span>
-        <div class="paper-title">EGS Paper 2 — to be confirmed</div>
-        <div class="paper-meta">A second contemporary EGS paper selected for discussion. Title and reference circulated to registrants before the session.</div>
+        <div class="paper-title">Laparoscopic vs open adhesiolysis for small bowel obstruction — the LASSO RCT</div>
+        <div class="paper-meta">Randomised controlled trial · JAMA Surgery 2025 · Presented by Jonathan Denfhy · <a href="https://jamanetwork.com/journals/jamasurgery/fullarticle/2845374" target="_blank" rel="noopener" style="color:var(--cyan);text-decoration:none;">View full paper ↗</a></div>
       </div>
     </div>
 
@@ -263,9 +263,10 @@ body {
     <div class="prog">
       <div class="prog-item"><div class="prog-time">18:00</div><div class="prog-label">Welcome &amp; Introductions</div><div class="prog-note">Drinks &amp; networking</div></div>
       <div class="prog-item"><div class="prog-time">18:05</div><div class="prog-label">Medtronic — Industry Presentation</div><div class="prog-note">15 min</div></div>
-      <div class="prog-item"><div class="prog-time">18:20</div><div class="prog-label">Paper 1 — EGS discussion</div><div class="prog-note">Registrar led</div></div>
-      <div class="prog-item"><div class="prog-time">18:50</div><div class="prog-label">Paper 2 — EGS discussion</div><div class="prog-note">SHO led</div></div>
-      <div class="prog-item"><div class="prog-time">19:20</div><div class="prog-label">Dinner &amp; Discussion</div><div class="prog-note">Private dining room</div></div>
+      <div class="prog-item"><div class="prog-time">18:20</div><div class="prog-label">Paper 1 — Cholecystostomy vs cholecystectomy</div><div class="prog-note">Mohammed Barghash</div></div>
+      <div class="prog-item"><div class="prog-time">18:50</div><div class="prog-label">Paper 2 — LASSO adhesiolysis RCT</div><div class="prog-note">Jonathan Denfhy</div></div>
+      <div class="prog-item"><div class="prog-time">19:20</div><div class="prog-label">Critical Appraisal of the Evidence</div><div class="prog-note">Mr Dimitrios Pournaras</div></div>
+      <div class="prog-item"><div class="prog-time">19:35</div><div class="prog-label">Dinner &amp; Discussion</div><div class="prog-note">Private dining room</div></div>
     </div>
   </div>
 
@@ -317,14 +318,19 @@ body {
         </div>
 
         <button type="submit" class="btn-submit" id="submitBtn">Register</button>
+        <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.5);line-height:1.5;text-align:center;">
+          Places are limited to <strong style="color:rgba(255,255,255,0.75);">28</strong>. Once full, further sign-ups join a waitlist, and we'll confirm your place by email.
+        </div>
         <div class="form-msg" id="formMsg"></div>
       </form>
 
       <div class="success-panel" id="successPanel">
-        <div class="tick">✓</div>
-        <h3>You're registered</h3>
-        <p>Thanks for registering for the GI Surgery Journal Club.</p>
-        <p>We'll email the two EGS papers, pre-reading and final joining details to the address you gave, closer to <strong>Tuesday 14th July</strong>.</p>
+        <div class="tick" id="successTick">✓</div>
+        <h3 id="successTitle">You're registered</h3>
+        <div id="successBody">
+          <p>Thanks for registering for the GI Surgery Journal Club — your place is confirmed.</p>
+          <p>We'll email the two EGS papers, pre-reading and final joining details to the address you gave, closer to <strong>Tuesday 14th July</strong>.</p>
+        </div>
       </div>
 
       <div class="fallback">
@@ -397,20 +403,40 @@ body {
       })
     })
     .then(function (res) {
-      if (res.ok) {
-        form.style.display = 'none';
-        successPanel.style.display = 'block';
-        successPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
+      if (!res.ok) {
         return res.text().then(function (t) {
           throw new Error(t || ('HTTP ' + res.status));
         });
       }
+      return res.json().catch(function () { return 'confirmed'; });
+    })
+    .then(function (status) {
+      var waitlisted = (String(status).replace(/"/g, '') === 'waitlist');
+      var tick = document.getElementById('successTick');
+      var title = document.getElementById('successTitle');
+      var body = document.getElementById('successBody');
+      if (waitlisted) {
+        tick.textContent = '★';
+        tick.style.background = 'rgba(237,139,0,0.15)';
+        tick.style.borderColor = 'rgba(237,139,0,0.5)';
+        tick.style.color = '#f0a500';
+        title.textContent = "You're on the waitlist";
+        body.innerHTML = "<p>Thanks for your interest — our 28 places are currently full, so you've been added to the waitlist.</p>" +
+          "<p>We'll email you as soon as a seat opens up. Either way, we'll be in touch before <strong>Tuesday 14th July</strong>.</p>";
+      } else {
+        tick.textContent = '✓';
+        title.textContent = "You're registered";
+        body.innerHTML = "<p>Thanks for registering for the GI Surgery Journal Club — your place is confirmed.</p>" +
+          "<p>We'll email the two EGS papers, pre-reading and final joining details to the address you gave, closer to <strong>Tuesday 14th July</strong>.</p>";
+      }
+      form.style.display = 'none';
+      successPanel.style.display = 'block';
+      successPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     })
     .catch(function (err) {
       btn.disabled = false;
       btn.textContent = original;
-      showErr("Sorry — we couldn't submit your registration just now. Please try again, or use the Google Form link below.");
+      showErr("Sorry — we couldn't submit your registration just now. Please try again, or email suketu.batra@nbt.nhs.uk.");
       console.error('Registration error:', err);
     });
   });

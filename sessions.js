@@ -752,23 +752,33 @@ async function loadJournalClubRegistrations(ev) {
   if (!isAdminView || !isJournalClubEvent(ev)) { container.innerHTML = ''; return; }
   container.innerHTML = '<div class="detail-field"><div class="detail-label">Registrations</div><div class="detail-value" style="color:var(--nhs-grey);font-size:13px;">Loading&hellip;</div></div>';
   try {
-    const regs = await sbGet('journal_club_registrations', `event_key=eq.${JC_EVENT_KEY}&order=created_at.asc&select=full_name,email,role,grade,dietary,created_at`);
+    const JC_CAP = 28;
+    const regs = await sbGet('journal_club_registrations', `event_key=eq.${JC_EVENT_KEY}&order=status.asc,created_at.asc&select=full_name,email,role,grade,dietary,status,created_at`);
     window._jcRegs = regs || [];
-    let html = `<div class="detail-field"><div class="detail-label">Registrations (${regs.length})</div>`;
+    const nConfirmed = regs.filter(r => (r.status || 'confirmed') === 'confirmed').length;
+    const nWait = regs.filter(r => r.status === 'waitlist').length;
+    let html = `<div class="detail-field"><div class="detail-label">Registrations</div>`;
     if (regs.length === 0) {
       html += `<div class="detail-value" style="color:var(--nhs-grey);font-size:13px;">No registrations yet.</div></div>`;
       container.innerHTML = html;
       return;
     }
+    html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(0,153,80,0.12);color:var(--nhs-green);">Confirmed ${nConfirmed}/${JC_CAP}</span>
+        <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(237,139,0,0.12);color:var(--nhs-orange);">Waitlist ${nWait}</span>
+      </div>`;
     html += `<div style="overflow-x:auto;margin-top:4px;"><table style="width:100%;border-collapse:collapse;font-size:12.5px;">
       <thead><tr style="text-align:left;color:var(--nhs-grey);border-bottom:1px solid var(--nhs-pale-grey);">
-        <th style="padding:6px 8px;">#</th><th style="padding:6px 8px;">Name</th><th style="padding:6px 8px;">Email</th><th style="padding:6px 8px;">Role</th><th style="padding:6px 8px;">Grade/Spec</th><th style="padding:6px 8px;">Dietary</th><th style="padding:6px 8px;">When</th>
+        <th style="padding:6px 8px;">#</th><th style="padding:6px 8px;">Name</th><th style="padding:6px 8px;">Status</th><th style="padding:6px 8px;">Email</th><th style="padding:6px 8px;">Role</th><th style="padding:6px 8px;">Grade/Spec</th><th style="padding:6px 8px;">Dietary</th><th style="padding:6px 8px;">When</th>
       </tr></thead><tbody>`;
     regs.forEach((r, i) => {
       const when = r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '';
+      const wl = r.status === 'waitlist';
+      const badge = `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;background:${wl ? 'rgba(237,139,0,0.14)' : 'rgba(0,153,80,0.14)'};color:${wl ? 'var(--nhs-orange)' : 'var(--nhs-green)'};">${wl ? 'Waitlist' : 'Confirmed'}</span>`;
       html += `<tr style="border-bottom:1px solid var(--nhs-bg);">
         <td style="padding:6px 8px;color:var(--nhs-grey);">${i + 1}</td>
         <td style="padding:6px 8px;font-weight:600;">${esc(r.full_name || '')}</td>
+        <td style="padding:6px 8px;">${badge}</td>
         <td style="padding:6px 8px;"><a href="mailto:${esc(r.email || '')}" style="color:var(--nhs-blue);">${esc(r.email || '')}</a></td>
         <td style="padding:6px 8px;">${esc(r.role || '')}</td>
         <td style="padding:6px 8px;">${esc(r.grade || '')}</td>
@@ -789,8 +799,8 @@ async function loadJournalClubRegistrations(ev) {
 function exportJournalClubRegistrations() {
   const regs = window._jcRegs || [];
   if (!regs.length) { alert('No registrations to export.'); return; }
-  const cols = ['full_name', 'email', 'role', 'grade', 'dietary', 'created_at'];
-  const head = ['Name', 'Email', 'Role', 'Grade/Specialty', 'Dietary', 'Registered'];
+  const cols = ['full_name', 'email', 'status', 'role', 'grade', 'dietary', 'created_at'];
+  const head = ['Name', 'Email', 'Status', 'Role', 'Grade/Specialty', 'Dietary', 'Registered'];
   const csvEsc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
   let csv = head.join(',') + '\n';
   regs.forEach(r => { csv += cols.map(c => csvEsc(r[c])).join(',') + '\n'; });
