@@ -61,6 +61,7 @@ function switchView(view) {
   document.getElementById('attendanceChartView').style.display = 'none';
   document.getElementById('siteFeedbackView').style.display = 'none';
   document.getElementById('adminDashView').style.display = 'none';
+  (document.getElementById('jcDashCardHost') || { style: {} }).style.display = 'none';
   document.getElementById('dashboardView').style.display = 'none';
   document.getElementById('inboxView').style.display = 'none';
   document.getElementById('teacherDashView').style.display = 'none';
@@ -112,6 +113,7 @@ function switchView(view) {
     document.getElementById('adminDashView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
     loadAdminDashboard();
+    if (typeof loadJournalClubDashCard === 'function') loadJournalClubDashCard();
   } else if (view === 'dashboard') {
     document.getElementById('dashboardView').style.display = 'block';
     filtersBar.style.display = 'none'; statsBar.style.display = 'none'; welcomeBanner.style.display = 'none';
@@ -812,9 +814,78 @@ function exportJournalClubRegistrations() {
   URL.revokeObjectURL(url);
 }
 
+// ===================== JOURNAL CLUB DASHBOARD CARD (admin) =====================
+function _jcDownloadCsv(filename, head, rows) {
+  const esc = v => '"' + String(v == null ? '' : (typeof v === 'object' ? JSON.stringify(v) : v)).replace(/"/g, '""') + '"';
+  let csv = head.map(esc).join(',') + '\n';
+  rows.forEach(r => { csv += r.map(esc).join(',') + '\n'; });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+async function exportJournalClubRegistrationsCSV() {
+  try {
+    const r = await sbGet('journal_club_registrations', `event_key=eq.${JC_EVENT_KEY}&order=status.asc,created_at.asc&select=full_name,email,role,grade,specialty,dietary,status,created_at`);
+    _jcDownloadCsv('journal_club_registrations.csv', ['Name', 'Email', 'Role', 'Grade', 'Specialty', 'Dietary', 'Status', 'Registered'],
+      (r || []).map(x => [x.full_name, x.email, x.role, x.grade, x.specialty, x.dietary, x.status, x.created_at]));
+  } catch (e) { alert('Could not export registrations.'); }
+}
+async function exportJournalClubReflectionsCSV() {
+  try {
+    const r = await sbGet('journal_club_reflections', `event_key=eq.${JC_EVENT_KEY}&order=created_at.asc&select=full_name,email,grade,paper,study_type,answers,created_at`);
+    _jcDownloadCsv('journal_club_reflections.csv', ['Name', 'Email', 'Grade', 'Paper', 'Study type', 'Answers', 'Submitted'],
+      (r || []).map(x => [x.full_name, x.email, x.grade, x.paper, x.study_type, x.answers, x.created_at]));
+  } catch (e) { alert('Could not export reflections.'); }
+}
+async function exportJournalClubFeedbackCSV() {
+  try {
+    const r = await sbGet('journal_club_feedback', `event_key=eq.${JC_EVENT_KEY}&order=created_at.asc&select=q_relevance,q_presentation,q_discussion,q_venue,q_return,confidence,liked,improve,role,grade,created_at`);
+    _jcDownloadCsv('journal_club_feedback.csv', ['Relevance', 'Presentation', 'Discussion', 'Venue', 'WouldReturn', 'Confidence', 'Liked', 'Improve', 'Role', 'Grade', 'Submitted'],
+      (r || []).map(x => [x.q_relevance, x.q_presentation, x.q_discussion, x.q_venue, x.q_return, x.confidence, x.liked, x.improve, x.role, x.grade, x.created_at]));
+  } catch (e) { alert('Could not export feedback.'); }
+}
+async function loadJournalClubDashCard() {
+  const host = document.getElementById('jcDashCardHost');
+  if (!host) return;
+  const isAdminView = isAdmin && !adminViewAsLearner;
+  if (!isAdminView) { host.style.display = 'none'; return; }
+  host.style.display = 'block';
+  host.innerHTML = '<div style="max-width:1100px;margin:18px auto 0;padding:0 16px;"><div style="background:linear-gradient(135deg,#003087,#001a4d);border:1px solid rgba(65,182,230,0.3);border-radius:14px;padding:18px 22px;color:#fff;font-size:13px;">Loading journal club…</div></div>';
+  try {
+    const results = await Promise.all([
+      sbGet('journal_club_registrations', `event_key=eq.${JC_EVENT_KEY}&select=status`),
+      sbGet('journal_club_reflections', `event_key=eq.${JC_EVENT_KEY}&select=id`),
+      sbGet('journal_club_feedback', `event_key=eq.${JC_EVENT_KEY}&select=q_return`)
+    ]);
+    const regs = results[0] || [], refls = results[1] || [], fbk = results[2] || [];
+    const nConf = regs.filter(r => (r.status || 'confirmed') === 'confirmed').length;
+    const nWait = regs.filter(r => r.status === 'waitlist').length;
+    const stat = (n, l, c) => `<div style="flex:1;min-width:80px;text-align:center;"><div style="font-size:24px;font-weight:800;color:${c};">${n}</div><div style="font-size:10px;letter-spacing:0.05em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-top:2px;">${l}</div></div>`;
+    const obtn = (t, fn) => `<button class="btn btn-outline" style="font-size:0.78rem;padding:7px 13px;color:#fff;border:1px solid rgba(255,255,255,0.4);" onclick="${fn}">${t}</button>`;
+    host.innerHTML = `<div style="max-width:1100px;margin:18px auto 0;padding:0 16px;">
+      <div style="background:linear-gradient(135deg,#003087,#001a4d);border:1px solid rgba(65,182,230,0.3);border-radius:14px;padding:18px 22px;color:#fff;box-shadow:0 6px 22px rgba(0,0,0,0.2);">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#41b6e6;">Upcoming Event</div>
+        <div style="font-size:18px;font-weight:700;margin-top:2px;">GI Surgery Journal Club</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:14px;">Tue 14 Jul 2026 · 6:00–8:30pm · The Kensington Arms, Bristol</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;background:rgba(255,255,255,0.05);border-radius:10px;padding:14px 8px;">
+          ${stat(regs.length, 'Registered', '#fff')}${stat(nConf + '/28', 'Confirmed', '#4ade80')}${stat(nWait, 'Waitlist', '#f0a500')}${stat(refls.length, 'Reflections', '#41b6e6')}${stat(fbk.length, 'Feedback', '#41b6e6')}
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          ${obtn('Registrations CSV', 'exportJournalClubRegistrationsCSV()')}${obtn('Reflections CSV', 'exportJournalClubReflectionsCSV()')}${obtn('Feedback CSV', 'exportJournalClubFeedbackCSV()')}
+        </div>
+      </div></div>`;
+  } catch (e) {
+    host.innerHTML = '';
+  }
+}
+
 async function loadDetailAttendance(sessionId) {
   const container = document.getElementById('detailAttendanceSummary');
   if (!container) return;
+  // Journal club uses registrations, not the in-hours rota/attendance model — skip turnout.
+  const evJC = events.find(e => e.id === sessionId);
+  if (typeof isJournalClubEvent === 'function' && isJournalClubEvent(evJC)) { container.innerHTML = ''; return; }
   try {
     const ev = events.find(e => e.id === sessionId);
     const att = await sbGet('attendance', `session_id=eq.${sessionId}&status=neq.removed&select=learner_id`);
