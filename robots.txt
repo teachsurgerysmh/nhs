@@ -1,0 +1,16 @@
+# Southmead Surgical Teaching
+# This site is for North Bristol NHS Trust surgical staff. It is not
+# intended for public search indexing — the induction handbook and the
+# app's internal pages list staff names, bleeps and ward extensions.
+#
+# Personal and on-call mobile numbers, and staff headshots, are NOT in
+# these files at all: they are served from Supabase behind authentication
+# (see private_contacts + the staff-photos bucket).
+
+User-agent: *
+Disallow: /nhs/induction.html
+Disallow: /nhs/journal_club.html
+Disallow: /nhs/journal_club_feedback.html
+Disallow: /nhs/journal_club_reflect.html
+Disallow: /nhs/journal_club_poster.html
+Disallow: /nhs/journal_club_save_the_date.html
