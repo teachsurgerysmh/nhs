@@ -13,7 +13,7 @@ async function doLogin() {
   if (user === DEMO_CREDENTIALS.username && pass === DEMO_CREDENTIALS.password) {
     isDemoMode = true;
     currentUser = { id: 0, username: 'demo', name: 'Demo User', role: 'admin' };
-    sessionStorage.setItem('sst_user', JSON.stringify(currentUser));
+    setAuthSession('sst_user', JSON.stringify(currentUser));
     sessionStorage.setItem('sst_demo', 'true');
     setAdmin(true);
     closeModal('loginModal');
@@ -34,7 +34,7 @@ async function doLogin() {
     if (result.access_token) setAuthToken(result.access_token);
     const u = result.user;
     currentUser = { id: u.id, username: u.username, name: u.display_name, role: u.role };
-    sessionStorage.setItem('sst_user', JSON.stringify(currentUser));
+    setAuthSession('sst_user', JSON.stringify(currentUser));
     setAdmin(true);
     closeModal('loginModal');
     showToast('Welcome, ' + currentUser.name);
@@ -78,9 +78,9 @@ function doLogout() {
   currentLearner = null;
   currentTeacher = null;
   setAuthToken(null);
-  sessionStorage.removeItem('sst_user');
-  sessionStorage.removeItem('sst_learner');
-  sessionStorage.removeItem('sst_teacher');
+  clearAuthSession('sst_user');
+  clearAuthSession('sst_learner');
+  clearAuthSession('sst_teacher');
   document.body.classList.remove('is-learner');
   setAdmin(false);
   switchView('list');
@@ -112,7 +112,7 @@ async function linkAdminToLearner() {
   if (isDemoMode) {
     // Use synthetic demo learner — never query real DB
     currentLearner = { id: 8001, name: 'Demo Admin', email: 'demo@nbt.nhs.uk', grade: 'Consultant', placement: 'Admin', verified: true };
-    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    setAuthSession('sst_learner', JSON.stringify(currentLearner));
     document.body.classList.add('is-learner');
     updateHeaderButtons();
     return;
@@ -148,7 +148,7 @@ async function linkAdminToLearner() {
       });
       currentLearner = result[0];
     }
-    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    setAuthSession('sst_learner', JSON.stringify(currentLearner));
     document.body.classList.add('is-learner');
     // Show My Dashboard tab for admins
     updateHeaderButtons();
@@ -161,7 +161,7 @@ async function linkAdminToTeacher() {
   if (!currentUser) return;
   if (isDemoMode) {
     currentTeacher = { id: 9001, name: 'Demo Teacher', email: 'demo@nhs.net', specialty: 'General Surgery', is_manager: true };
-    sessionStorage.setItem('sst_teacher', JSON.stringify(currentTeacher));
+    setAuthSession('sst_teacher', JSON.stringify(currentTeacher));
     updateHeaderButtons();
     return;
   }
@@ -176,7 +176,7 @@ async function linkAdminToTeacher() {
     const data = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=${CONTACT_FIELDS}`);
     if (data.length > 0) {
       currentTeacher = data[0];
-      sessionStorage.setItem('sst_teacher', JSON.stringify(data[0]));
+      setAuthSession('sst_teacher', JSON.stringify(data[0]));
       updateHeaderButtons();
     }
   } catch(e) { console.warn('Could not link admin to teacher:', e); }
@@ -248,7 +248,7 @@ function updateHeaderButtons() {
 
 function checkSession() {
   restoreAuthToken(); // Restore JWT from sessionStorage
-  const stored = sessionStorage.getItem('sst_user');
+  const stored = getAuthSession('sst_user');
   if (stored) {
     try {
       currentUser = JSON.parse(stored);
@@ -318,7 +318,7 @@ async function doLearnerLogin() {
     if (result.access_token) setAuthToken(result.access_token);
     const learner = result.user;
     currentLearner = learner;
-    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    setAuthSession('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
     logQI('learner_login', { metadata: { grade: learner.grade, placement: learner.placement } });
     await linkLearnerToTeacher();
@@ -350,6 +350,7 @@ function showSetupPinForm(learner, attemptedPin) {
     <select id="setupRotation" onchange="onSetupRotationChange()"><option value="">-- Select --</option><option value="aug_dec">Aug – Dec</option><option value="dec_apr">Dec – Apr</option><option value="apr_aug">Apr – Aug</option></select>
     <input type="hidden" id="setupStart" value="">
     <input type="hidden" id="setupEnd" value="">
+    <input type="hidden" id="setupEmail" value="${esc(learner.email)}">
     <div style="margin-top:16px;text-align:center;">
       <button class="btn btn-green" onclick="completeAccountSetup(${learner.id})">Set Up Account</button>
     </div>
@@ -383,9 +384,18 @@ async function completeAccountSetup(learnerId) {
   if (pin1 !== pin2) { showToast('PINs do not match'); return; }
   if (!placement) { showToast('Please select a placement'); return; }
 
+  // NOTE: email must come from #setupEmail (a hidden field set when this
+  // form was built), not #learnerEmail — showSetupPinForm() replaces the
+  // whole #learnerLoginForm innerHTML, which destroys the original
+  // #learnerEmail input from the login form. Reading it here always
+  // silently returned '' (optional chaining swallowed the missing
+  // element), so every pre-created-account setup sent an empty email to
+  // the edge function, which correctly rejected it — surfaced to the user
+  // as a generic, always-happens "Setup failed. Please try again."
+  const setupEmail = document.getElementById('setupEmail')?.value?.trim()?.toLowerCase() || '';
   try {
     // Set password via server-side Edge Function
-    const authResult = await callAuth({ action: 'setup', type: 'learner', email: document.getElementById('learnerEmail')?.value?.trim()?.toLowerCase() || '', password: pin1 });
+    const authResult = await callAuth({ action: 'setup', type: 'learner', email: setupEmail, password: pin1 });
     if (authResult.access_token) setAuthToken(authResult.access_token);
     // Update profile fields directly (non-sensitive data)
     const updates = { verified: true, grade, placement, rotation_block: rotation || null };
@@ -394,7 +404,7 @@ async function completeAccountSetup(learnerId) {
     await sbUpdate('learners', learnerId, updates);
 
     currentLearner = { ...authResult.user, ...updates };
-    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    setAuthSession('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
 
     // Show success with PIN reminder
@@ -585,7 +595,7 @@ async function doLearnerRegister() {
     // Set password server-side
     await callAuth({ action: 'setup', type: 'learner', email, password: pin });
     currentLearner = result[0];
-    sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+    setAuthSession('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
     logQI('learner_register', { metadata: { grade, placement, rotation_block: rotationBlock || null } });
 
@@ -595,7 +605,7 @@ async function doLearnerRegister() {
       if (contactMatch.length > 0) {
         await sbUpdate('learners', currentLearner.id, { contact_id: contactMatch[0].id });
         currentLearner.contact_id = contactMatch[0].id;
-        sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+        setAuthSession('sst_learner', JSON.stringify(currentLearner));
       }
     } catch(linkErr) { console.warn('Contact link skipped:', linkErr); }
 
@@ -619,7 +629,7 @@ function doLearnerLogout() {
   if (currentLearner) logQI('learner_logout');
   currentLearner = null;
   setAuthToken(null);
-  sessionStorage.removeItem('sst_learner');
+  clearAuthSession('sst_learner');
   setLearnerUI(false);
   updateSessionsTabLabel();
   if (currentView === 'dashboard') switchView('list');
@@ -634,13 +644,13 @@ function setLearnerUI(loggedIn) {
 }
 
 function checkLearnerSession() {
-  const stored = sessionStorage.getItem('sst_learner');
+  const stored = getAuthSession('sst_learner');
   if (stored) {
     try {
       currentLearner = JSON.parse(stored);
       setLearnerUI(true);
       updateSessionsTabLabel();
-    } catch(e) { sessionStorage.removeItem('sst_learner'); }
+    } catch(e) { clearAuthSession('sst_learner'); }
   }
 }
 
@@ -688,7 +698,7 @@ async function doTeacherLogin() {
     if (result.access_token) setAuthToken(result.access_token);
     const teacher = result.user;
     currentTeacher = teacher;
-    sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
+    setAuthSession('sst_teacher', JSON.stringify(teacher));
     closeModal('teacherLoginModal');
     if (redirectAfterAuth()) return;
     logQI('teacher_login', { metadata: { specialty: teacher.specialty || null } });
@@ -711,7 +721,7 @@ async function doTeacherSetup() {
     if (result.access_token) setAuthToken(result.access_token);
     const teacher = result.user;
     currentTeacher = teacher;
-    sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
+    setAuthSession('sst_teacher', JSON.stringify(teacher));
     closeModal('teacherLoginModal');
     if (redirectAfterAuth()) return;
     logQI('teacher_setup', { metadata: { specialty: teacher.specialty || null } });
@@ -729,7 +739,7 @@ async function linkTeacherToLearner() {
     const data = await sbGet('learners', `email=ilike.${encodeURIComponent(email)}&select=${LEARNER_FIELDS}`);
     if (data.length > 0) {
       currentLearner = data[0];
-      sessionStorage.setItem('sst_learner', JSON.stringify(currentLearner));
+      setAuthSession('sst_learner', JSON.stringify(currentLearner));
       document.body.classList.add('is-learner');
     }
   } catch(e) { console.warn('Could not link teacher to learner:', e); }
@@ -742,7 +752,7 @@ async function linkLearnerToTeacher() {
     const data = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=${CONTACT_FIELDS}`);
     if (data.length > 0) {
       currentTeacher = data[0];
-      sessionStorage.setItem('sst_teacher', JSON.stringify(data[0]));
+      setAuthSession('sst_teacher', JSON.stringify(data[0]));
     }
   } catch(e) { console.warn('Could not link learner to teacher:', e); }
 }
@@ -752,8 +762,8 @@ function doTeacherLogout() {
   currentTeacher = null;
   currentLearner = null;
   setAuthToken(null);
-  sessionStorage.removeItem('sst_teacher');
-  sessionStorage.removeItem('sst_learner');
+  clearAuthSession('sst_teacher');
+  clearAuthSession('sst_learner');
   document.body.classList.remove('is-learner');
   updateHeaderButtons();
   if (currentView === 'teacherDash') switchView('list');
@@ -761,12 +771,12 @@ function doTeacherLogout() {
 }
 
 function checkTeacherSession() {
-  const stored = sessionStorage.getItem('sst_teacher');
+  const stored = getAuthSession('sst_teacher');
   if (stored) {
     try {
       currentTeacher = JSON.parse(stored);
       updateHeaderButtons();
-    } catch(e) { sessionStorage.removeItem('sst_teacher'); }
+    } catch(e) { clearAuthSession('sst_teacher'); }
   }
 }
 
