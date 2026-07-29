@@ -562,14 +562,26 @@ async function doLearnerRegister() {
   const pin = String(Math.floor(100000 + Math.random() * 900000));
 
   try {
-    // Register without password first, then set password server-side
-    const result = await sbInsert('learners', {
-      name, email, grade, specialty: '', placement,
-      placement_start: placementStart || null,
-      placement_end: placementEnd || null,
-      rotation_block: rotationBlock || null,
-      pin_code: null, verified: true
+    // Register without password first, then set password server-side.
+    // Uses the register_learner RPC, not a raw sbInsert: anon can INSERT
+    // into learners under RLS, but sbInsert always asks for the row back
+    // (Prefer: return=representation), which also needs a SELECT policy —
+    // anon has none on learners (only authenticated does) — so a direct
+    // insert fails with 42501 even though the insert itself is permitted.
+    const regRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/register_learner`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        p_name: name, p_email: email, p_grade: grade, p_placement: placement,
+        p_placement_start: placementStart || null,
+        p_placement_end: placementEnd || null,
+        p_rotation_block: rotationBlock || null
+      })
     });
+    if (!regRes.ok) {
+      const errBody = await regRes.text();
+      throw new Error(`Registration failed: ${regRes.status}${errBody ? ' — ' + errBody : ''}`);
+    }
+    const result = await regRes.json();
     // Set password server-side
     await callAuth({ action: 'setup', type: 'learner', email, password: pin });
     currentLearner = result[0];
