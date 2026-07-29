@@ -4,7 +4,7 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.3';
+const APP_VERSION = 'v3.12.5';
 const APP_BUILD = '2026-07-29';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
@@ -53,6 +53,24 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 let _authToken = null;
 
+// Login state lives in both sessionStorage (existing per-tab behaviour) and
+// localStorage (persists across tabs/windows and browser restarts). The
+// site is one login, not two: signing in from the main app or from a gated
+// static page (e.g. induction.html, which has no shared JS and reads these
+// keys directly) should unlock both, including a fresh tab from a bookmark
+// or QR code — sessionStorage alone can't do that, it's per-tab only.
+function setAuthSession(key, value) {
+  try { sessionStorage.setItem(key, value); } catch(e) {}
+  try { localStorage.setItem(key, value); } catch(e) {}
+}
+function getAuthSession(key) {
+  try { return sessionStorage.getItem(key) || localStorage.getItem(key); } catch(e) { return null; }
+}
+function clearAuthSession(key) {
+  try { sessionStorage.removeItem(key); } catch(e) {}
+  try { localStorage.removeItem(key); } catch(e) {}
+}
+
 const headers = {
   'apikey': SUPABASE_KEY,
   'Authorization': 'Bearer ' + SUPABASE_KEY,
@@ -65,17 +83,17 @@ function setAuthToken(token) {
   _authToken = token;
   headers['Authorization'] = 'Bearer ' + (token || SUPABASE_KEY);
   if (token) {
-    sessionStorage.setItem('sst_token', token);
+    setAuthSession('sst_token', token);
     resetInactivityTimer();
   } else {
-    sessionStorage.removeItem('sst_token');
+    clearAuthSession('sst_token');
     if (_inactivityTimer) { clearTimeout(_inactivityTimer); _inactivityTimer = null; }
   }
 }
 
 // Restore JWT from session (called on page load)
 function restoreAuthToken() {
-  const token = sessionStorage.getItem('sst_token');
+  const token = getAuthSession('sst_token');
   if (token) {
     // Check if token is expired
     try {
@@ -86,7 +104,7 @@ function restoreAuthToken() {
       }
     } catch(e) {}
     // Token expired or invalid — clear it
-    sessionStorage.removeItem('sst_token');
+    clearAuthSession('sst_token');
   }
   return false;
 }
