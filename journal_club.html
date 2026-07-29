@@ -254,7 +254,7 @@ body {
       </div>
     </div>
 
-    <div class="note">📄 Register below and we'll email you both papers, the pre-reading and joining details closer to the date.</div>
+    <div class="note">📄 Registration has closed. Registered attendees will be emailed both papers, the pre-reading and joining details closer to the date.</div>
     <div style="margin-top:14px;text-align:center;">
       <a href="journal_club_reflect.html" style="display:inline-block;border:1px solid var(--cyan);color:var(--cyan);text-decoration:none;font-size:13px;font-weight:700;padding:11px 22px;border-radius:8px;">Reflect on the papers &amp; get a CPD copy →</a>
     </div>
@@ -264,7 +264,7 @@ body {
   <div class="section">
     <div class="section-label">Programme</div>
     <div class="prog">
-      <div class="prog-item"><div class="prog-time">18:00</div><div class="prog-label">Welcome &amp; Introductions</div><div class="prog-note">Drinks &amp; networking</div></div>
+      <div class="prog-item"><div class="prog-time">18:00</div><div class="prog-label">Welcome &amp; Introductions</div><div class="prog-note">5 min</div></div>
       <div class="prog-item"><div class="prog-time">18:05</div><div class="prog-label">Medtronic — Industry Presentation</div><div class="prog-note">15 min</div></div>
       <div class="prog-item"><div class="prog-time">18:20</div><div class="prog-label">Paper 1 — Cholecystostomy vs cholecystectomy</div><div class="prog-note">Mohammed Barghash</div></div>
       <div class="prog-item"><div class="prog-time">18:50</div><div class="prog-label">Paper 2 — LASSO adhesiolysis RCT</div><div class="prog-note">Jonathan Denfhy</div></div>
@@ -286,58 +286,15 @@ body {
     </div>
   </div>
 
-  <!-- REGISTRATION -->
+  <!-- REGISTRATION (closed) -->
   <div class="section">
-    <div class="section-label">Register to Attend</div>
-    <div class="form-card">
-
-      <form id="regForm" novalidate>
-        <div class="field">
-          <label for="fullName">Full name <span class="req">*</span></label>
-          <input type="text" id="fullName" name="fullName" autocomplete="name" required>
-        </div>
-        <div class="field">
-          <label for="email">Email <span class="req">*</span> <span class="hint">— we'll send the papers &amp; joining details here</span></label>
-          <input type="email" id="email" name="email" autocomplete="email" required>
-        </div>
-        <div class="row2">
-          <div class="field">
-            <label for="role">Role</label>
-            <select id="role" name="role">
-              <option value="">Select…</option>
-              <option value="Resident">Surgical resident</option>
-              <option value="Consultant">Consultant</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="grade">Grade / Specialty <span class="hint">(optional)</span></label>
-            <input type="text" id="grade" name="grade" placeholder="e.g. ST5, CT1, Consultant UGI">
-          </div>
-        </div>
-        <div class="field">
-          <label for="dietary">Dietary requirements <span class="hint">(optional — dinner is provided)</span></label>
-          <input type="text" id="dietary" name="dietary" placeholder="e.g. Vegetarian, no nuts">
-        </div>
-
-        <button type="submit" class="btn-submit" id="submitBtn">Register</button>
-        <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.5);line-height:1.5;text-align:center;">
-          Places are limited to <strong style="color:rgba(255,255,255,0.75);">28</strong>. Once full, further sign-ups join a waitlist, and we'll confirm your place by email.
-        </div>
-        <div class="form-msg" id="formMsg"></div>
-      </form>
-
-      <div class="success-panel" id="successPanel">
-        <div class="tick" id="successTick">✓</div>
-        <h3 id="successTitle">You're registered</h3>
-        <div id="successBody">
-          <p>Thanks for registering for the GI Surgery Journal Club — your place is confirmed.</p>
-          <p>We'll email the two EGS papers, pre-reading and final joining details to the address you gave, closer to <strong>Tuesday 14th July</strong>.</p>
-        </div>
-      </div>
-
-      <div class="fallback">
-        Having trouble? Email <a href="mailto:suketu.batra@nbt.nhs.uk">suketu.batra@nbt.nhs.uk</a> and we'll register you.
+    <div class="section-label">Registration</div>
+    <div class="form-card" style="text-align:center;padding:32px 22px;">
+      <div style="font-size:32px;margin-bottom:10px;">🔒</div>
+      <h3 style="margin-bottom:8px;">Registration is now closed</h3>
+      <p style="color:rgba(255,255,255,0.65);font-size:14px;line-height:1.55;">Sign-ups for the inaugural GI Surgery Journal Club have closed. If you already registered, joining details will be emailed to you closer to the date.</p>
+      <div class="fallback" style="margin-top:16px;">
+        Questions? Email <a href="mailto:suketu.batra@nbt.nhs.uk">suketu.batra@nbt.nhs.uk</a>
       </div>
     </div>
   </div>
@@ -351,99 +308,5 @@ body {
 
 </div>
 
-<script>
-(function () {
-  var SUPABASE_URL = 'https://rufihxjquwrluaenmbaa.supabase.co';
-  var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1ZmloeGpxdXdybHVhZW5tYmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyOTg4NDMsImV4cCI6MjA5Mzg3NDg0M30.6o8GrCPcQ__JjrGLUiqQwdgWcM1Qk_02TvLvTOwUjyg';
-
-  var form = document.getElementById('regForm');
-  var btn = document.getElementById('submitBtn');
-  var msg = document.getElementById('formMsg');
-  var successPanel = document.getElementById('successPanel');
-
-  function showErr(text) {
-    msg.className = 'form-msg err';
-    msg.textContent = text;
-  }
-
-  function validEmail(e) {
-    return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
-  }
-
-  form.addEventListener('submit', function (ev) {
-    ev.preventDefault();
-    msg.className = 'form-msg';
-    msg.textContent = '';
-
-    var name = document.getElementById('fullName').value.trim();
-    var email = document.getElementById('email').value.trim();
-    var role = document.getElementById('role').value;
-    var grade = document.getElementById('grade').value.trim();
-    var dietary = document.getElementById('dietary').value.trim();
-
-    if (!name) { showErr('Please enter your full name.'); return; }
-    if (!validEmail(email)) { showErr('Please enter a valid email address.'); return; }
-
-    btn.disabled = true;
-    var original = btn.textContent;
-    btn.textContent = 'Registering…';
-
-    fetch(SUPABASE_URL + '/rest/v1/rpc/journal_club_register', {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        p_full_name: name,
-        p_email: email,
-        p_role: role || null,
-        p_grade: grade || null,
-        p_specialty: null,
-        p_dietary: dietary || null,
-        p_source: 'web'
-      })
-    })
-    .then(function (res) {
-      if (!res.ok) {
-        return res.text().then(function (t) {
-          throw new Error(t || ('HTTP ' + res.status));
-        });
-      }
-      return res.json().catch(function () { return 'confirmed'; });
-    })
-    .then(function (status) {
-      var waitlisted = (String(status).replace(/"/g, '') === 'waitlist');
-      var tick = document.getElementById('successTick');
-      var title = document.getElementById('successTitle');
-      var body = document.getElementById('successBody');
-      if (waitlisted) {
-        tick.textContent = '★';
-        tick.style.background = 'rgba(237,139,0,0.15)';
-        tick.style.borderColor = 'rgba(237,139,0,0.5)';
-        tick.style.color = '#f0a500';
-        title.textContent = "You're on the waitlist";
-        body.innerHTML = "<p>Thanks for your interest — our 28 places are currently full, so you've been added to the waitlist.</p>" +
-          "<p>We'll email you as soon as a seat opens up. Either way, we'll be in touch before <strong>Tuesday 14th July</strong>.</p>";
-      } else {
-        tick.textContent = '✓';
-        title.textContent = "You're registered";
-        body.innerHTML = "<p>Thanks for registering for the GI Surgery Journal Club — your place is confirmed.</p>" +
-          "<p>We'll email the two EGS papers, pre-reading and final joining details to the address you gave, closer to <strong>Tuesday 14th July</strong>.</p>";
-      }
-      form.style.display = 'none';
-      successPanel.style.display = 'block';
-      successPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    })
-    .catch(function (err) {
-      btn.disabled = false;
-      btn.textContent = original;
-      showErr("Sorry — we couldn't submit your registration just now. Please try again, or email suketu.batra@nbt.nhs.uk.");
-      console.error('Registration error:', err);
-    });
-  });
-})();
-</script>
 </body>
 </html>

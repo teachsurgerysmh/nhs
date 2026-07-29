@@ -292,6 +292,19 @@ function showLearnerRegister() {
   document.getElementById('learnerModalTitle').textContent = 'Learner Registration';
 }
 
+// After a successful login/setup, send the user back to the gated page that
+// sent them here (e.g. induction.html), if one was recorded. Returns true if
+// a redirect happened (caller should stop further post-login UI work).
+function redirectAfterAuth() {
+  const returnTo = sessionStorage.getItem('sst_return_to');
+  const ts = Number(sessionStorage.getItem('sst_return_to_ts') || 0);
+  sessionStorage.removeItem('sst_return_to');
+  sessionStorage.removeItem('sst_return_to_ts');
+  if (!returnTo || (Date.now() - ts) > 15 * 60 * 1000) return false; // stale intent (>15 min) — ignore
+  window.location.href = returnTo;
+  return true;
+}
+
 async function doLearnerLogin() {
   const email = document.getElementById('learnerEmail').value.trim().toLowerCase();
   const pin = document.getElementById('learnerPin').value.trim();
@@ -310,6 +323,7 @@ async function doLearnerLogin() {
     logQI('learner_login', { metadata: { grade: learner.grade, placement: learner.placement } });
     await linkLearnerToTeacher();
     closeModal('learnerLoginModal');
+    if (redirectAfterAuth()) return;
     showToast('Welcome, ' + learner.name + '!');
     updateHeaderButtons();
     handleLearnerURLParams();
@@ -389,7 +403,7 @@ async function completeAccountSetup(learnerId) {
         <div style="font-size:36px;margin-bottom:8px;">✅</div>
         <h3 style="color:var(--nhs-green);">Account Set Up!</h3>
         <p style="color:var(--nhs-grey);font-size:13px;margin-top:8px;">Your password has been set. Use it with your email to log in next time.</p>
-        <button class="btn btn-green" style="margin-top:16px;" onclick="closeModal('learnerLoginModal');location.reload();">Continue</button>
+        <button class="btn btn-green" style="margin-top:16px;" onclick="closeModal('learnerLoginModal');if(!redirectAfterAuth())location.reload();">Continue</button>
       </div>`;
   } catch(e) {
     console.error('Account setup error:', e);
@@ -664,6 +678,7 @@ async function doTeacherLogin() {
     currentTeacher = teacher;
     sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
     closeModal('teacherLoginModal');
+    if (redirectAfterAuth()) return;
     logQI('teacher_login', { metadata: { specialty: teacher.specialty || null } });
     await linkTeacherToLearner();
     updateHeaderButtons();
@@ -686,6 +701,7 @@ async function doTeacherSetup() {
     currentTeacher = teacher;
     sessionStorage.setItem('sst_teacher', JSON.stringify(teacher));
     closeModal('teacherLoginModal');
+    if (redirectAfterAuth()) return;
     logQI('teacher_setup', { metadata: { specialty: teacher.specialty || null } });
     await linkTeacherToLearner();
     updateHeaderButtons();

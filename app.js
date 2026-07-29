@@ -268,6 +268,25 @@ async function init() {
   checkSession();
   checkLearnerSession();
   checkTeacherSession();
+
+  // Sign-in handoff from a gated static page (e.g. induction.html):
+  // ?openLogin=learner|teacher&return=<page> — open the right login modal,
+  // then redirect back once login succeeds (see doLearnerLogin/doTeacherLogin etc.)
+  const RETURNABLE_PAGES = ['induction.html'];
+  const handoffParams = new URLSearchParams(window.location.search);
+  const openLoginType = handoffParams.get('openLogin');
+  const returnTo = handoffParams.get('return');
+  if (openLoginType && returnTo && RETURNABLE_PAGES.includes(returnTo)) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    if ((openLoginType === 'learner' && currentLearner) || (openLoginType === 'teacher' && currentTeacher)) {
+      window.location.replace(returnTo);
+      return;
+    }
+    sessionStorage.setItem('sst_return_to', returnTo);
+    sessionStorage.setItem('sst_return_to_ts', String(Date.now()));
+    setTimeout(() => { openLoginType === 'teacher' ? openTeacherLoginModal() : openLearnerLoginModal(); }, 300);
+  }
+
   await Promise.all([loadEvents(), fetchBankHolidays()]);
   renderAll();
   updateSessionsTabLabel();

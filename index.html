@@ -103,16 +103,16 @@
 
 <div id="surveyCardContainer"></div>
 
-<!-- Featured upcoming event: GI Surgery Journal Club -->
+<!-- Featured link: General Surgery Induction Handbook (sign-in required) -->
 <div style="max-width:1100px;margin:22px auto 0;padding:0 16px;">
-  <a href="journal_club.html" style="text-decoration:none;display:block;">
+  <a href="induction.html" style="text-decoration:none;display:block;">
     <div style="background:linear-gradient(135deg,#003087 0%,#001a4d 100%);border:1px solid rgba(65,182,230,0.35);border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;box-shadow:0 8px 28px rgba(0,0,0,0.25);">
       <div style="flex:1;min-width:240px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#41b6e6;margin-bottom:6px;">Upcoming Event · Inaugural</div>
-        <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px;">GI Surgery Journal Club</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.65);">Tue 14 July 2026 · 6–8pm · The Kensington Arms, Bristol · For surgical residents &amp; consultants</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#41b6e6;margin-bottom:6px;">Sign-in required</div>
+        <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px;">General Surgery Induction Handbook</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.65);">Bleeps, referrals, algorithms &amp; day-1 essentials for Southmead surgical trainees</div>
       </div>
-      <div style="background:#009639;color:#fff;font-weight:700;font-size:14px;padding:12px 26px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,150,57,0.4);">Register to Attend →</div>
+      <div style="background:#009639;color:#fff;font-weight:700;font-size:14px;padding:12px 26px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,150,57,0.4);">Open Handbook →</div>
     </div>
   </a>
 </div>
@@ -478,7 +478,7 @@
         <div style="font-size:16px;font-weight:700;color:var(--nhs-dark-blue);margin-bottom:10px;">Registration Successful!</div>
         <div style="font-size:14px;color:var(--nhs-grey);margin-bottom:14px;">Your PIN code (save it - shown only once):</div>
         <div id="generatedPin" style="font-size:36px;font-weight:700;color:var(--nhs-blue);letter-spacing:6px;padding:16px;background:var(--nhs-bg);border-radius:8px;"></div>
-        <div style="margin-top:16px;"><button class="btn btn-green" onclick="closeModal('learnerLoginModal');showToast('Welcome! You are now logged in.');">Continue</button></div>
+        <div style="margin-top:16px;"><button class="btn btn-green" onclick="closeModal('learnerLoginModal');if(!redirectAfterAuth())showToast('Welcome! You are now logged in.');">Continue</button></div>
       </div>
     </div>
   </div>
