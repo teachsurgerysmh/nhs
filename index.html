@@ -425,13 +425,21 @@
     <div class="modal-header"><h3 id="learnerModalTitle">Learner Login</h3><button class="modal-close" onclick="closeModal('learnerLoginModal')">&times;</button></div>
     <div class="modal-body" id="learnerModalBody">
       <div id="learnerLoginForm">
-        <label>NHS Email</label>
-        <input type="email" id="learnerEmail" placeholder="name@nhs.net or name@nbt.nhs.uk">
-        <label>Password</label>
-        <input type="password" id="learnerPin" placeholder="Enter password">
-        <div style="margin-top:14px;text-align:center;">
-          <button class="btn btn-green" onclick="doLearnerLogin()" style="width:100%;">Login</button>
-        </div>
+        <!-- Real <form> + autocomplete hints so iOS/macOS Safari (and password
+             managers) reliably offer to save the password and then autofill it
+             with Face ID / Touch ID. Without a submit event Safari's save
+             prompt is unreliable inside a modal. The button is type="submit"
+             and has no onclick, so there is exactly one code path. -->
+        <form onsubmit="doLearnerLogin(); return false;" autocomplete="on">
+          <label>NHS Email</label>
+          <input type="email" id="learnerEmail" name="username" placeholder="name@nhs.net or name@nbt.nhs.uk" autocomplete="username webauthn" autocapitalize="none" spellcheck="false">
+          <label>Password</label>
+          <input type="password" id="learnerPin" name="password" placeholder="Enter password" autocomplete="current-password">
+          <div id="learnerPasskeyRow" style="display:none;margin-top:12px;"></div>
+          <div style="margin-top:14px;text-align:center;">
+            <button class="btn btn-green" type="submit" style="width:100%;">Login</button>
+          </div>
+        </form>
         <div style="margin-top:8px;text-align:center;font-size:13px;color:var(--nhs-grey);">
           <a href="#" onclick="showForgotPassword();return false;">Forgot password?</a>
         </div>
@@ -443,7 +451,7 @@
         <label>Full Name *</label>
         <input type="text" id="regName" placeholder="e.g. Dr John Smith">
         <label>NHS Email *</label>
-        <input type="email" id="regEmail" placeholder="name@nhs.net or name@nbt.nhs.uk">
+        <input type="email" id="regEmail" placeholder="name@nhs.net or name@nbt.nhs.uk" autocomplete="username" autocapitalize="none" spellcheck="false">
         <label>Grade *</label>
         <select id="regGrade">
           <option value="">-- Select grade --</option>
@@ -680,13 +688,16 @@
     </div>
     <div class="modal-body">
       <div id="teacherLoginForm">
-        <label>Email</label>
-        <input type="email" id="teacherEmail" placeholder="name@nhs.net">
-        <label>Password</label>
-        <input type="password" id="teacherPin" placeholder="Enter password">
-        <div style="margin-top:14px;text-align:center;">
-          <button class="btn" style="width:100%;background:#ed8b00;color:white;border:none;" onclick="doTeacherLogin()">Login</button>
-        </div>
+        <form onsubmit="doTeacherLogin(); return false;" autocomplete="on">
+          <label>Email</label>
+          <input type="email" id="teacherEmail" name="username" placeholder="name@nhs.net" autocomplete="username webauthn" autocapitalize="none" spellcheck="false">
+          <label>Password</label>
+          <input type="password" id="teacherPin" name="password" placeholder="Enter password" autocomplete="current-password">
+          <div id="teacherPasskeyRow" style="display:none;margin-top:12px;"></div>
+          <div style="margin-top:14px;text-align:center;">
+            <button class="btn" type="submit" style="width:100%;background:#ed8b00;color:white;border:none;">Login</button>
+          </div>
+        </form>
         <div style="margin-top:8px;text-align:center;font-size:13px;color:var(--nhs-grey);">
           First time? <a href="#" onclick="showTeacherSetup();return false;">Set up your account</a>
         </div>
@@ -694,11 +705,11 @@
       <div id="teacherSetupForm" style="display:none;">
         <p style="font-size:13px;color:var(--nhs-grey);margin:0 0 12px;">Enter your email to find your account. You'll set a password to access your dashboard.</p>
         <label>Email</label>
-        <input type="email" id="teacherSetupEmail" placeholder="name@nhs.net">
+        <input type="email" id="teacherSetupEmail" placeholder="name@nhs.net" autocomplete="username" autocapitalize="none" spellcheck="false">
         <label>New Password</label>
-        <input type="password" id="teacherSetupPin" placeholder="Choose a password">
+        <input type="password" id="teacherSetupPin" placeholder="Choose a password" autocomplete="new-password">
         <label>Confirm Password</label>
-        <input type="password" id="teacherSetupPinConfirm" placeholder="Confirm password">
+        <input type="password" id="teacherSetupPinConfirm" placeholder="Confirm password" autocomplete="new-password">
         <div style="margin-top:14px;text-align:center;">
           <button class="btn" style="width:100%;background:#ed8b00;color:white;border:none;" onclick="doTeacherSetup()">Set Up Account</button>
         </div>

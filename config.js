@@ -4,7 +4,7 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.13';
+const APP_VERSION = 'v3.12.15';
 const APP_BUILD = '2026-07-29';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
@@ -110,7 +110,13 @@ function restoreAuthToken() {
 }
 
 // ===================== INACTIVITY AUTO-LOGOUT (NHS DSPT) =====================
-const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
+// 40 min (raised from 20 on 2026-07-29). This app holds staff/teaching data
+// — attendance, feedback, learner profiles — not patient records, so the
+// tighter 20-min window wasn't buying much against the cost of repeated
+// logins mid-shift. Still well inside the 12 h JWT expiry, which remains
+// the outer bound. Trade-off: doubles the unattended-but-logged-in window
+// on a shared ward PC.
+const INACTIVITY_TIMEOUT_MS = 40 * 60 * 1000; // 40 minutes
 let _inactivityTimer = null;
 
 function resetInactivityTimer() {
@@ -120,7 +126,7 @@ function resetInactivityTimer() {
     if (isDemoMode) { endDemoMode(); return; }
     if (typeof doLogout === 'function') doLogout();
     else if (typeof doLearnerLogout === 'function') doLearnerLogout();
-    showToast('Logged out due to inactivity (20 min)', 5000);
+    showToast('Logged out due to inactivity (40 min)', 5000);
   }, INACTIVITY_TIMEOUT_MS);
 }
 

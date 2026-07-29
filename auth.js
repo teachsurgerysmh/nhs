@@ -276,6 +276,7 @@ function openLearnerLoginModal() {
   document.getElementById('learnerPin').value = '';
   openModal('learnerLoginModal');
   setTimeout(() => document.getElementById('learnerEmail').focus(), 100);
+  initPasskeyUI();
 }
 
 function showLearnerLoginForm() {
@@ -327,6 +328,7 @@ async function doLearnerLogin() {
     showToast('Welcome, ' + learner.name + '!');
     updateHeaderButtons();
     handleLearnerURLParams();
+    setTimeout(maybeOfferPasskey, 1200);
   } catch(e) { console.error('Learner login error:', e); showToast(e.message || 'Login failed'); }
 }
 
@@ -339,9 +341,9 @@ function showSetupPinForm(learner, attemptedPin) {
       <p style="color:var(--nhs-grey);font-size:13px;margin-bottom:16px;">Your account has been pre-created. Set a 6-digit PIN to get started.</p>
     </div>
     <label>Choose a password</label>
-    <input type="password" id="setupPin1" placeholder="Enter password" style="margin-bottom:8px;">
+    <input type="password" id="setupPin1" placeholder="Enter password" autocomplete="new-password" style="margin-bottom:8px;">
     <label>Confirm password</label>
-    <input type="password" id="setupPin2" placeholder="Confirm password">
+    <input type="password" id="setupPin2" placeholder="Confirm password" autocomplete="new-password">
     <label style="margin-top:12px;">Grade</label>
     <select id="setupGrade"><option value="FY1">FY1</option><option value="FY2">FY2</option><option value="CT1">CT1</option><option value="CT2">CT2</option><option value="ST3">ST3</option><option value="ST4">ST4</option><option value="ST5">ST5</option><option value="ST6">ST6</option><option value="ST7">ST7</option><option value="ST8">ST8</option><option value="Registrar">Registrar</option><option value="Consultant">Consultant</option><option value="Other">Other</option></select>
     <label>Placement / Firm</label>
@@ -440,9 +442,9 @@ function showForgotPassword() {
     <input type="email" id="fpEmail" placeholder="name@nhs.net or name@nbt.nhs.uk">
     <div id="fpNewFields" style="display:none;margin-top:12px;">
       <label>New Password</label>
-      <input type="password" id="fpNewPin1" placeholder="Enter new password">
+      <input type="password" id="fpNewPin1" placeholder="Enter new password" autocomplete="new-password">
       <label>Confirm Password</label>
-      <input type="password" id="fpNewPin2" placeholder="Confirm new password">
+      <input type="password" id="fpNewPin2" placeholder="Confirm new password" autocomplete="new-password">
     </div>
     <div style="margin-top:14px;text-align:center;">
       <button class="btn btn-green" id="fpSubmitBtn" onclick="handleForgotPassword()" style="width:100%;">Verify Email</button>
@@ -674,6 +676,7 @@ function handleLearnerURLParams() {
 function openTeacherLoginModal() {
   showTeacherLoginForm();
   openModal('teacherLoginModal');
+  initPasskeyUI();
 }
 
 function showTeacherLoginForm() {
@@ -706,6 +709,7 @@ async function doTeacherLogin() {
     updateHeaderButtons();
     showToast(`Welcome, ${teacher.name}!`);
     switchView('teacherDash');
+    setTimeout(maybeOfferPasskey, 1200);
   } catch(e) { console.error('Teacher login failed:', e); showToast(e.message || 'Login failed'); }
 }
 
@@ -799,4 +803,271 @@ function canMarkAttendance(sessionId) {
   if (isManager()) return true;
   if (isTeacherForSession(sessionId)) return true;
   return false;
+}
+
+// ===================== PASSKEYS — Face ID / Touch ID =====================
+// ADDITIVE to password login. Every function here fails soft: if anything
+// goes wrong (unsupported browser, cancelled prompt, network, expired
+// challenge) we surface a message and the password form is still sitting
+// right there. Nothing in here can lock anyone out.
+//
+// Backend: `passkey` Edge Function. Its auth_verify mints a token with the
+// same claims as `authenticate`, so downstream state is identical whether
+// you signed in with a password or a face.
+//
+// RP ID is teachsurgerysmh.github.io. Moving to a custom domain would
+// invalidate every enrolled passkey — see database/edge-function-passkey.ts.
+
+const PASSKEY_FN = SUPABASE_URL + '/functions/v1/passkey';
+
+function passkeySupported() {
+  return !!(window.PublicKeyCredential && navigator.credentials &&
+            navigator.credentials.create && navigator.credentials.get);
+}
+
+// True only where there's a built-in biometric authenticator (Face ID,
+// Touch ID, Windows Hello). Used to decide whether to show the buttons at
+// all, so we never advertise something the device can't do.
+async function passkeyPlatformAvailable() {
+  try {
+    if (!passkeySupported()) return false;
+    if (!PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) return false;
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch (e) { return false; }
+}
+
+function _pkB64uToBuf(s) {
+  s = String(s).replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function _pkBufToB64u(buf) {
+  const b = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function _pkDeviceLabel() {
+  const ua = navigator.userAgent || '';
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua)) return 'iPad';
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Android/.test(ua)) return 'Android';
+  if (/Windows/.test(ua)) return 'Windows';
+  return 'Passkey';
+}
+
+function _pkCloseModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('show');
+}
+
+async function callPasskey(body, useAuth) {
+  const tok = useAuth ? getAuthSession('sst_token') : null;
+  const res = await fetch(PASSKEY_FN, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + (tok || SUPABASE_KEY)
+    },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Passkey request failed');
+  return data;
+}
+
+// Mirrors the tail of doLearnerLogin / doTeacherLogin exactly — same state,
+// same session keys, same QI events — so the rest of the app can't tell
+// which method was used.
+async function _applyPasskeySession(result) {
+  if (result.access_token) setAuthToken(result.access_token);
+  if (result.login_type === 'teacher') {
+    currentTeacher = result.user;
+    setAuthSession('sst_teacher', JSON.stringify(currentTeacher));
+    _pkCloseModal('teacherLoginModal');
+    _pkCloseModal('learnerLoginModal');
+    if (redirectAfterAuth()) return;
+    logQI('teacher_login', { metadata: { specialty: currentTeacher.specialty || null, method: 'passkey' } });
+    await linkTeacherToLearner();
+    updateHeaderButtons();
+    showToast('Welcome, ' + currentTeacher.name + '!');
+    switchView('teacherDash');
+  } else {
+    currentLearner = result.user;
+    setAuthSession('sst_learner', JSON.stringify(currentLearner));
+    setLearnerUI(true);
+    _pkCloseModal('learnerLoginModal');
+    _pkCloseModal('teacherLoginModal');
+    if (redirectAfterAuth()) return;
+    logQI('learner_login', { metadata: { grade: currentLearner.grade, placement: currentLearner.placement, method: 'passkey' } });
+    await linkLearnerToTeacher();
+    showToast('Welcome, ' + currentLearner.name + '!');
+    updateHeaderButtons();
+    handleLearnerURLParams();
+  }
+}
+
+// email is optional. Omit it and the browser offers whatever passkey it
+// holds for this site — no typing at all. mediation 'conditional' drives
+// the iOS autofill-style suggestion above the keyboard.
+async function doPasskeyLogin(email, mediation) {
+  const options = await callPasskey({ action: 'auth_options', email: email || '' }, false);
+  const pk = Object.assign({}, options);
+  pk.challenge = _pkB64uToBuf(options.challenge);
+  if (options.allowCredentials && options.allowCredentials.length) {
+    pk.allowCredentials = options.allowCredentials.map(c => Object.assign({}, c, { id: _pkB64uToBuf(c.id) }));
+  } else {
+    delete pk.allowCredentials;
+  }
+  const getOpts = { publicKey: pk };
+  if (mediation) getOpts.mediation = mediation;
+  const a = await navigator.credentials.get(getOpts);
+  if (!a) return false;
+  const payload = {
+    id: a.id,
+    rawId: _pkBufToB64u(a.rawId),
+    type: a.type,
+    clientExtensionResults: a.getClientExtensionResults ? a.getClientExtensionResults() : {},
+    response: {
+      clientDataJSON: _pkBufToB64u(a.response.clientDataJSON),
+      authenticatorData: _pkBufToB64u(a.response.authenticatorData),
+      signature: _pkBufToB64u(a.response.signature),
+      userHandle: a.response.userHandle ? _pkBufToB64u(a.response.userHandle) : undefined
+    }
+  };
+  const result = await callPasskey({ action: 'auth_verify', response: payload }, false);
+  await _applyPasskeySession(result);
+  return true;
+}
+
+async function passkeyLoginClick(kind) {
+  const emailEl = document.getElementById(kind === 'teacher' ? 'teacherEmail' : 'learnerEmail');
+  const email = (emailEl && emailEl.value.trim().toLowerCase()) || '';
+  try {
+    await doPasskeyLogin(email);
+  } catch (e) {
+    // NotAllowedError = user dismissed the sheet. Not an error worth shouting about.
+    if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) return;
+    console.error('Passkey login failed:', e);
+    showToast(e.message || 'Passkey sign-in failed — use your password');
+    try { logError('passkey_login_failed', { message: String(e && e.message || e) }); } catch (_) {}
+  }
+}
+
+// Enrol the current device. Requires an existing signed-in session — you
+// add a passkey to an account you've already proved you own.
+async function enrolPasskey(silent) {
+  try {
+    if (!(await passkeyPlatformAvailable())) {
+      if (!silent) showToast('This device does not support Face ID / Touch ID sign-in');
+      return false;
+    }
+    const who = currentTeacher || currentLearner || {};
+    const label = _pkDeviceLabel();
+    const options = await callPasskey({
+      action: 'register_options', display_name: who.name || '', device_label: label
+    }, true);
+    options.challenge = _pkB64uToBuf(options.challenge);
+    options.user.id = _pkB64uToBuf(options.user.id);
+    if (options.excludeCredentials && options.excludeCredentials.length) {
+      options.excludeCredentials = options.excludeCredentials.map(
+        c => Object.assign({}, c, { id: _pkB64uToBuf(c.id) }));
+    } else {
+      delete options.excludeCredentials;
+    }
+    const cred = await navigator.credentials.create({ publicKey: options });
+    if (!cred) return false;
+    const payload = {
+      id: cred.id,
+      rawId: _pkBufToB64u(cred.rawId),
+      type: cred.type,
+      clientExtensionResults: cred.getClientExtensionResults ? cred.getClientExtensionResults() : {},
+      response: {
+        clientDataJSON: _pkBufToB64u(cred.response.clientDataJSON),
+        attestationObject: _pkBufToB64u(cred.response.attestationObject),
+        transports: cred.response.getTransports ? cred.response.getTransports() : undefined
+      }
+    };
+    await callPasskey({ action: 'register_verify', response: payload, device_label: label }, true);
+    showToast('Face ID sign-in is set up on this ' + label + ' 🎉');
+    try { logQI('passkey_enrolled', { metadata: { device: label } }); } catch (_) {}
+    return true;
+  } catch (e) {
+    if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) return false;
+    console.error('Passkey enrol failed:', e);
+    if (!silent) showToast(e.message || 'Could not set up Face ID sign-in');
+    try { logError('passkey_enrol_failed', { message: String(e && e.message || e) }); } catch (_) {}
+    return false;
+  }
+}
+
+// Adds the "Sign in with Face ID" button to both login modals, and starts
+// the iOS autofill-style passkey suggestion if the browser supports it.
+async function initPasskeyUI() {
+  if (!(await passkeyPlatformAvailable())) return;
+  [['learnerPasskeyRow', 'learner'], ['teacherPasskeyRow', 'teacher']].forEach(pair => {
+    const row = document.getElementById(pair[0]);
+    if (!row || row.dataset.pkReady) return;
+    row.dataset.pkReady = '1';
+    row.style.display = '';
+    row.innerHTML =
+      '<button type="button" class="btn btn-outline" style="width:100%;" onclick="passkeyLoginClick(\'' + pair[1] + '\')">' +
+      'Sign in with Face ID / Touch ID</button>' +
+      '<div style="text-align:center;font-size:12px;color:var(--nhs-grey);margin-top:6px;">' +
+      'Set one up after signing in with your password once.</div>';
+  });
+  // Conditional mediation: the passkey appears as an autofill suggestion on
+  // the email field. Silently unsupported on older browsers.
+  try {
+    if (PublicKeyCredential.isConditionalMediationAvailable &&
+        await PublicKeyCredential.isConditionalMediationAvailable()) {
+      doPasskeyLogin('', 'conditional').catch(() => {});
+    }
+  } catch (e) { /* no conditional UI here */ }
+}
+
+// Offered once, after a successful password login, when the account has no
+// passkey yet. Deliberately a real prompt rather than a toast, because a
+// toast can't carry a button.
+async function maybeOfferPasskey() {
+  try {
+    if (!(await passkeyPlatformAvailable())) return;
+    if (localStorage.getItem('sst_pk_declined') === '1') return;
+    const who = currentTeacher || currentLearner;
+    if (!who || !who.email) return;
+    const { has } = await callPasskey({ action: 'has_passkeys', email: who.email }, false);
+    if (has) return;
+    _showPasskeyOffer(_pkDeviceLabel());
+  } catch (e) { /* never block login on this */ }
+}
+
+function _showPasskeyOffer(label) {
+  if (document.getElementById('pkOffer')) return;
+  const d = document.createElement('div');
+  d.id = 'pkOffer';
+  d.style.cssText = 'position:fixed;inset:0;z-index:4000;background:rgba(0,24,60,.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+  d.innerHTML =
+    '<div style="background:#fff;border-radius:12px;max-width:380px;width:100%;padding:24px;text-align:center;font-family:inherit;">' +
+    '<div style="font-size:34px;line-height:1;margin-bottom:10px;">🔐</div>' +
+    '<h3 style="margin:0 0 8px;color:var(--nhs-dark-blue);">Skip the password next time?</h3>' +
+    '<p style="margin:0 0 18px;font-size:14px;line-height:1.5;color:var(--nhs-grey);">' +
+    'Use Face ID or Touch ID on this ' + label + ' to sign in. Your password still works as a backup.</p>' +
+    '<button class="btn btn-green" style="width:100%;" id="pkOfferYes">Set up Face ID</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" id="pkOfferNo">Not now</button>' +
+    '</div>';
+  document.body.appendChild(d);
+  document.getElementById('pkOfferYes').onclick = async () => {
+    d.remove();
+    await enrolPasskey(false);
+  };
+  document.getElementById('pkOfferNo').onclick = () => {
+    try { localStorage.setItem('sst_pk_declined', '1'); } catch (e) {}
+    d.remove();
+  };
 }
