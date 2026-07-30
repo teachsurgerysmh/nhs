@@ -291,6 +291,10 @@ function showLearnerRegister() {
   document.getElementById('learnerRegisterForm').style.display = '';
   document.getElementById('learnerPinDisplay').style.display = 'none';
   document.getElementById('learnerModalTitle').textContent = 'Learner Registration';
+  // Denominator for the registration funnel. learner_register only ever fires
+  // on success, so before this there was no way to see people who opened the
+  // form and gave up — which is exactly what a mandatory-fields change risks.
+  try { logQI('registration_started'); } catch(_) {}
 }
 
 // After a successful login/setup, send the user back to the gated page that
@@ -541,6 +545,146 @@ function onRotationBlockChange() {
   }
 }
 
+// ── Verified-access tier ──
+// Registration accepts any email domain, so "logged in" no longer proves the
+// person works here. RLS (auth_nhs_verified()) is what actually withholds the
+// personal-data tables; everything below is signposting so an unverified user
+// understands why the app looks empty instead of assuming it's broken.
+
+function isLearnerVerified(l) {
+  // Absent property = a session stored before this change, all of which were
+  // NHS-only registrations. Treat as verified, matching the SQL helper.
+  return !l || l.nhs_verified === undefined || l.nhs_verified === true;
+}
+
+function renderPendingNotice(learner) {
+  if (isLearnerVerified(learner)) return;
+  const host = document.getElementById('learnerPinDisplay');
+  if (!host || document.getElementById('pendingApprovalNotice')) return;
+  const div = document.createElement('div');
+  div.id = 'pendingApprovalNotice';
+  div.style.cssText = 'margin-top:16px;padding:14px;border-radius:8px;background:#fff4e5;border:1px solid var(--nhs-warm-yellow,#ffb81c);text-align:left;';
+  div.innerHTML = `
+    <div style="font-weight:700;color:var(--nhs-dark-blue);font-size:14px;margin-bottom:6px;">⏳ Awaiting approval</div>
+    <div style="font-size:13px;color:var(--nhs-grey);line-height:1.6;">
+      You registered with a non-NHS email, so your account needs approving by the
+      teaching team before it can show contact details, learner lists or feedback.
+      You can browse the teaching timetable in the meantime.<br><br>
+      To be approved instantly, register again with an <strong>@nhs.net</strong> or
+      <strong>@nbt.nhs.uk</strong> address once you have one.
+    </div>`;
+  host.appendChild(div);
+}
+
+// Persistent banner for an unverified learner anywhere in the app.
+function refreshPendingBanner() {
+  const existing = document.getElementById('pendingBanner');
+  if (isLearnerVerified(currentLearner) || !currentLearner) { if (existing) existing.remove(); return; }
+  if (existing) return;
+  const bar = document.createElement('div');
+  bar.id = 'pendingBanner';
+  bar.style.cssText = 'background:#fff4e5;border-bottom:1px solid #ffb81c;color:#425563;font-size:13px;padding:10px 16px;text-align:center;';
+  bar.innerHTML = '⏳ <strong>Account awaiting approval</strong> — you can see the teaching timetable, but contact details and learner data stay hidden until the teaching team approves you.';
+  document.body.insertBefore(bar, document.body.firstChild);
+}
+
+// ── Invite links ──
+// A time-limited link that lets someone without an NHS account register as
+// verified. It is a bearer credential — whoever holds it gets in — so it is
+// bounded three ways server-side (expiry, use cap, revocable) and every account
+// it admits is stamped in approved_by for audit. See create_invite/consume_invite.
+
+const INVITE_KEY = 'sst_invite_token';
+
+function getStoredInvite() {
+  try { return sessionStorage.getItem(INVITE_KEY) || null; } catch (_) { return null; }
+}
+
+async function handleInviteLink() {
+  const params = new URLSearchParams(window.location.search);
+  const token = (params.get('invite') || '').trim();
+  if (!token) return;
+
+  // Strip it from the address bar immediately: a bearer token has no business
+  // sitting in browser history, or being copied out of the URL bar and shared
+  // further than intended.
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  let info = null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_invite`, {
+      method: 'POST', headers, body: JSON.stringify({ p_token: token })
+    });
+    if (res.ok) { const rows = await res.json(); info = rows && rows[0]; }
+  } catch (e) { console.warn('invite check failed', e); }
+
+  if (!info || !info.valid) {
+    const why = { expired: 'This invite link has expired.',
+                  revoked: 'This invite link has been withdrawn.',
+                  exhausted: 'This invite link has already been used the maximum number of times.',
+                  not_found: 'That invite link is not recognised.' }[info && info.reason] ||
+                'That invite link is no longer valid.';
+    showToast(why + ' Please ask the teaching team for a new one.', 6000);
+    logQI('invite_link_rejected', { metadata: { reason: (info && info.reason) || 'unknown' } });
+    return;
+  }
+
+  try { sessionStorage.setItem(INVITE_KEY, token); } catch (_) {}
+  logQI('invite_link_opened', { metadata: { label: info.label || null } });
+
+  // Already signed in but stuck pending? Upgrade in place rather than making
+  // them register a second account.
+  if (currentLearner && !isLearnerVerified(currentLearner)) {
+    await redeemInviteForCurrentLearner(token);
+    return;
+  }
+  if (currentLearner) { showToast('You already have full access — no need for the invite link.', 4000); return; }
+
+  showInviteBanner(info);
+  setTimeout(() => { openLearnerLoginModal(); showLearnerRegister(); }, 400);
+}
+
+async function redeemInviteForCurrentLearner(token) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_invite`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ p_token: token, p_email: currentLearner.email })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const row = (await res.json())[0] || {};
+    if (row.ok) {
+      currentLearner.nhs_verified = true;
+      setAuthSession('sst_learner', JSON.stringify(currentLearner));
+      refreshPendingBanner();
+      logQI('invite_link_redeemed', { metadata: { mode: 'upgrade' } });
+      showToast('Your account has been approved — you now have full access.', 5000);
+      // The JWT still carries nhs_verified:false until it is reissued, and RLS
+      // reads the token, not the row. Sign back in to pick up the new claim.
+      setTimeout(() => {
+        showToast('Please sign in again to finish activating your access.', 6000);
+        if (typeof doLearnerLogout === 'function') doLearnerLogout();
+      }, 2500);
+    } else {
+      showToast('That invite link could not be applied to your account.', 5000);
+    }
+  } catch (e) {
+    console.error('claim_invite failed', e);
+    showToast('Could not apply the invite link. Please try again.', 4000);
+  }
+}
+
+function showInviteBanner(info) {
+  if (document.getElementById('inviteBanner')) return;
+  const bar = document.createElement('div');
+  bar.id = 'inviteBanner';
+  bar.style.cssText = 'background:#e8f5e9;border-bottom:1px solid var(--nhs-green,#009639);color:#22543d;font-size:13px;padding:10px 16px;text-align:center;';
+  const expires = info.expires_at ? new Date(info.expires_at) : null;
+  const when = expires ? expires.toLocaleString('en-GB', { weekday:'short', hour:'2-digit', minute:'2-digit', day:'numeric', month:'short' }) : null;
+  bar.innerHTML = '✅ <strong>Invite link accepted</strong> — you can register with a personal email and get full access straight away.' +
+                  (when ? ' <span style="opacity:.75;">Valid until ' + when + '.</span>' : '');
+  document.body.insertBefore(bar, document.body.firstChild);
+}
+
 // ── Learner Registration ──
 
 async function doLearnerRegister() {
@@ -554,15 +698,26 @@ async function doLearnerRegister() {
   const placementEnd = document.getElementById('regPlacementEnd').value;
   const rotationBlock = document.getElementById('regRotationBlock').value;
 
-  // Every field is mandatory. Rotation block is the one exception: its empty
-  // value means "custom dates", and picking a block just auto-fills the two
-  // date fields below — so the dates are what actually get required.
-  if (!name || !email || !personalEmail || !phone || !grade || !placement || !placementStart || !placementEnd) {
+  // Every field is mandatory except two deliberate cases:
+  //  - Rotation block: its empty value MEANS "custom dates", and picking a
+  //    block just auto-fills the two date fields — so the dates are required
+  //    instead, which covers both routes.
+  //  - Personal email: only required when the login email is an NHS address.
+  //    New starters often have no @nhs.net account on day one, so demanding
+  //    one blocked exactly the people we're onboarding. When someone registers
+  //    with a personal address the "personal" field is redundant by definition.
+  const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  const isNhsEmail = /@(nhs\.net|nbt\.nhs\.uk)$/.test(email);
+
+  if (!name || !email || !phone || !grade || !placement || !placementStart || !placementEnd) {
     showToast('Please fill in all fields'); return;
   }
-  if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) { showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return; }
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(personalEmail)) { showToast('Please enter a valid personal email'); return; }
-  if (personalEmail === email) { showToast('Your personal email must be different from your NHS email'); return; }
+  if (!EMAIL_RE.test(email)) { showToast('Please enter a valid email address'); return; }
+  if (isNhsEmail && !personalEmail) {
+    showToast('Please add a personal email as well, so we can still reach you if NHS mail bounces', 4500); return;
+  }
+  if (personalEmail && !EMAIL_RE.test(personalEmail)) { showToast('Please enter a valid personal email'); return; }
+  if (personalEmail && personalEmail === email) { showToast('Your personal email must be different from your main email'); return; }
   if (phone.replace(/\D/g, '').length < 10) { showToast('Please enter a valid mobile number'); return; }
   if (placementEnd < placementStart) { showToast('Placement end date must be after the start date'); return; }
 
@@ -598,7 +753,10 @@ async function doLearnerRegister() {
         p_placement_start: placementStart || null,
         p_placement_end: placementEnd || null,
         p_rotation_block: rotationBlock || null,
-        p_phone: phone, p_personal_email: personalEmail
+        p_phone: phone, p_personal_email: personalEmail,
+        // Ignored server-side for an NHS address, and a stale/expired token
+        // degrades to an ordinary pending registration rather than an error.
+        p_invite_token: getStoredInvite()
       })
     });
     if (!regRes.ok) {
@@ -611,7 +769,16 @@ async function doLearnerRegister() {
     currentLearner = result[0];
     setAuthSession('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
-    logQI('learner_register', { metadata: { grade, placement, rotation_block: rotationBlock || null } });
+    // Contactability is a QI outcome in its own right: an unreachable learner
+    // can't be reminded, chased for feedback, or sent a certificate. Record
+    // WHETHER each channel was captured — never the number or address itself,
+    // which is personal data and has no business sitting in an event log.
+    logQI('learner_register', { metadata: {
+      grade, placement, rotation_block: rotationBlock || null,
+      has_phone: !!phone,
+      has_personal_email: !!personalEmail,
+      contact_channels: 1 + (phone ? 1 : 0) + (personalEmail ? 1 : 0)
+    } });
 
     // Auto-link to contact if email matches
     try {
@@ -629,6 +796,18 @@ async function doLearnerRegister() {
     document.getElementById('learnerPinDisplay').style.display = '';
     document.getElementById('generatedPin').textContent = pin;
     document.getElementById('learnerModalTitle').textContent = 'Registration Complete';
+
+    // An account registered with a non-NHS address starts unverified: it can
+    // see the timetable but RLS returns nothing from the personal-data tables
+    // until an admin approves it. Say so plainly here rather than letting them
+    // discover it as a mysteriously empty app.
+    renderPendingNotice(currentLearner);
+    // Burnt on success — stops a shared device carrying the token into a
+    // second, unintended registration.
+    if (currentLearner && currentLearner.nhs_verified) {
+      try { sessionStorage.removeItem(INVITE_KEY); } catch (_) {}
+      logQI('invite_link_redeemed', { metadata: { mode: 'register' } });
+    }
   } catch(e) {
     console.error('Registration error:', e);
     if (e.message && e.message.includes('409')) {
@@ -655,6 +834,7 @@ function setLearnerUI(loggedIn) {
   updateHeaderButtons();
   // Update sessions tab label
   updateSessionsTabLabel();
+  try { refreshPendingBanner(); } catch(_) {}
 }
 
 function checkLearnerSession() {

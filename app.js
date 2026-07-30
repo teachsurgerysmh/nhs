@@ -287,6 +287,11 @@ async function init() {
     setTimeout(() => { openLoginType === 'teacher' ? openTeacherLoginModal() : openLearnerLoginModal(); }, 300);
   }
 
+  // ?invite=<token> — time-limited link letting someone without an NHS account
+  // register as verified. Handled before the main render so the banner is up
+  // by the time the page is interactive.
+  await handleInviteLink();
+
   await Promise.all([loadEvents(), fetchBankHolidays()]);
   renderAll();
   updateSessionsTabLabel();

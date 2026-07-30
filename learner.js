@@ -1715,12 +1715,101 @@ function isJuniorGrade(grade) {
   return JUNIOR_GRADES.some(j => g.includes(j.toUpperCase()));
 }
 
+// ── Invite links ──
+// Generates a bearer link that lets people without an NHS account register as
+// verified. Deliberately surfaced next to the pending queue, because the two
+// are the same problem: an invite is the bulk answer, approval the individual one.
+async function createInviteLink() {
+  if (isDemoMode) { showDemoToast('Create invite link'); return; }
+  const label = prompt('Label this invite (so you can tell links apart later):', 'August 2026 intake');
+  if (label === null) return;
+  const hoursRaw = prompt('Valid for how many hours? (1–168)', '24');
+  if (hoursRaw === null) return;
+  const hours = parseInt(hoursRaw, 10);
+  if (!hours || hours < 1 || hours > 168) { showToast('Please enter between 1 and 168 hours'); return; }
+  const capRaw = prompt('Maximum number of people who can use it?\nLeave blank for unlimited.', '30');
+  if (capRaw === null) return;
+  const cap = capRaw.trim() === '' ? null : parseInt(capRaw, 10);
+  if (capRaw.trim() !== '' && (!cap || cap < 1)) { showToast('Maximum uses must be a positive number'); return; }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_invite`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ p_label: label.trim() || null, p_hours: hours, p_max_uses: cap })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
+    const row = (await res.json())[0];
+    const url = `${SITE_URL}?invite=${row.token}`;
+    try { await navigator.clipboard.writeText(url); showToast('Invite link copied to clipboard', 4000); }
+    catch (_) { showToast('Invite created — copy it from the list below', 4000); }
+    logQI('invite_created', { metadata: { label: row.label || null, hours, max_uses: cap } });
+    loadRosterView();
+  } catch (e) {
+    console.error('createInviteLink failed:', e);
+    showToast('Could not create invite link. Are you logged in as an admin?', 4000);
+  }
+}
+
+async function revokeInviteLink(id) {
+  if (isDemoMode) { showDemoToast('Revoke invite'); return; }
+  if (!confirm('Withdraw this invite link?\n\nAnyone still holding it will no longer be able to register with it. Accounts already created stay active.')) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/revoke_invite`, {
+      method: 'POST', headers, body: JSON.stringify({ p_id: id })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('Invite link withdrawn');
+    logQI('invite_revoked', { metadata: { invite_id: id } });
+    loadRosterView();
+  } catch (e) {
+    console.error('revokeInviteLink failed:', e);
+    showToast('Could not withdraw the link', 4000);
+  }
+}
+
+function copyInviteLink(token) {
+  const url = `${SITE_URL}?invite=${token}`;
+  navigator.clipboard.writeText(url)
+    .then(() => showToast('Invite link copied', 3000))
+    .catch(() => window.prompt('Copy this invite link:', url));
+}
+
+// Flip a self-registered account to verified. Goes through the SECURITY
+// DEFINER RPC, not a PATCH: nhs_verified is deliberately not in the column
+// grant for `authenticated`, so a direct update would (correctly) fail — that
+// same revoke is what stops a pending user approving themselves.
+async function approveLearner(learnerId, approve = true) {
+  if (isDemoMode) { showDemoToast('Approve learner'); return; }
+  if (approve && !confirm('Approve this account?\n\nThey will get access to contact details, learner data and the induction handbook. Only approve people you know work here.')) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/approve_learner`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ p_learner_id: learnerId, p_approve: approve })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
+    const rows = await res.json();
+    const who = (rows && rows[0]) || {};
+    showToast(approve ? `Approved${who.name ? ' — ' + who.name : ''}` : 'Approval revoked');
+    logQI('learner_approved', { metadata: { learner_id: learnerId, approved: approve } });
+    loadRosterView();
+  } catch (e) {
+    console.error('approveLearner failed:', e);
+    showToast('Could not update approval. Are you logged in as an admin?', 4000);
+    try { logError('approve_learner', e, { learner_id: learnerId }); } catch(_) {}
+  }
+}
+
 async function loadRosterView() {
   const container = document.getElementById('rosterView');
   container.innerHTML = '<div style="text-align:center;padding:30px;"><div class="loading-spinner"></div> Loading roster...</div>';
   try {
     const learners = await sbGet('learners', `order=placement.asc,grade.asc,name.asc&select=${LEARNER_FIELDS}`);
     const today = new Date().toISOString().split('T')[0];
+
+    // Admin-only under RLS; a non-admin simply gets an empty list rather than
+    // an error, so this must not be allowed to fail the whole roster render.
+    let invites = [];
+    try { invites = await sbGet('invite_tokens', 'order=created_at.desc&limit=20'); } catch (_) {}
 
     // Fetch attendance counts per learner (approved only)
     const attendanceData = await sbGet('attendance', 'status=eq.approved&select=learner_id,session_id');
@@ -1784,7 +1873,73 @@ async function loadRosterView() {
         <button class="btn" style="background:var(--nhs-green);color:white;border:none;" onclick="openAddLearnerToRosterModal()">Add Learner</button>
         <button class="btn" style="background:var(--nhs-orange);color:white;border:none;" onclick="endCurrentRotation()">End Current Rotation</button>
         <button class="btn" style="background:var(--nhs-pale-grey);border:none;font-size:12px;" onclick="findDuplicateLearners()">Find Duplicates</button>
+        <button class="btn" style="background:var(--nhs-blue);color:white;border:none;" onclick="createInviteLink()">🔗 Create Invite Link</button>
       </div>`;
+
+    // Live invite links. Shown whenever any exist so a forgotten open link is
+    // visible rather than quietly outstanding.
+    const liveInvites = invites.filter(t => !t.revoked_at && new Date(t.expires_at) > new Date());
+    if (invites.length > 0) {
+      html += `<div class="dashboard-card" style="margin-bottom:16px;border-left:4px solid var(--nhs-blue);">
+        <h4 style="color:var(--nhs-dark-blue);margin-bottom:4px;">🔗 Invite links ${liveInvites.length ? `<span style="color:var(--nhs-green);font-size:13px;font-weight:400;">(${liveInvites.length} active)</span>` : '<span style="color:var(--nhs-grey);font-size:13px;font-weight:400;">(none active)</span>'}</h4>
+        <p style="font-size:12px;color:var(--nhs-grey);margin-bottom:10px;">Anyone with an active link can register with a personal email and get full access immediately, without waiting for approval. Share only with people you expect. Withdraw a link the moment it is no longer needed.</p>
+        <div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">
+          <tr style="background:var(--nhs-bg);">
+            <th style="padding:8px;text-align:left;">Label</th><th style="padding:8px;text-align:left;">Status</th>
+            <th style="padding:8px;text-align:left;">Used</th><th style="padding:8px;text-align:left;">Expires</th>
+            <th style="padding:8px;">Actions</th>
+          </tr>`;
+      invites.forEach(t => {
+        const expired = new Date(t.expires_at) <= new Date();
+        const exhausted = t.max_uses != null && t.used_count >= t.max_uses;
+        const active = !t.revoked_at && !expired && !exhausted;
+        const status = t.revoked_at ? '<span style="color:var(--nhs-red);">Withdrawn</span>'
+          : expired ? '<span style="color:var(--nhs-grey);">Expired</span>'
+          : exhausted ? '<span style="color:var(--nhs-orange);">Fully used</span>'
+          : '<span style="color:var(--nhs-green);font-weight:600;">Active</span>';
+        html += `<tr style="border-bottom:1px solid var(--nhs-pale-grey);">
+          <td style="padding:8px;font-weight:600;">${esc(t.label || 'Unlabelled')}</td>
+          <td style="padding:8px;">${status}</td>
+          <td style="padding:8px;font-size:12px;">${t.used_count}${t.max_uses != null ? ' / ' + t.max_uses : ''}</td>
+          <td style="padding:8px;font-size:12px;">${esc(new Date(t.expires_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }))}</td>
+          <td style="padding:8px;text-align:center;white-space:nowrap;">
+            ${active ? `<button class="btn" style="padding:3px 10px;font-size:11px;background:var(--nhs-pale-grey);border:none;" onclick="copyInviteLink('${esc(t.token)}')">Copy</button>
+            <button class="btn" style="padding:3px 10px;font-size:11px;background:var(--nhs-red);color:#fff;border:none;margin-left:4px;" onclick="revokeInviteLink(${t.id})">Withdraw</button>` : '—'}
+          </td>
+        </tr>`;
+      });
+      html += '</table></div></div>';
+    }
+
+    // Accounts self-registered with a non-NHS address. Until approved, RLS
+    // returns nothing to them from the personal-data tables and the induction
+    // handbook stays locked — so this queue is the thing that unblocks a real
+    // person, and belongs at the top where it will actually be seen.
+    const pending = learners.filter(l => l.nhs_verified === false);
+    if (pending.length > 0) {
+      html += `<div class="dashboard-card" style="margin-bottom:16px;border-left:4px solid var(--nhs-orange);">
+        <h4 style="color:var(--nhs-dark-blue);margin-bottom:4px;">⏳ Awaiting approval (${pending.length})</h4>
+        <p style="font-size:12px;color:var(--nhs-grey);margin-bottom:10px;">Registered without an NHS email. They can see the timetable only — no contact details, learner lists or handbook until approved. Check you know who they are first.</p>
+        <div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">
+          <tr style="background:var(--nhs-bg);">
+            <th style="padding:8px;text-align:left;">Name</th><th style="padding:8px;text-align:left;">Email</th>
+            <th style="padding:8px;text-align:left;">Mobile</th><th style="padding:8px;text-align:left;">Grade</th>
+            <th style="padding:8px;text-align:left;">Registered</th><th style="padding:8px;">Action</th>
+          </tr>`;
+      pending.forEach(l => {
+        html += `<tr style="border-bottom:1px solid var(--nhs-pale-grey);">
+          <td style="padding:8px;font-weight:600;">${esc(l.name)}</td>
+          <td style="padding:8px;font-size:12px;">${esc(l.email)}${l.personal_email ? '<br><span style="color:var(--nhs-grey);">' + esc(l.personal_email) + '</span>' : ''}</td>
+          <td style="padding:8px;font-size:12px;">${esc(l.phone || '—')}</td>
+          <td style="padding:8px;font-size:12px;">${esc(l.grade || '—')}</td>
+          <td style="padding:8px;font-size:12px;">${l.created_at ? esc(String(l.created_at).split('T')[0]) : '—'}</td>
+          <td style="padding:8px;text-align:center;white-space:nowrap;">
+            <button class="btn" style="padding:3px 10px;font-size:11px;background:var(--nhs-green);color:#fff;border:none;" onclick="approveLearner(${l.id}, true)">Approve</button>
+          </td>
+        </tr>`;
+      });
+      html += '</table></div></div>';
+    }
 
     // Current rotation stats
     html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;">

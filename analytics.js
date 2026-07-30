@@ -11,13 +11,17 @@ const QI_EVENT_TYPES = new Set([
   'admin_login','admin_logout',
   'learner_register','learner_login','learner_logout',
   'teacher_setup','teacher_login','teacher_logout',
-  'password_reset',
+  'password_reset','password_reset_requested','email_code_requested','passkey_enrolled',
   // Session lifecycle
   'session_created','session_edited','session_published','session_unpublished',
   'session_deleted','session_cancelled','session_completed','session_requested',
-  // Teacher invitation flow
+  // Teacher invitation flow. The bare verbs (invitation_confirm/decline/claim/
+  // cancel) come from the one-click EMAIL action links; the -ed past-tense ones
+  // come from in-app actions. Both shapes are live in the data — keep both.
   'invitation_sent','invitation_confirmed','invitation_declined',
+  'invitation_confirm','invitation_decline','invitation_claim','invitation_cancel',
   'reschedule_requested','reminder_sent',
+  'request_response_sent','cancellation_sent',
   // Attendance
   'attendance_self_marked','attendance_admin_marked','attendance_via_feedback',
   'attendance_approved','attendance_rejected','attendance_removed',
@@ -26,10 +30,28 @@ const QI_EVENT_TYPES = new Set([
   'feedback_request_sent','feedback_reminder_sent','feedback_submitted',
   'feedback_qr_scan','feedback_link_opened',
   // Certificate
-  'certificate_viewed','certificate_downloaded',
-  // Survey
+  'certificate_viewed','certificate_generated','certificate_downloaded',
+  // Survey — pre-platform baseline
   'baseline_survey_started','baseline_survey_question_answered',
   'baseline_survey_completed','survey_email_one_click',
+  // Survey — post-platform ("after") arm. Kept as separate event types rather
+  // than a flag on the baseline events so the two funnels never blend in the
+  // dashboard: the whole point is comparing them.
+  'post_survey_started','post_survey_question_answered','post_survey_completed',
+  // Registration funnel. learner_register only ever fired on SUCCESS, so
+  // drop-off was invisible — registration_started gives the denominator.
+  'registration_started','learner_approved',
+  // Induction handbook + intro video. These pages are static and don't load
+  // the app's JS, so they log through their own minimal poster (see the
+  // inline QI script in each file).
+  'induction_opened','induction_module_viewed','induction_search',
+  'induction_gate_blocked','induction_cheatsheet_printed',
+  'induction_nav_click','induction_link_click','induction_copy',
+  'induction_session_summary',
+  'intro_video_played','intro_video_completed',
+  // Invite links (time-limited non-NHS registration)
+  'invite_created','invite_revoked','invite_link_opened',
+  'invite_link_redeemed','invite_link_rejected',
   // Teacher engagement with their feedback
   'teacher_viewed_feedback','teacher_viewed_session_feedback',
   // Page / nav

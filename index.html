@@ -450,10 +450,12 @@
       <div id="learnerRegisterForm" style="display:none;">
         <label>Full Name *</label>
         <input type="text" id="regName" placeholder="e.g. Dr John Smith">
-        <label>NHS Email *</label>
-        <input type="email" id="regEmail" placeholder="name@nhs.net or name@nbt.nhs.uk" autocomplete="username" autocapitalize="none" spellcheck="false">
-        <label>Personal Email *</label>
+        <label>Email *</label>
+        <input type="email" id="regEmail" placeholder="name@nhs.net or name@gmail.com" autocomplete="username" autocapitalize="none" spellcheck="false">
+        <div style="font-size:11px;color:var(--nhs-grey);margin:-4px 0 8px;">You'll log in with this. No NHS address yet? A personal one is fine.</div>
+        <label>Personal Email</label>
         <input type="email" id="regPersonalEmail" placeholder="name@gmail.com" autocomplete="email" autocapitalize="none" spellcheck="false">
+        <div style="font-size:11px;color:var(--nhs-grey);margin:-4px 0 8px;">Required if you registered with an NHS address — so we can still reach you if NHS mail bounces.</div>
         <label>Mobile Number *</label>
         <input type="tel" id="regPhone" placeholder="07700 900123" autocomplete="tel" inputmode="tel">
         <label>Grade *</label>
@@ -461,7 +463,12 @@
           <option value="">-- Select grade --</option>
           <option>FY1</option><option>FY2</option><option>CT1</option><option>CT2</option>
           <option>ST3</option><option>ST4</option><option>ST5</option><option>ST6</option><option>ST7</option><option>ST8</option>
-          <option>Registrar</option><option>Consultant</option><option>Other</option>
+          <option>Registrar</option><option>Consultant</option>
+          <!-- ANP/ACP attend and teach on the programme too; without these they
+               had to register as "Other", which lost them from grade breakdowns. -->
+          <option>ANP</option><option>ACP</option>
+          <option>JCF</option><option>SCF</option>
+          <option>Other</option>
         </select>
         <label>Placement *</label>
         <select id="regPlacement">

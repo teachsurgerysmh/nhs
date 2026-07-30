@@ -186,8 +186,196 @@ const SURVEY_FORMS = {
         { id: 'E3', text: 'Any other comments?', type: 'text', placeholder: 'Optional', long: true, optional: true },
       ]},
     ]
+  },
+
+  // ===================== POST-PLATFORM ("AFTER") ARM =====================
+  // Question ids are reused from the matching pre-platform form wherever the
+  // question is directly comparable, so a pre/post pair is a join on
+  // question_id filtered to the two form_types. Anything genuinely new to the
+  // platform era is numbered P* so it can never collide with a baseline id.
+  // Scale direction and wording are kept identical to the baseline — changing
+  // either would make the two arms non-comparable.
+
+  staff_post: {
+    title: 'Teaching Programme Organisers',
+    subtitle: 'AFTER the digital teaching platform (May 2026 onwards)',
+    icon: '📋',
+    isPost: true,
+    timeEstimate: '5 minutes',
+    respondentFields: [
+      { id: 'name', label: 'Your name', type: 'text', placeholder: 'e.g. Dr John Smith' },
+      { id: 'grade', label: 'Your grade', type: 'single',
+        options: ['F1','F2','CT1','CT2','ST3','ST4','ST5','ST6','ST7','ST8','JCF','SCF','Consultant','ANP','ACP'] },
+      { id: 'period', label: 'Period you have managed teaching', type: 'text', placeholder: 'e.g. May 2026 – present' },
+    ],
+    sections: [
+      { id: 'A', title: 'Organising Sessions Now', questions: [
+        { id: 'A2', text: 'How far in advance are sessions typically arranged now?', type: 'single',
+          options: ['Day of','1–2 days before','3–7 days before','1–2 weeks before','>2 weeks / term planned'] },
+        { id: 'A4', text: 'When a teacher cancels now, what typically happens?', type: 'multi',
+          options: ['Session was cancelled','Last-minute replacement found','I (the organiser) taught the session','Another trainee stepped in','Learners turned up and found out on the day','Session was rescheduled'] },
+        { id: 'A5', text: 'What proportion of scheduled sessions now actually take place as planned?', type: 'single',
+          options: ['<25%','25–50%','50–75%','75–90%','>90%','Don\'t know'] },
+        { id: 'A6', text: 'How much time per week do you now spend on teaching admin?', type: 'single',
+          options: ['<15 min','15–30 min','30–60 min','1–2 hours','>2 hours','Don\'t know'] },
+        { id: 'A7', text: 'What are the biggest remaining challenges? (tick all that apply)', type: 'multi',
+          options: ['Getting teachers to commit to sessions','Short-notice cancellations by teachers','Low learner attendance','Clinical duties clashing with teaching time','No data on attendance or feedback','Lack of teaching rooms / booking issues','No handover from previous organiser','Fitting admin around my own clinical work','None — these are largely solved'], other: true },
+      ]},
+      { id: 'P', title: 'The Platform Itself', questions: [
+        { id: 'P1', text: 'Which parts of the platform do you actually use? (tick all that apply)', type: 'multi',
+          options: ['Session scheduling / calendar','One-click teacher invitations','Attendance marking','Feedback dashboard','Certificate generation','Weekly poster','QI dashboard','Induction handbook'], other: true },
+        { id: 'P2', text: 'How much admin time do you estimate the platform saves you per week?', type: 'single',
+          options: ['None','<15 min','15–30 min','30–60 min','1–2 hours','>2 hours'] },
+        { id: 'P3', text: 'How easy is the platform to use?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Very difficult', maxLabel: 'Very easy' },
+        { id: 'P4', text: 'Has anything about the platform made your job harder?', type: 'text',
+          placeholder: 'Optional — be blunt, this is the useful bit', long: true, optional: true },
+        { id: 'P5', text: 'How confident would you be handing the programme over to the next organiser?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Not at all confident', maxLabel: 'Completely confident' },
+      ]},
+      { id: 'E', title: 'Overall', questions: [
+        { id: 'E1', text: 'How effective is the surgical teaching programme now?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Very ineffective', maxLabel: 'Very effective' },
+        { id: 'E2', text: 'How administratively burdensome is managing the programme now?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Minimal', maxLabel: 'Extremely burdensome' },
+        { id: 'P6', text: 'If the platform disappeared tomorrow, what would you miss most?', type: 'text',
+          placeholder: 'Optional', long: true, optional: true },
+        { id: 'E4', text: 'Anything else about the programme since the platform?', type: 'text',
+          placeholder: 'Optional — any other thoughts', long: true, optional: true },
+      ]},
+    ]
+  },
+
+  teacher_post: {
+    title: 'Session Teachers',
+    subtitle: 'Your experience of teaching coordination SINCE the digital platform (May 2026 onwards)',
+    icon: '👨‍🏫',
+    isPost: true,
+    timeEstimate: 'under 5 minutes',
+    respondentFields: [
+      { id: 'name', label: 'Your name', type: 'text', placeholder: 'e.g. Mr Arvind / Dr Smith' },
+      { id: 'grade', label: 'Your grade', type: 'single',
+        options: ['F1','F2','CT1','CT2','ST3','ST4','ST5','ST6','ST7','ST8','JCF','SCF','Consultant','ANP','ACP'] },
+      { id: 'specialty', label: 'Specialty', type: 'single',
+        options: ['Upper GI','Lower GI','Transplant','Vascular'], other: true },
+      { id: 'sessions_taught', label: 'Approx. sessions taught since May 2026', type: 'single',
+        options: ['0','1–3','4–10','11–20','>20'] },
+    ],
+    sections: [
+      { id: 'A', title: 'Being Asked to Teach', questions: [
+        { id: 'A2', text: 'How much notice are you usually given now?', type: 'single',
+          options: ['Day of','1–2 days','3–7 days','1–2 weeks','>2 weeks'] },
+        { id: 'A3', text: 'How easy is it now to confirm or decline a teaching request?', type: 'single',
+          options: ['Very easy','Fairly easy','Somewhat difficult','Very difficult'] },
+        { id: 'P1', text: 'Have you used the one-click confirm/decline buttons in the invitation email?', type: 'single',
+          options: ['Yes, every time','Yes, sometimes','No — I reply by email instead','No — never noticed them'] },
+        { id: 'P2', text: 'Did the one-click buttons work as expected?', type: 'single',
+          options: ['Yes, every time','Mostly','Sometimes failed','Never worked','N/A — haven\'t used them'] },
+      ]},
+      { id: 'B', title: 'Barriers to Teaching', questions: [
+        { id: 'B1', text: 'What still prevents you from teaching when you want to? (tick all that apply)', type: 'multi',
+          options: ['Theatre list / operating commitments','Clinic commitments','On-call duties','Too short notice','Administrative workload','Request lost in emails','Forgot about the session','No suitable room booked','Nothing — I\'ve always been able to teach when asked'], other: true },
+        { id: 'P3', text: 'Have automated reminders reduced the chance of you forgetting a session?', type: 'single',
+          options: ['Yes, definitely','Yes, a little','No difference','I don\'t receive reminders'] },
+      ]},
+      { id: 'C', title: 'Feedback on Your Teaching', questions: [
+        { id: 'C1', text: 'Do you now receive structured feedback from learners on your sessions?', type: 'single',
+          options: ['Yes, routinely','Occasionally','Rarely','Never'] },
+        { id: 'C2', text: 'Is the feedback you receive useful for improving your teaching?', type: 'single',
+          options: ['Very useful','Somewhat useful','Not useful','N/A — never received'] },
+        { id: 'C4', text: 'Have you received a certificate or formal record of your teaching contribution?', type: 'single',
+          options: ['Yes','No'] },
+        { id: 'P4', text: 'Have you used a teaching certificate from the platform for your appraisal or portfolio?', type: 'single',
+          options: ['Yes','Not yet, but intend to','No','Didn\'t know I could'] },
+      ]},
+      { id: 'D', title: 'Overall', questions: [
+        { id: 'D1', text: 'How would you rate the overall organisation of surgical teaching at Southmead now?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Very disorganised', maxLabel: 'Very well organised' },
+        { id: 'P5', text: 'How likely are you to recommend teaching on this programme to a colleague?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Not at all likely', maxLabel: 'Extremely likely' },
+        { id: 'D3', text: 'What would most improve it from here?', type: 'text', placeholder: 'Optional', long: true, optional: true },
+      ]},
+    ]
+  },
+
+  trainee_post: {
+    title: 'Current Surgical Trainees',
+    subtitle: 'Your experience of teaching SINCE the digital platform (May 2026 onwards)',
+    icon: '🩺',
+    isPost: true,
+    timeEstimate: 'under 5 minutes',
+    respondentFields: [
+      { id: 'name', label: 'Your name', type: 'text', placeholder: 'e.g. Dr Jane Doe' },
+      { id: 'grade', label: 'Your grade', type: 'single',
+        options: ['F1','F2','CT1','CT2','ST3','ST4','ST5','ST6','ST7','ST8','JCF','SCF','ANP','ACP'] },
+      { id: 'placement', label: 'Surgical placement', type: 'single',
+        options: ['Upper GI','Lower GI','Transplant','Vascular'], other: true },
+      { id: 'period', label: 'Your placement dates', type: 'text', placeholder: 'e.g. Aug 2026 – Dec 2026' },
+    ],
+    sections: [
+      { id: 'A', title: 'Knowing About Teaching', questions: [
+        { id: 'A1', text: 'How do you find out about upcoming teaching sessions now? (tick all that apply)', type: 'multi',
+          options: ['Email from the platform','Automated reminder','The website schedule','Weekly poster','WhatsApp group','Word of mouth from colleagues','Didn\'t know sessions were happening'], other: true },
+        { id: 'A2', text: 'How much notice do you typically get before a session?', type: 'single',
+          options: ['Day of','1–2 days','3–7 days','>1 week','Varied'] },
+        { id: 'A3', text: 'Do you receive reminders about upcoming sessions?', type: 'single',
+          options: ['Yes, regularly','Occasionally','Rarely','Never'] },
+        { id: 'A4', text: 'Have sessions been cancelled without you being told?', type: 'single',
+          options: ['Frequently','Sometimes','Rarely','Never'] },
+      ]},
+      { id: 'B', title: 'Attendance', questions: [
+        { id: 'B1', text: 'What proportion of teaching sessions have you attended?', type: 'single',
+          options: ['<25%','25–50%','50–75%','>75%','Don\'t know'] },
+        { id: 'B2', text: 'Main reasons you missed sessions? (tick all that apply)', type: 'multi',
+          options: ['On-call / bleeped away','Ward too busy to leave','In theatre or clinic','Didn\'t know it was happening','Annual leave','Topic not relevant to me','Forgot'], other: true },
+        { id: 'B3', text: 'Is your attendance formally recorded?', type: 'single',
+          options: ['Yes, always','Sometimes','Rarely','Never','Don\'t know'] },
+      ]},
+      { id: 'C', title: 'Feedback & Quality', questions: [
+        { id: 'C1', text: 'Are you asked to give feedback after teaching sessions?', type: 'single',
+          options: ['Yes, routinely','Occasionally','Rarely','Never'] },
+        { id: 'C3', text: 'Do you feel your feedback makes a difference?', type: 'single',
+          options: ['Yes','Somewhat','No','N/A — never gave feedback'] },
+        { id: 'C4', text: 'Overall quality of surgical teaching during your placement?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Very poor', maxLabel: 'Excellent' },
+        { id: 'P1', text: 'How easy is it to submit feedback?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Very difficult', maxLabel: 'Very easy' },
+      ]},
+      { id: 'D', title: 'CPD & Portfolio', questions: [
+        { id: 'D1', text: 'Have you received certificates for attending teaching?', type: 'single',
+          options: ['Yes, for every session','Summary certificate at end','On request only','Never'] },
+        { id: 'D2', text: 'Have you been able to use teaching attendance as portfolio evidence?', type: 'single',
+          options: ['Yes, easily','Yes, with difficulty','No','Didn\'t try'] },
+      ]},
+      { id: 'I', title: 'Induction & Handbook', questions: [
+        { id: 'P2', text: 'Did you watch the induction intro video?', type: 'single',
+          options: ['Yes, all of it','Yes, part of it','No','Didn\'t know it existed'] },
+        { id: 'P3', text: 'Have you used the General Surgery Induction Handbook?', type: 'single',
+          options: ['Yes, regularly','Yes, once or twice','Looked at it briefly','No','Didn\'t know it existed'] },
+        { id: 'P4', text: 'How prepared did you feel on your first day?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Not at all prepared', maxLabel: 'Completely prepared' },
+        { id: 'P5', text: 'How much did the handbook contribute to that?', type: 'single',
+          options: ['A great deal','Quite a bit','A little','Not at all','Didn\'t use it'] },
+        { id: 'P6', text: 'What was missing from the handbook, or what did you have to ask someone for anyway?', type: 'text',
+          placeholder: 'Optional — this directly drives the next handbook update', long: true, optional: true },
+      ]},
+      { id: 'E', title: 'Overall', questions: [
+        { id: 'E1', text: 'What are the biggest remaining barriers to engaging with teaching? (tick all that apply)', type: 'multi',
+          options: ['Clinical duties clashing','Not knowing when sessions were happening','Sessions being cancelled','Topics not relevant to my training','No incentive to attend (no tracking, no certificates)','None — no real barriers now'], other: true },
+        { id: 'P7', text: 'How likely are you to recommend this teaching programme to a colleague?', type: 'scale',
+          scaleMin: 1, scaleMax: 10, minLabel: 'Not at all likely', maxLabel: 'Extremely likely' },
+        { id: 'E3', text: 'Any other comments?', type: 'text', placeholder: 'Optional', long: true, optional: true },
+      ]},
+    ]
   }
 };
+
+// Pre/post arms are paired by key so the card, the results view and the CSV
+// export all stay in step when an arm is added.
+const SURVEY_PRE_FORMS  = ['staff', 'teacher', 'trainee'];
+const SURVEY_POST_FORMS = ['staff_post', 'teacher_post', 'trainee_post'];
+const SURVEY_ALL_FORMS  = [...SURVEY_PRE_FORMS, ...SURVEY_POST_FORMS];
+function isPostForm(formType) { return !!(SURVEY_FORMS[formType] || {}).isPost; }
 
 // ===================== SURVEY STATE =====================
 let surveyState = {
@@ -214,7 +402,8 @@ function openSurvey(formType, token) {
     answers: {},
     saving: false,
   };
-  logQI('baseline_survey_started', { metadata: { form: formType, token: surveyState.token } });
+  logQI(isPostForm(formType) ? 'post_survey_started' : 'baseline_survey_started',
+        { metadata: { form: formType, token: surveyState.token } });
   renderSurvey();
   switchView('survey');
   document.querySelector('.nav-bar').style.display = 'none';
@@ -317,7 +506,7 @@ function renderQuestionSection(section) {
       html += `<div class="survey-options">`;
       q.options.forEach(opt => {
         const sel = surveyState.answers[q.id] === opt ? 'selected' : '';
-        html += `<button class="survey-opt-btn ${sel}" onclick="selectSurveyAnswer('${q.id}', '${esc(opt)}', 'single', this)">${esc(opt)}</button>`;
+        html += `<button class="survey-opt-btn ${sel}" data-val="${esc(opt)}" onclick="selectSurveyAnswer('${q.id}', this.dataset.val, 'single', this)">${esc(opt)}</button>`;
       });
       if (q.other) {
         html += renderOtherInput(q.id);
@@ -329,7 +518,7 @@ function renderQuestionSection(section) {
       q.options.forEach(opt => {
         const answers = surveyState.answers[q.id] ? surveyState.answers[q.id].split('||') : [];
         const sel = answers.includes(opt) ? 'selected' : '';
-        html += `<button class="survey-opt-btn ${sel}" onclick="selectSurveyAnswer('${q.id}', '${esc(opt)}', 'multi', this)">${esc(opt)}</button>`;
+        html += `<button class="survey-opt-btn ${sel}" data-val="${esc(opt)}" onclick="selectSurveyAnswer('${q.id}', this.dataset.val, 'multi', this)">${esc(opt)}</button>`;
       });
       if (q.other) {
         html += renderOtherInput(q.id);
@@ -495,7 +684,8 @@ async function saveSurveyAnswer(qId) {
       // Surface save failures immediately (was silent until v3.9.3) so an outage is visible in the Error Log.
       try { logError('survey_save', `Survey answer save failed: HTTP ${res.status}`, { form: surveyState.formType, token: surveyState.token, question_id: qId, status: res.status, source: 'web' }); } catch(_) {}
     } else {
-      logQI('baseline_survey_question_answered', { metadata: { form: surveyState.formType, q: qId, grade, placement } });
+      logQI(isPostForm(surveyState.formType) ? 'post_survey_question_answered' : 'baseline_survey_question_answered',
+            { metadata: { form: surveyState.formType, q: qId, grade, placement } });
     }
   } catch(e) {
     console.error('Survey save error:', e);
@@ -604,7 +794,8 @@ async function submitSurvey() {
 
   // Mark completion
   surveyState.currentSection = form.sections.length;
-  logQI('baseline_survey_completed', { metadata: { form: surveyState.formType, token: surveyState.token, answer_count: Object.keys(surveyState.answers).length } });
+  logQI(isPostForm(surveyState.formType) ? 'post_survey_completed' : 'baseline_survey_completed',
+        { metadata: { form: surveyState.formType, token: surveyState.token, answer_count: Object.keys(surveyState.answers).length } });
   renderSurvey();
   window.scrollTo(0, 0);
 }
@@ -674,6 +865,12 @@ async function handleSurveyEmailClick() {
 
 // ===================== HOMEPAGE CARD =====================
 function renderSurveyCard() {
+  // Two arms of the same QI study, side by side: the pre-platform baseline
+  // (blue) and the post-platform follow-up (green). Same three respondent
+  // roles in each, so a person answers the arm that matches when they were here.
+  const btn = (color, formType, label) =>
+    `<button class="btn btn-outline" style="font-size:12px;padding:6px 14px;color:var(--${color});border-color:var(--${color});" onclick="openSurvey('${formType}')">${label}</button>`;
+
   return `
     <div class="survey-home-card" id="surveyHomeCard">
       <div class="survey-home-card-inner">
@@ -684,9 +881,94 @@ function renderSurveyCard() {
         </div>
       </div>
       <div class="survey-home-links">
-        <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="openSurvey('staff')">Staff/Organiser</button>
-        <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="openSurvey('teacher')">Session Teacher</button>
-        <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="openSurvey('trainee')">Trainee</button>
+        ${btn('nhs-blue', 'staff', 'Staff/Organiser')}
+        ${btn('nhs-blue', 'teacher', 'Session Teacher')}
+        ${btn('nhs-blue', 'trainee', 'Trainee')}
+      </div>
+    </div>
+    <div class="survey-home-card" id="surveyHomeCardPost">
+      <div class="survey-home-card-inner">
+        <div style="font-size:24px;">📈</div>
+        <div>
+          <strong>Post-Platform Follow-Up Survey</strong>
+          <p style="font-size:12px;color:var(--nhs-grey);margin:2px 0 0;">How is teaching working <strong>now</strong>, with the website? Same questions as the baseline so we can measure the difference — under 5 minutes.</p>
+        </div>
+      </div>
+      <div class="survey-home-links">
+        ${btn('nhs-green', 'staff_post', 'Staff/Organiser')}
+        ${btn('nhs-green', 'teacher_post', 'Session Teacher')}
+        ${btn('nhs-green', 'trainee_post', 'Trainee')}
+      </div>
+    </div>`;
+}
+
+// ===================== PRE/POST COMPARISON =====================
+// The headline QI output: for every scale question that exists with the SAME
+// id in both arms of a role, the mean before vs after and the change. Scale
+// questions only — a mean is meaningful there, whereas averaging a multi-select
+// isn't. Matching on id is why the post forms deliberately reuse baseline ids.
+function renderPrePostComparison(byForm) {
+  const mean = (vals) => {
+    const nums = vals.map(v => parseFloat(v)).filter(n => !isNaN(n));
+    return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+  };
+  const answersById = (rows) => {
+    const m = {};
+    rows.forEach(r => { (m[r.question_id] = m[r.question_id] || []).push(r.answer); });
+    return m;
+  };
+
+  let rows = '';
+  SURVEY_PRE_FORMS.forEach((preFt, i) => {
+    const postFt = SURVEY_POST_FORMS[i];
+    const preForm = SURVEY_FORMS[preFt], postForm = SURVEY_FORMS[postFt];
+    const preA = answersById(byForm[preFt] || []), postA = answersById(byForm[postFt] || []);
+
+    const postScaleQs = {};
+    postForm.sections.forEach(s => s.questions.forEach(q => { if (q.type === 'scale') postScaleQs[q.id] = q; }));
+
+    preForm.sections.forEach(section => section.questions.forEach(q => {
+      if (q.type !== 'scale' || !postScaleQs[q.id]) return;   // matched pairs only
+      const mPre = mean(preA[q.id] || []), mPost = mean(postA[q.id] || []);
+      if (mPre === null && mPost === null) return;
+      const delta = (mPre !== null && mPost !== null) ? mPost - mPre : null;
+      const fmt = (v, n) => v === null ? '<span style="color:var(--nhs-grey);">—</span>' : `${v.toFixed(1)} <span style="color:var(--nhs-grey);font-size:11px;">(n=${n})</span>`;
+      // Most scales are "higher is better", but admin burden is inverted —
+      // a rise there is a worse result, so colour by intent not by sign.
+      const lowerIsBetter = /burdensome|difficult|disorganised/i.test(q.minLabel + ' ' + q.maxLabel) && /burdensome/i.test(q.maxLabel || '');
+      let deltaCell = '<span style="color:var(--nhs-grey);">—</span>';
+      if (delta !== null) {
+        const good = lowerIsBetter ? delta < 0 : delta > 0;
+        const color = Math.abs(delta) < 0.05 ? 'var(--nhs-grey)' : (good ? 'var(--nhs-green)' : 'var(--nhs-red)');
+        deltaCell = `<strong style="color:${color};">${delta > 0 ? '+' : ''}${delta.toFixed(1)}</strong>`;
+      }
+      rows += `<tr>
+        <td style="padding:8px;border-bottom:1px solid var(--nhs-mid-grey);font-size:12px;">
+          <span style="color:var(--nhs-grey);">${preForm.icon}</span> ${q.text}
+          ${lowerIsBetter ? '<span style="font-size:10px;color:var(--nhs-grey);"> (lower is better)</span>' : ''}
+        </td>
+        <td style="padding:8px;border-bottom:1px solid var(--nhs-mid-grey);text-align:center;font-size:12px;">${fmt(mPre, (preA[q.id] || []).length)}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--nhs-mid-grey);text-align:center;font-size:12px;">${fmt(mPost, (postA[q.id] || []).length)}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--nhs-mid-grey);text-align:center;font-size:13px;">${deltaCell}</td>
+      </tr>`;
+    }));
+  });
+
+  if (!rows) return '';
+  return `
+    <div class="survey-results-form" style="margin-bottom:24px;">
+      <h4 style="color:var(--nhs-dark-blue);margin-bottom:4px;">📈 Pre vs Post — matched questions</h4>
+      <p style="font-size:12px;color:var(--nhs-grey);margin:0 0 12px;">Mean score on questions asked identically in both arms. Blank where that arm has no responses yet.</p>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;min-width:520px;">
+          <thead><tr style="text-align:left;">
+            <th style="padding:8px;font-size:11px;color:var(--nhs-grey);text-transform:uppercase;">Question</th>
+            <th style="padding:8px;font-size:11px;color:var(--nhs-grey);text-transform:uppercase;text-align:center;">Before</th>
+            <th style="padding:8px;font-size:11px;color:var(--nhs-grey);text-transform:uppercase;text-align:center;">After</th>
+            <th style="padding:8px;font-size:11px;color:var(--nhs-grey);text-transform:uppercase;text-align:center;">Change</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
       </div>
     </div>`;
 }
@@ -725,8 +1007,10 @@ async function renderSurveyResults() {
     return;
   }
 
-  // Group by form type
-  const byForm = { staff: [], teacher: [], trainee: [] };
+  // Group by form type — built from SURVEY_ALL_FORMS so a new arm can't be
+  // silently dropped on the floor here (post responses were invisible before).
+  const byForm = {};
+  SURVEY_ALL_FORMS.forEach(ft => { byForm[ft] = []; });
   responses.forEach(r => { if (byForm[r.form_type]) byForm[r.form_type].push(r); });
 
   // Count unique respondents
@@ -734,11 +1018,14 @@ async function renderSurveyResults() {
 
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-      <h3 style="color:var(--nhs-dark-blue);margin:0;">Pre-Platform Baseline Survey Results</h3>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('staff')">Copy Staff Link</button>
-        <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('teacher')">Copy Teacher Link</button>
-        <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('trainee')">Copy Trainee Link</button>
+      <h3 style="color:var(--nhs-dark-blue);margin:0;">QI Survey Results — Pre &amp; Post Platform</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('staff')">Pre: Staff</button>
+        <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('teacher')">Pre: Teacher</button>
+        <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="copySurveyLink('trainee')">Pre: Trainee</button>
+        <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-green);border-color:var(--nhs-green);" onclick="copySurveyLink('staff_post')">Post: Staff</button>
+        <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-green);border-color:var(--nhs-green);" onclick="copySurveyLink('teacher_post')">Post: Teacher</button>
+        <button class="btn btn-outline" style="font-size:12px;color:var(--nhs-green);border-color:var(--nhs-green);" onclick="copySurveyLink('trainee_post')">Post: Trainee</button>
         <button class="btn btn-green" style="font-size:12px;" onclick="openSurveyEmailGenerator()">📧 Generate Email</button>
         <button class="btn btn-green" style="font-size:12px;" onclick="exportSurveyCSV()">Export CSV</button>
       </div>
@@ -754,21 +1041,18 @@ async function renderSurveyResults() {
         <div class="stat-label">Unique Respondents</div>
       </div>
       <div class="stat-card" style="text-align:center;padding:16px;">
-        <div class="stat-num">${uniqueRespondents(byForm.staff)}</div>
-        <div class="stat-label">Staff Forms</div>
+        <div class="stat-num">${SURVEY_PRE_FORMS.reduce((n, ft) => n + uniqueRespondents(byForm[ft]), 0)}</div>
+        <div class="stat-label">Pre-Platform Respondents</div>
       </div>
       <div class="stat-card" style="text-align:center;padding:16px;">
-        <div class="stat-num">${uniqueRespondents(byForm.teacher)}</div>
-        <div class="stat-label">Teacher Forms</div>
+        <div class="stat-num">${SURVEY_POST_FORMS.reduce((n, ft) => n + uniqueRespondents(byForm[ft]), 0)}</div>
+        <div class="stat-label">Post-Platform Respondents</div>
       </div>
-      <div class="stat-card" style="text-align:center;padding:16px;">
-        <div class="stat-num">${uniqueRespondents(byForm.trainee)}</div>
-        <div class="stat-label">Trainee Forms</div>
-      </div>
-    </div>`;
+    </div>
+    ${renderPrePostComparison(byForm)}`;
 
   // Show per-question breakdown for each form
-  ['staff', 'teacher', 'trainee'].forEach(ft => {
+  SURVEY_ALL_FORMS.forEach(ft => {
     const form = SURVEY_FORMS[ft];
     const data = byForm[ft];
     if (!data.length) return;
