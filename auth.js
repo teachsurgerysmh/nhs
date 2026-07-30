@@ -588,6 +588,100 @@ function refreshPendingBanner() {
   document.body.insertBefore(bar, document.body.firstChild);
 }
 
+// ── Password setup for pre-created accounts ──
+// Accounts seeded from the rota are locked with an unusable placeholder
+// password; this single-use link is the only way to set a real one. The token
+// is checked server-side on both arrival and submission — the check on arrival
+// is only so we can greet them by name and pre-fill the address.
+
+async function handleSetupLink() {
+  const params = new URLSearchParams(window.location.search);
+  const token = (params.get('setup') || '').trim();
+  if (!token) return false;
+
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  let info = null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_setup_token`, {
+      method: 'POST', headers, body: JSON.stringify({ p_token: token })
+    });
+    if (res.ok) info = (await res.json())[0];
+  } catch (e) { console.warn('setup token check failed', e); }
+
+  if (!info || !info.valid) {
+    const why = {
+      already_used: 'That setup link has already been used. Try signing in, or reset your password.',
+      expired: 'That setup link has expired.',
+      not_found: 'That setup link is not recognised.'
+    }[info && info.reason] || 'That setup link is no longer valid.';
+    showToast(why + ' Please ask the teaching team for a new one.', 7000);
+    logQI('setup_link_rejected', { metadata: { reason: (info && info.reason) || 'unknown' } });
+    return false;
+  }
+
+  logQI('setup_link_opened', {});
+  openLearnerLoginModal();
+  document.getElementById('learnerLoginForm').style.display = 'none';
+  document.getElementById('learnerRegisterForm').style.display = 'none';
+  document.getElementById('learnerPinDisplay').style.display = 'none';
+  document.getElementById('learnerModalTitle').textContent = 'Set your password';
+
+  let box = document.getElementById('setupPasswordForm');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'setupPasswordForm';
+    document.getElementById('learnerModalBody').appendChild(box);
+  }
+  box.style.display = '';
+  box.innerHTML = `
+    <p style="font-size:14px;color:var(--nhs-dark-blue);margin-bottom:4px;">Welcome, <strong>${esc(info.name || '')}</strong> 👋</p>
+    <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">Your account is ready — just choose a password to finish setting it up.</p>
+    <label>Email</label>
+    <input type="email" id="suEmail" value="${esc(info.email || '')}" readonly style="background:var(--nhs-bg);">
+    <label>Choose a password</label>
+    <input type="password" id="suPin1" placeholder="At least 8 characters" autocomplete="new-password">
+    <label>Confirm password</label>
+    <input type="password" id="suPin2" placeholder="Type it again" autocomplete="new-password">
+    <div style="margin-top:14px;">
+      <button class="btn btn-green" id="suBtn" style="width:100%;" onclick="submitSetupPassword('${esc(token)}')">Set password &amp; sign in</button>
+    </div>`;
+  return true;
+}
+
+async function submitSetupPassword(token) {
+  const p1 = document.getElementById('suPin1').value;
+  const p2 = document.getElementById('suPin2').value;
+  const email = document.getElementById('suEmail').value.trim().toLowerCase();
+  if (!p1 || p1.length < 8) { showToast('Password must be at least 8 characters'); return; }
+  if (p1 !== p2) { showToast('Passwords do not match'); return; }
+
+  const btn = document.getElementById('suBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Setting up…'; }
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/setup-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
+      body: JSON.stringify({ token, password: p1 })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Setup failed');
+
+    logQI('setup_link_completed', { actor_type: 'learner', actor_email: email });
+    showToast('Password set — signing you in…', 3000);
+    // Sign in through the normal path so rate limiting and audit apply as usual.
+    document.getElementById('setupPasswordForm').style.display = 'none';
+    showLearnerLoginForm();
+    document.getElementById('learnerEmail').value = email;
+    document.getElementById('learnerPin').value = p1;
+    if (typeof doLearnerLogin === 'function') await doLearnerLogin();
+  } catch (e) {
+    console.error('setup-password failed', e);
+    showToast(e.message || 'Could not set your password. Please try again.', 5000);
+    if (btn) { btn.disabled = false; btn.textContent = 'Set password & sign in'; }
+  }
+}
+
 // ── Invite links ──
 // A time-limited link that lets someone without an NHS account register as
 // verified. It is a bearer credential — whoever holds it gets in — so it is

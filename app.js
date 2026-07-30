@@ -287,10 +287,15 @@ async function init() {
     setTimeout(() => { openLoginType === 'teacher' ? openTeacherLoginModal() : openLearnerLoginModal(); }, 300);
   }
 
+  // ?setup=<token> — pre-created account setting its first password. Checked
+  // before ?invite because someone who already has an account has no use for
+  // an invite link, and both could in principle be present.
+  const inSetup = await handleSetupLink();
+
   // ?invite=<token> — time-limited link letting someone without an NHS account
   // register as verified. Handled before the main render so the banner is up
   // by the time the page is interactive.
-  await handleInviteLink();
+  if (!inSetup) await handleInviteLink();
 
   await Promise.all([loadEvents(), fetchBankHolidays()]);
   renderAll();

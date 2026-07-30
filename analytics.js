@@ -52,6 +52,9 @@ const QI_EVENT_TYPES = new Set([
   // Invite links (time-limited non-NHS registration)
   'invite_created','invite_revoked','invite_link_opened',
   'invite_link_redeemed','invite_link_rejected',
+  // Password setup for pre-created (rota-seeded) accounts
+  'setup_link_opened','setup_link_completed','setup_link_rejected',
+  'setup_links_issued',
   // Teacher engagement with their feedback
   'teacher_viewed_feedback','teacher_viewed_session_feedback',
   // Page / nav
