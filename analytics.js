@@ -385,6 +385,9 @@ function renderQIDashboard() {
       </table>
     </div>`;
 
+  // ---- Induction handbook ----
+  html += renderQIInductionSection(d);
+
   // ---- Event-type breakdown ----
   html += `<div class="qi-section-title">Event taxonomy (raw counts)</div>
     <div class="qi-card" style="overflow-x:auto;max-height:300px;overflow-y:auto;">
@@ -404,6 +407,292 @@ function renderQIDashboard() {
 
   c.innerHTML = html;
   renderQIWeeklyChart();
+  renderQIInductionChart();
+}
+
+// ===================== INDUCTION HANDBOOK SECTION =====================
+// induction.html is a self-contained bundle that never loads config.js, so it
+// logs through its own inline poster (source='induction'). Those events landed
+// in qi_events from the start but nothing aggregated them — handbook usage was
+// invisible on this dashboard until v3.12.27 added the qi_induction_* views.
+function renderQIInductionSection(d) {
+  const ind = d.induction;
+  const title = `<div class="qi-section-title">Induction handbook <span style="font-size:12px;color:var(--nhs-grey);font-weight:normal;">(induction.html — self-contained bundle)</span></div>`;
+
+  if (!ind) {
+    return title + `<div class="qi-card" style="color:var(--nhs-grey);font-size:13px;">
+      The <code>qi-dashboard</code> Edge Function is on an older version and isn't returning handbook data yet.
+      Redeploy it from <code>database/edge-function-qi-dashboard.ts</code>.</div>`;
+  }
+  if (ind.available === false) {
+    return title + `<div class="qi-card" style="color:var(--nhs-red);font-size:13px;">
+      Handbook views unavailable: ${esc(ind.error || 'unknown error')}.<br>
+      Apply <code>database/migration_v3.12.27_qi_induction_views.sql</code> in the Supabase SQL editor.</div>`;
+  }
+
+  const k = ind.kpis || {};
+  const num  = v => (v === null || v === undefined || v === '' ? null : Number(v));
+  const fmt  = v => (v === null || v === undefined ? '—' : v);
+  const pct  = v => (v === null || v === undefined ? '—' : v + '%');
+  const secs = v => {
+    const n = num(v);
+    if (n === null || isNaN(n)) return '—';
+    if (n < 60) return (Math.round(n * 10) / 10) + 's';
+    const m = Math.floor(n / 60);
+    return m + 'm ' + Math.round(n - m * 60) + 's';
+  };
+  const kpi = (label, value, sub) => `
+    <div class="qi-kpi-card">
+      <div class="qi-kpi-num">${fmt(value)}</div>
+      <div class="qi-kpi-label">${label}</div>
+      ${sub ? `<div class="qi-kpi-sub">${sub}</div>` : ''}
+    </div>`;
+
+  if (!num(k.page_loads)) {
+    return title + `<div class="qi-card" style="color:var(--nhs-grey);font-size:13px;">
+      No handbook activity recorded yet. Events appear here as soon as someone opens
+      <code>induction.html</code>.</div>`;
+  }
+
+  let html = title;
+
+  // Traffic quality first. NBT's Mimecast pre-fetches every link it sees, and
+  // a prefetch looks exactly like a page load that bounced at the gate. Mixing
+  // the two produced a "70% turned away" reading on this very data when the
+  // real figure was zero — so the split is stated before any rate is.
+  const botLoads  = num(k.bot_page_loads)   || 0;
+  const lowSignal = num(k.low_signal_loads) || 0;
+  if (botLoads || lowSignal) {
+    html += `<div class="qi-card" style="border-left:4px solid var(--nhs-grey);margin-bottom:14px;font-size:13px;color:var(--nhs-dark-blue);line-height:1.6;">
+      <strong>Traffic quality:</strong> ${fmt(k.all_page_loads)} raw page loads →
+      <strong>${fmt(k.page_loads)}</strong> counted below.
+      ${botLoads ? `${botLoads} excluded as automation (agent tooling, headless runs, named scanners).` : ''}
+      ${lowSignal ? ` ${lowSignal} more were signed-out loads that hit the gate and vanished in under 5s with no interaction — consistent with Mimecast link pre-fetch, so they are counted but kept out of the engaged rate.` : ''}
+    </div>`;
+  }
+
+  // Only shout about the gate when real people were actually turned away —
+  // i.e. blocked loads that showed some sign of being human.
+  const blockRate = num(k.gate_block_rate_engaged_pct);
+  const blockedReal = num(k.gate_blocked_engaged);
+  if (blockedReal > 0 && blockRate !== null && blockRate >= 20) {
+    html += `<div class="qi-card" style="border-left:4px solid var(--nhs-red);background:#fff4f4;margin-bottom:14px;">
+      <div style="font-weight:600;color:var(--nhs-red);margin-bottom:4px;">
+        ${pct(k.gate_block_rate_engaged_pct)} of real handbook opens never got in
+      </div>
+      <div style="font-size:13px;color:var(--nhs-dark-blue);line-height:1.5;">
+        ${fmt(k.gate_blocked_engaged)} page loads that look human hit the gate instead of the handbook —
+        ${fmt(k.blocked_not_signed_in)} not signed in, ${fmt(k.blocked_pending_approval)} pending approval.
+        Every one of those is someone who wanted the content and was turned away at the door.
+      </div>
+    </div>`;
+  } else if (num(k.gate_blocked_visits) > 0) {
+    html += `<div class="qi-card" style="border-left:4px solid var(--nhs-green);margin-bottom:14px;font-size:13px;color:var(--nhs-dark-blue);line-height:1.5;">
+      <strong>Gate:</strong> ${fmt(k.gate_blocked_visits)} blocked loads, but
+      <strong>${fmt(k.gate_blocked_engaged)}</strong> of them showed any sign of being a person.
+      No evidence real readers are being turned away.
+    </div>`;
+  }
+
+  html += `<div class="qi-kpi-grid">
+      ${kpi('Handbook visits', k.visits, fmt(k.page_loads) + ' counted loads · ' + fmt(k.all_page_loads) + ' raw')}
+      ${kpi('Unique readers', k.unique_readers, fmt(k.returning_visits) + ' returning visits (' + pct(k.returning_rate_pct) + ')')}
+      ${kpi('Real gate-blocks', k.gate_blocked_engaged, fmt(k.gate_blocked_visits) + ' raw (' + pct(k.gate_block_rate_pct) + ') · ' + lowSignal + ' likely prefetch')}
+      ${kpi('Median visit', secs(k.median_visit_seconds), 'mean ' + secs(k.mean_visit_seconds))}
+      ${kpi('Bounce rate', pct(k.bounce_rate_pct), 'arrived, opened no module')}
+      ${kpi('Modules per visit', k.mean_modules_per_visit, fmt(k.engaged_visits) + ' visits opened ≥1 module')}
+      ${kpi('Module reads', k.module_views, fmt(k.distinct_modules_opened) + ' distinct modules touched')}
+      ${kpi('Median dwell / module', secs(k.median_module_dwell_s), pct(k.pct_modules_read_to_end) + ' read to the end')}
+      ${kpi('Searches', k.searches, fmt(k.zero_hit_searches) + ' returned nothing')}
+      ${kpi('Copies', k.copy_events, 'bleeps / extensions lifted out')}
+      ${kpi('Outbound clicks', k.outbound_clicks, fmt(k.print_events) + ' prints / PDF saves')}
+      ${kpi('Device split', fmt(k.mobile_visits) + '/' + fmt(k.tablet_visits) + '/' + fmt(k.desktop_visits), 'mobile / tablet / desktop')}
+      ${kpi('Intro video plays', k.intro_video_plays, fmt(k.intro_video_completions) + ' watched to the end')}
+    </div>`;
+
+  // ---- Daily trend ----
+  if ((ind.daily || []).length > 1) {
+    html += `<div class="qi-section-title">Handbook usage by day</div>
+      <div class="qi-card"><canvas id="qiInductionChart" height="110"></canvas></div>`;
+  }
+
+  // ---- Modules ----
+  html += `<div class="qi-section-title">Module engagement <span style="font-size:12px;color:var(--nhs-grey);font-weight:normal;">(logged on exit, so dwell is real reading time)</span></div>
+    <div class="qi-card" style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+      <table class="qi-table">
+        <thead><tr>
+          <th>Module</th><th>Views</th><th>Visits</th><th>Readers</th>
+          <th>Median dwell</th><th>Max dwell</th><th>Read to end</th><th>Median scroll</th>
+          <th>Skimmed</th><th>Entered on</th><th>Left on</th>
+        </tr></thead>
+        <tbody>
+          ${(ind.modules || []).length === 0
+            ? `<tr><td colspan="11" style="text-align:center;color:var(--nhs-grey);padding:18px;">No modules opened yet.</td></tr>`
+            : (ind.modules || []).map(m => {
+                const skim = num(m.pct_skimmed);
+                return `<tr>
+                <td>${esc(m.title || m.module || '')}<div style="font-size:10px;color:var(--nhs-grey);"><code>${esc(m.module || '')}</code></div></td>
+                <td><strong>${fmt(m.views)}</strong></td>
+                <td>${fmt(m.unique_visits)}</td>
+                <td>${fmt(m.unique_readers)}</td>
+                <td>${secs(m.median_dwell_s)}</td>
+                <td>${secs(m.max_dwell_s)}</td>
+                <td>${pct(m.pct_reached_end)}</td>
+                <td>${pct(m.median_scroll_pct)}</td>
+                <td${skim !== null && skim >= 60 ? ' style="color:var(--nhs-red);font-weight:600;"' : ''}>${pct(m.pct_skimmed)}</td>
+                <td>${fmt(m.entry_count)}</td>
+                <td>${fmt(m.exit_count)}</td>
+              </tr>`;
+              }).join('')
+          }
+        </tbody>
+      </table>
+      <div style="font-size:11px;color:var(--nhs-grey);margin-top:8px;line-height:1.5;">
+        <strong>Skimmed</strong> = share of views under 5 seconds. A module with high views and high skim
+        is one people keep opening and not finding what they came for.
+        <strong>Left on</strong> = visits that ended there.
+      </div>
+    </div>`;
+
+  // ---- Searches: the content-gap list ----
+  const zeroHits = (ind.searches || []).filter(s => num(s.zero_hit_count) > 0);
+  html += `<div class="qi-section-title">Search — what people looked for</div>
+    <div class="qi-card" style="overflow-x:auto;max-height:340px;overflow-y:auto;">
+      ${zeroHits.length ? `<div style="background:#fff8e6;border-left:4px solid var(--nhs-warm-yellow,#ffb81c);padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--nhs-dark-blue);line-height:1.5;">
+        <strong>${zeroHits.length} ${zeroHits.length === 1 ? 'query' : 'queries'} returned nothing.</strong>
+        These are the handbook's content gaps, written by the readers themselves.
+      </div>` : ''}
+      <table class="qi-table">
+        <thead><tr><th>Query</th><th>Times</th><th>Visits</th><th>Best hit count</th><th>Zero-hit</th><th>Last searched</th></tr></thead>
+        <tbody>
+          ${(ind.searches || []).length === 0
+            ? `<tr><td colspan="6" style="text-align:center;color:var(--nhs-grey);padding:18px;">No searches logged yet.</td></tr>`
+            : (ind.searches || []).map(s => `<tr${num(s.zero_hit_count) > 0 ? ' style="background:#fffaf0;"' : ''}>
+                <td><strong>${esc(s.query || '')}</strong></td>
+                <td>${fmt(s.search_count)}</td>
+                <td>${fmt(s.unique_visits)}</td>
+                <td>${fmt(s.max_hits)}</td>
+                <td>${num(s.zero_hit_count) > 0 ? `<span style="color:var(--nhs-red);font-weight:600;">${s.zero_hit_count}</span>` : '—'}</td>
+                <td>${s.last_searched_at ? new Date(s.last_searched_at).toLocaleDateString() : '—'}</td>
+              </tr>`).join('')
+          }
+        </tbody>
+      </table>
+    </div>`;
+
+  // ---- Navigation demand ----
+  html += `<div class="qi-section-title">Navigation demand <span style="font-size:12px;color:var(--nhs-grey);font-weight:normal;">(what gets reached for)</span></div>
+    <div class="qi-card" style="overflow-x:auto;max-height:340px;overflow-y:auto;">
+      <table class="qi-table">
+        <thead><tr><th>Destination</th><th>Type</th><th>Clicks</th><th>Visits</th><th>Last</th></tr></thead>
+        <tbody>
+          ${(ind.nav || []).length === 0
+            ? `<tr><td colspan="5" style="text-align:center;color:var(--nhs-grey);padding:18px;">No navigation logged yet.</td></tr>`
+            : (ind.nav || []).map(n => `<tr>
+                <td>${esc(n.label || n.destination || '')}<div style="font-size:10px;color:var(--nhs-grey);"><code>${esc(n.destination || '')}</code></div></td>
+                <td><span class="qi-pill" style="background:${n.kind === 'category' ? '#e0f5fa' : '#e6f4ea'};color:${n.kind === 'category' ? 'var(--nhs-blue)' : 'var(--nhs-green)'};">${esc(n.kind || '')}</span></td>
+                <td><strong>${fmt(n.clicks)}</strong></td>
+                <td>${fmt(n.unique_visits)}</td>
+                <td>${n.last_clicked_at ? new Date(n.last_clicked_at).toLocaleDateString() : '—'}</td>
+              </tr>`).join('')
+          }
+        </tbody>
+      </table>
+    </div>`;
+
+  // ---- Outbound links ----
+  if ((ind.links || []).length) {
+    html += `<div class="qi-section-title">Outbound links used</div>
+      <div class="qi-card" style="overflow-x:auto;max-height:280px;overflow-y:auto;">
+        <table class="qi-table">
+          <thead><tr><th>Link</th><th>From module</th><th>Clicks</th><th>Visits</th><th>Last</th></tr></thead>
+          <tbody>
+            ${(ind.links || []).map(l => `<tr>
+              <td style="max-width:380px;word-break:break-all;"><code style="font-size:11px;">${esc(l.href || '')}</code></td>
+              <td>${esc(l.module || '—')}</td>
+              <td>${fmt(l.clicks)}</td>
+              <td>${fmt(l.unique_visits)}</td>
+              <td>${l.last_clicked_at ? new Date(l.last_clicked_at).toLocaleDateString() : '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ---- Individual journeys ----
+  html += `<div class="qi-section-title">Recent visits <span style="font-size:12px;color:var(--nhs-grey);font-weight:normal;">(most recent 200 — each row is one page load)</span></div>
+    <div class="qi-card" style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+      <table class="qi-table">
+        <thead><tr>
+          <th>When</th><th>Who</th><th>Device</th><th>Outcome</th>
+          <th>Duration</th><th>Modules</th><th>Path</th><th>Searches</th><th>Exit</th>
+        </tr></thead>
+        <tbody>
+          ${(ind.visits || []).map(v => {
+            const path = Array.isArray(v.path) ? v.path : [];
+            const outcome = v.was_gate_blocked
+              ? `<span style="color:var(--nhs-red);">blocked · ${esc(v.gate_reason || '')}</span>`
+              : (v.reached_content ? 'opened' : 'partial');
+            const tag = v.is_bot
+              ? ' <span style="font-size:10px;color:var(--nhs-grey);">[bot]</span>'
+              : (v.is_low_signal ? ' <span style="font-size:10px;color:var(--nhs-grey);">[likely prefetch]</span>' : '');
+            return `<tr${v.is_bot || v.is_low_signal ? ' style="opacity:0.55;"' : ''}>
+              <td style="white-space:nowrap;">${v.started_at ? new Date(v.started_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—'}</td>
+              <td>${esc(v.actor_name || v.actor_email || v.actor_type || 'public')}${v.is_returning ? ' <span style="font-size:10px;color:var(--nhs-grey);">(returning)</span>' : ''}</td>
+              <td>${esc(v.device || '—')}</td>
+              <td>${outcome}${tag}</td>
+              <td>${secs(v.duration_s)}</td>
+              <td>${fmt(v.modules_viewed)}</td>
+              <td style="max-width:260px;font-size:11px;color:var(--nhs-grey);">${path.length ? esc(path.join(' → ')) : '—'}</td>
+              <td>${fmt(v.searches)}${num(v.zero_hit_searches) > 0 ? ` <span style="color:var(--nhs-red);">(${v.zero_hit_searches} empty)</span>` : ''}</td>
+              <td style="font-size:11px;color:var(--nhs-grey);">${esc(v.exit_reason || '—')}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  return html;
+}
+
+// ---- Handbook daily trend chart ----
+function renderQIInductionChart() {
+  const rows = _qiData?.induction?.daily;
+  if (!rows || rows.length < 2) return;
+  const canvas = document.getElementById('qiInductionChart');
+  if (!canvas) return;
+
+  function draw() {
+    const labels = rows.map(r => new Date(r.day).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }));
+    if (window._qiIndChart) { try { window._qiIndChart.destroy(); } catch (e) {} }
+    window._qiIndChart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Visits',        data: rows.map(r => r.visits || 0),         borderColor: '#005eb8', tension: 0.3, fill: false },
+          { label: 'Blocked',       data: rows.map(r => r.gate_blocked || 0),   borderColor: '#da291c', tension: 0.3, fill: false },
+          { label: 'Modules read',  data: rows.map(r => r.modules_viewed || 0), borderColor: '#009639', tension: 0.3, fill: false },
+          { label: 'Readers',       data: rows.map(r => r.unique_readers || 0), borderColor: '#41b6e6', tension: 0.3, fill: false },
+          { label: 'Bot / prefetch', data: rows.map(r => r.bot_loads || 0),     borderColor: '#768692', borderDash: [4, 3], tension: 0.3, fill: false },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true } },
+      },
+    });
+  }
+
+  if (typeof Chart === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    s.onload = draw;
+    document.head.appendChild(s);
+  } else {
+    draw();
+  }
 }
 
 // ---- Weekly trend chart (uses Chart.js loaded on-demand) ----
@@ -462,6 +751,33 @@ function exportQICSV() {
   rows.push(['== PDSA Cycles ==']);
   rows.push(['cycle','title','version','started_at','invites','confirmed','confirm_pct','attendance','feedback','mean_rating']);
   (_qiData.pdsa_metrics || []).forEach(p => rows.push([p.cycle_number, p.title, p.app_version, p.started_at, p.invites_sent, p.invites_confirmed, p.confirmation_rate_pct, p.attendances, p.feedback_count, p.mean_rating]));
+
+  const ind = _qiData.induction;
+  if (ind && ind.available !== false) {
+    rows.push([]);
+    rows.push(['== Induction handbook KPIs ==']);
+    Object.entries(ind.kpis || {}).forEach(([k, v]) => rows.push([k, v]));
+    rows.push([]);
+    rows.push(['== Induction modules ==']);
+    rows.push(['module','title','views','unique_visits','unique_readers','median_dwell_s','mean_dwell_s','max_dwell_s','pct_reached_end','median_scroll_pct','pct_skimmed','entry_count','exit_count']);
+    (ind.modules || []).forEach(m => rows.push([m.module, m.title, m.views, m.unique_visits, m.unique_readers, m.median_dwell_s, m.mean_dwell_s, m.max_dwell_s, m.pct_reached_end, m.median_scroll_pct, m.pct_skimmed, m.entry_count, m.exit_count]));
+    rows.push([]);
+    rows.push(['== Induction searches ==']);
+    rows.push(['query','search_count','zero_hit_count','max_hits','unique_visits','last_searched_at']);
+    (ind.searches || []).forEach(s => rows.push([s.query, s.search_count, s.zero_hit_count, s.max_hits, s.unique_visits, s.last_searched_at]));
+    rows.push([]);
+    rows.push(['== Induction navigation ==']);
+    rows.push(['destination','kind','label','clicks','unique_visits']);
+    (ind.nav || []).forEach(n => rows.push([n.destination, n.kind, n.label, n.clicks, n.unique_visits]));
+    rows.push([]);
+    rows.push(['== Induction daily ==']);
+    rows.push(['day','page_loads','bot_loads','visits','gate_blocked','unique_readers','modules_viewed','searches','median_visit_seconds']);
+    (ind.daily || []).forEach(r => rows.push([r.day, r.page_loads, r.bot_loads, r.visits, r.gate_blocked, r.unique_readers, r.modules_viewed, r.searches, r.median_visit_seconds]));
+    rows.push([]);
+    rows.push(['== Induction visits ==']);
+    rows.push(['started_at','actor_type','actor_name','actor_email','device','is_bot','is_low_signal','reached_content','was_gate_blocked','gate_reason','duration_s','modules_viewed','path','searches','zero_hit_searches','exit_reason','is_returning','referrer','user_agent']);
+    (ind.visits || []).forEach(v => rows.push([v.started_at, v.actor_type, v.actor_name, v.actor_email, v.device, v.is_bot, v.is_low_signal, v.reached_content, v.was_gate_blocked, v.gate_reason, v.duration_s, v.modules_viewed, (Array.isArray(v.path) ? v.path.join(' > ') : ''), v.searches, v.zero_hit_searches, v.exit_reason, v.is_returning, v.referrer, v.user_agent]));
+  }
 
   const csv = rows.map(r => r.map(c => {
     const s = (c === null || c === undefined) ? '' : String(c);
