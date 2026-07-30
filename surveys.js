@@ -417,13 +417,23 @@ function renderSurvey() {
   const currentIdx = surveyState.currentSection + 1; // -1 becomes 0
   const progress = Math.round((currentIdx / totalSections) * 100);
 
+  // Both arms render through this one template, so the heading and the
+  // before/after badge have to follow the form — they were hardcoded to the
+  // pre-platform wording, so a post survey collected the right answers under a
+  // header that said the opposite.
+  const isPost = isPostForm(surveyState.formType);
+  const armTitle = isPost ? 'Post-Platform Follow-Up Survey' : 'Pre-Platform Baseline Survey';
+  const armBadge = isPost
+    ? '⏩ About your experience SINCE the teaching website'
+    : '⏪ About your experience BEFORE the teaching website';
+
   let html = `
     <div class="survey-container">
       <div class="survey-header">
         <div style="font-size:32px;margin-bottom:6px;">${form.icon}</div>
-        <h2>Pre-Platform Baseline Survey</h2>
+        <h2>${armTitle}</h2>
         <p>${form.title}</p>
-        <p style="opacity:0.9;font-size:12px;margin-top:4px;background:rgba(255,255,255,0.15);display:inline-block;padding:3px 12px;border-radius:12px;">⏪ About your experience BEFORE the teaching website</p>
+        <p style="opacity:0.9;font-size:12px;margin-top:4px;background:rgba(255,255,255,0.15);display:inline-block;padding:3px 12px;border-radius:12px;">${armBadge}</p>
         <div class="survey-progress">
           <div class="survey-progress-bar" style="width:${progress}%"></div>
         </div>
