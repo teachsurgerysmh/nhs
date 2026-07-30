@@ -163,6 +163,13 @@ function switchView(view) {
     welcomeBanner.style.display = (isAdmin || currentLearner) ? 'none' : '';
     renderEvents();
   }
+
+  // The survey pills live outside every view container, so nothing was ever
+  // hiding them — they rendered on top of the calendar, the roster, the QI
+  // dashboard, everything. Tie them to the home view in one place rather than
+  // repeating a hide in all fifteen branches above.
+  const surveyHost = document.getElementById('surveyCardContainer');
+  if (surveyHost) surveyHost.style.display = (view === 'list' || !view) ? '' : 'none';
 }
 
 // ===================== FILTERING =====================
@@ -845,38 +852,69 @@ async function exportJournalClubFeedbackCSV() {
       (r || []).map(x => [x.q_relevance, x.q_presentation, x.q_discussion, x.q_venue, x.q_return, x.confidence, x.liked, x.improve, x.role, x.grade, x.created_at]));
   } catch (e) { alert('Could not export feedback.'); }
 }
+// Journal Club is a single one-off event, but its dashboard card occupied a
+// full-width panel on the admin dashboard permanently. Reduced to one small
+// button; the stats and exports move into a panel it opens on demand. Nothing
+// is loaded until the button is pressed, so the dashboard also gets three
+// fewer queries on every visit.
 async function loadJournalClubDashCard() {
   const host = document.getElementById('jcDashCardHost');
   if (!host) return;
   const isAdminView = isAdmin && !adminViewAsLearner;
   if (!isAdminView) { host.style.display = 'none'; return; }
   host.style.display = 'block';
-  host.innerHTML = '<div style="max-width:1100px;margin:18px auto 0;padding:0 16px;"><div style="background:linear-gradient(135deg,#003087,#001a4d);border:1px solid rgba(65,182,230,0.3);border-radius:14px;padding:18px 22px;color:#fff;font-size:13px;">Loading journal club…</div></div>';
+  host.innerHTML = `
+    <div style="max-width:1100px;margin:14px auto 0;padding:0 16px;">
+      <button onclick="openJournalClubPanel()"
+        style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;
+               border:1px solid var(--nhs-blue);background:transparent;color:var(--nhs-blue);
+               font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">
+        <span style="font-size:14px;">📄</span>Journal Club
+        <span style="opacity:.6;font-weight:400;">· registrations &amp; exports</span>
+      </button>
+      <div id="jcPanel" style="display:none;margin-top:12px;"></div>
+    </div>`;
+}
+
+async function openJournalClubPanel() {
+  const panel = document.getElementById('jcPanel');
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+
+  panel.style.display = '';
+  panel.innerHTML = '<div style="background:var(--nhs-bg);border:1px solid var(--nhs-pale-grey);border-radius:12px;padding:16px;font-size:13px;color:var(--nhs-grey);">Loading journal club…</div>';
   try {
-    const results = await Promise.all([
+    const [regs = [], refls = [], fbk = []] = await Promise.all([
       sbGet('journal_club_registrations', `event_key=eq.${JC_EVENT_KEY}&select=status`),
       sbGet('journal_club_reflections', `event_key=eq.${JC_EVENT_KEY}&select=id`),
       sbGet('journal_club_feedback', `event_key=eq.${JC_EVENT_KEY}&select=q_return`)
     ]);
-    const regs = results[0] || [], refls = results[1] || [], fbk = results[2] || [];
     const nConf = regs.filter(r => (r.status || 'confirmed') === 'confirmed').length;
     const nWait = regs.filter(r => r.status === 'waitlist').length;
-    const stat = (n, l, c) => `<div style="flex:1;min-width:80px;text-align:center;"><div style="font-size:24px;font-weight:800;color:${c};">${n}</div><div style="font-size:10px;letter-spacing:0.05em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-top:2px;">${l}</div></div>`;
-    const obtn = (t, fn) => `<button class="btn btn-outline" style="font-size:0.78rem;padding:7px 13px;color:#fff;border:1px solid rgba(255,255,255,0.4);" onclick="${fn}">${t}</button>`;
-    host.innerHTML = `<div style="max-width:1100px;margin:18px auto 0;padding:0 16px;">
-      <div style="background:linear-gradient(135deg,#003087,#001a4d);border:1px solid rgba(65,182,230,0.3);border-radius:14px;padding:18px 22px;color:#fff;box-shadow:0 6px 22px rgba(0,0,0,0.2);">
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#41b6e6;">Upcoming Event</div>
-        <div style="font-size:18px;font-weight:700;margin-top:2px;">GI Surgery Journal Club</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:14px;">Tue 14 Jul 2026 · 6:00–8:30pm · The Kensington Arms, Bristol</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;background:rgba(255,255,255,0.05);border-radius:10px;padding:14px 8px;">
-          ${stat(regs.length, 'Registered', '#fff')}${stat(nConf + '/28', 'Confirmed', '#4ade80')}${stat(nWait, 'Waitlist', '#f0a500')}${stat(refls.length, 'Reflections', '#41b6e6')}${stat(fbk.length, 'Feedback', '#41b6e6')}
+    const stat = (n, l) => `<div style="min-width:74px;text-align:center;">
+      <div style="font-size:20px;font-weight:800;color:var(--nhs-dark-blue);">${n}</div>
+      <div style="font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--nhs-grey);margin-top:2px;">${l}</div></div>`;
+    const obtn = (t, fn) => `<button class="btn btn-outline" style="font-size:11.5px;padding:5px 12px;color:var(--nhs-blue);border-color:var(--nhs-blue);" onclick="${fn}">${t}</button>`;
+
+    panel.innerHTML = `
+      <div style="background:var(--nhs-bg);border:1px solid var(--nhs-pale-grey);border-radius:12px;padding:16px 18px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--nhs-dark-blue);">GI Surgery Journal Club</div>
+            <div style="font-size:11.5px;color:var(--nhs-grey);">Tue 14 Jul 2026 · 6:00–8:30pm · The Kensington Arms, Bristol</div>
+          </div>
+          <button onclick="document.getElementById('jcPanel').style.display='none'"
+            style="background:none;border:none;color:var(--nhs-grey);font-size:12px;cursor:pointer;font-family:inherit;">Close</button>
         </div>
-        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;background:#fff;border-radius:10px;padding:12px 8px;">
+          ${stat(regs.length, 'Registered')}${stat(nConf + '/28', 'Confirmed')}${stat(nWait, 'Waitlist')}${stat(refls.length, 'Reflections')}${stat(fbk.length, 'Feedback')}
+        </div>
+        <div style="margin-top:12px;display:flex;gap:7px;flex-wrap:wrap;">
           ${obtn('Registrations CSV', 'exportJournalClubRegistrationsCSV()')}${obtn('Reflections CSV', 'exportJournalClubReflectionsCSV()')}${obtn('Feedback CSV', 'exportJournalClubFeedbackCSV()')}
         </div>
-      </div></div>`;
+      </div>`;
   } catch (e) {
-    host.innerHTML = '';
+    panel.innerHTML = '<div style="background:var(--nhs-bg);border:1px solid var(--nhs-pale-grey);border-radius:12px;padding:16px;font-size:13px;color:var(--nhs-red);">Could not load journal club data.</div>';
   }
 }
 

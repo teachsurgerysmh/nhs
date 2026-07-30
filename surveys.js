@@ -864,42 +864,76 @@ async function handleSurveyEmailClick() {
 }
 
 // ===================== HOMEPAGE CARD =====================
+// Two arms of the same QI study, as a pair of compact pills. They were two
+// full-width cards with six buttons showing on every page; that is a lot of
+// permanent furniture for something most people fill in once. Tapping a pill
+// reveals its three role choices inline and collapses the other.
 function renderSurveyCard() {
-  // Two arms of the same QI study, side by side: the pre-platform baseline
-  // (blue) and the post-platform follow-up (green). Same three respondent
-  // roles in each, so a person answers the arm that matches when they were here.
-  const btn = (color, formType, label) =>
-    `<button class="btn btn-outline" style="font-size:12px;padding:6px 14px;color:var(--${color});border-color:var(--${color});" onclick="openSurvey('${formType}')">${label}</button>`;
+  const pill = (id, colorVar, icon, label) =>
+    `<button id="surveyPill_${id}" onclick="toggleSurveyPill('${id}')"
+       style="display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:999px;
+              border:1px solid var(--${colorVar});background:transparent;color:var(--${colorVar});
+              font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+              transition:background .15s,color .15s;">
+       <span style="font-size:14px;">${icon}</span>${label}</button>`;
 
   return `
-    <div class="survey-home-card" id="surveyHomeCard">
-      <div class="survey-home-card-inner">
-        <div style="font-size:24px;">📊</div>
-        <div>
-          <strong>Pre-Platform Baseline Survey</strong>
-          <p style="font-size:12px;color:var(--nhs-grey);margin:2px 0 0;">How did surgical teaching work <strong>before</strong> this website? Help us capture the baseline — takes under 5 minutes.</p>
-        </div>
+    <div style="max-width:1100px;margin:14px auto 0;padding:0 16px;text-align:center;">
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        ${pill('pre', 'nhs-blue', '📊', 'Pre-platform survey')}
+        ${pill('post', 'nhs-green', '📈', 'Post-platform survey')}
       </div>
-      <div class="survey-home-links">
-        ${btn('nhs-blue', 'staff', 'Staff/Organiser')}
-        ${btn('nhs-blue', 'teacher', 'Session Teacher')}
-        ${btn('nhs-blue', 'trainee', 'Trainee')}
-      </div>
-    </div>
-    <div class="survey-home-card" id="surveyHomeCardPost">
-      <div class="survey-home-card-inner">
-        <div style="font-size:24px;">📈</div>
-        <div>
-          <strong>Post-Platform Follow-Up Survey</strong>
-          <p style="font-size:12px;color:var(--nhs-grey);margin:2px 0 0;">How is teaching working <strong>now</strong>, with the website? Same questions as the baseline so we can measure the difference — under 5 minutes.</p>
-        </div>
-      </div>
-      <div class="survey-home-links">
-        ${btn('nhs-green', 'staff_post', 'Staff/Organiser')}
-        ${btn('nhs-green', 'teacher_post', 'Session Teacher')}
-        ${btn('nhs-green', 'trainee_post', 'Trainee')}
+      <div id="surveyPillExpand" style="display:none;margin-top:10px;"></div>
+    </div>`;
+}
+
+const SURVEY_PILL_ARMS = {
+  pre:  { colorVar: 'nhs-blue',  blurb: 'How did teaching work <strong>before</strong> this website? Under 5 minutes.',
+          forms: [['staff','Staff / Organiser'], ['teacher','Session Teacher'], ['trainee','Trainee']] },
+  post: { colorVar: 'nhs-green', blurb: 'How is teaching working <strong>now</strong>? Same questions, so we can measure the difference.',
+          forms: [['staff_post','Staff / Organiser'], ['teacher_post','Session Teacher'], ['trainee_post','Trainee']] }
+};
+let _openSurveyPill = null;
+
+function toggleSurveyPill(which) {
+  const host = document.getElementById('surveyPillExpand');
+  if (!host) return;
+
+  // Second tap on the open pill closes it.
+  if (_openSurveyPill === which) {
+    host.style.display = 'none';
+    _openSurveyPill = null;
+    paintSurveyPills();
+    return;
+  }
+
+  const arm = SURVEY_PILL_ARMS[which];
+  if (!arm) return;
+  _openSurveyPill = which;
+  host.style.display = '';
+  host.innerHTML = `
+    <div style="display:inline-block;background:var(--nhs-bg);border:1px solid var(--nhs-pale-grey);
+                border-radius:12px;padding:12px 16px;max-width:520px;">
+      <p style="font-size:12px;color:var(--nhs-grey);margin:0 0 9px;">${arm.blurb}</p>
+      <div style="display:flex;gap:7px;justify-content:center;flex-wrap:wrap;">
+        ${arm.forms.map(([ft, label]) =>
+          `<button class="btn btn-outline" style="font-size:11.5px;padding:5px 12px;color:var(--${arm.colorVar});border-color:var(--${arm.colorVar});"
+             onclick="openSurvey('${ft}')">${label}</button>`).join('')}
       </div>
     </div>`;
+  paintSurveyPills();
+}
+
+// Fill the active pill so it reads as selected rather than just adjacent.
+function paintSurveyPills() {
+  Object.keys(SURVEY_PILL_ARMS).forEach(k => {
+    const el = document.getElementById('surveyPill_' + k);
+    if (!el) return;
+    const on = _openSurveyPill === k;
+    const c = SURVEY_PILL_ARMS[k].colorVar;
+    el.style.background = on ? `var(--${c})` : 'transparent';
+    el.style.color = on ? '#fff' : `var(--${c})`;
+  });
 }
 
 // ===================== PRE/POST COMPARISON =====================
