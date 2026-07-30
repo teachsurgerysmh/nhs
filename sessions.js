@@ -1237,12 +1237,24 @@ async function submitSiteFeedback() {
   else if (currentLearner) role = currentLearner.grade || 'Learner';
 
   try {
-    await sbInsert('site_feedback', {
-      type, subject, detail: detail || null,
-      submitted_by: name || null, email: email || null, role
+    // Write-only RPC, not a PostgREST insert. sbInsert() carries the global
+    // `Prefer: return=representation` header, so PostgREST issued
+    // INSERT ... RETURNING, which needs SELECT on top of INSERT — and anon has
+    // no SELECT on site_feedback (correctly; grievances must not be readable).
+    // Every logged-out submission failed 42501 -> 401. Granting anon SELECT
+    // would have exposed every report ever filed, so this goes through a
+    // SECURITY DEFINER function instead. See migration_v3.12.32.
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_site_feedback`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        p_type: type, p_subject: subject, p_detail: detail || null,
+        p_name: name || null, p_email: email || null, p_role: role
+      })
     });
+    if (!res.ok) throw new Error('submit_site_feedback failed: ' + res.status);
     document.getElementById('siteFbForm').style.display = 'none';
     document.getElementById('siteFbSuccess').style.display = '';
+    logQI('page_view', { metadata: { view: 'site_feedback_submitted', type } });
   } catch(e) {
     console.error('Feedback submit error:', e);
     showToast('Failed to submit. Please try again.');

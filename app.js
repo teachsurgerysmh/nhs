@@ -306,6 +306,24 @@ async function init() {
   if (surveyCardContainer) surveyCardContainer.innerHTML = renderSurveyCard();
   // Handle survey URL params (public survey or email one-click)
   const params = new URLSearchParams(window.location.search);
+
+  // ?report=bug|grievance|feature|feedback — opens the report form directly.
+  // This is what the QR codes on the ward posters point at. It deliberately
+  // does NOT require a login: the single most likely reason someone scans that
+  // poster is that they cannot get in, and a form that demands the thing you
+  // are stuck on is no use. Anon INSERT on site_feedback is already allowed.
+  const reportType = params.get('report');
+  if (reportType) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(() => {
+      const allowed = ['bug', 'grievance', 'feature', 'feedback'];
+      const t = allowed.includes(reportType) ? reportType : 'bug';
+      openSiteFeedbackModal();
+      const sel = document.getElementById('siteFbType');
+      if (sel) { sel.value = t; updateSiteFbPlaceholder(); }
+      logQI('page_view', { metadata: { view: 'report_' + t, source: 'poster_qr' } });
+    }, 400);
+  }
   // Email one-click survey answer: ?survey_answer=1&form=X&q=Y&a=Z&token=T
   const hasSurveyEmail = await handleSurveyEmailClick();
   if (hasSurveyEmail) {
