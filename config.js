@@ -4,12 +4,12 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.16';
+const APP_VERSION = 'v3.12.17';
 const APP_BUILD = '2026-07-30';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
 // ===================== SAFE COLUMN LISTS (exclude pin_code) =====================
-const LEARNER_FIELDS = 'id,name,email,grade,specialty,placement,placement_start,placement_end,verified,created_at,rotation_block,role,contact_id,followup_eligible';
+const LEARNER_FIELDS = 'id,name,email,personal_email,phone,grade,specialty,placement,placement_start,placement_end,verified,created_at,rotation_block,role,contact_id,followup_eligible';
 const CONTACT_FIELDS = 'id,name,role,email,phone,specialty,notes,added_by,created_at,is_manager';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;

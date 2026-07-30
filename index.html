@@ -452,6 +452,10 @@
         <input type="text" id="regName" placeholder="e.g. Dr John Smith">
         <label>NHS Email *</label>
         <input type="email" id="regEmail" placeholder="name@nhs.net or name@nbt.nhs.uk" autocomplete="username" autocapitalize="none" spellcheck="false">
+        <label>Personal Email *</label>
+        <input type="email" id="regPersonalEmail" placeholder="name@gmail.com" autocomplete="email" autocapitalize="none" spellcheck="false">
+        <label>Mobile Number *</label>
+        <input type="tel" id="regPhone" placeholder="07700 900123" autocomplete="tel" inputmode="tel">
         <label>Grade *</label>
         <select id="regGrade">
           <option value="">-- Select grade --</option>
@@ -472,8 +476,8 @@
           <option value="apr_aug">April - August</option>
         </select>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div><label>Placement Start</label><input type="date" id="regPlacementStart"></div>
-          <div><label>Placement End</label><input type="date" id="regPlacementEnd"></div>
+          <div><label>Placement Start *</label><input type="date" id="regPlacementStart"></div>
+          <div><label>Placement End *</label><input type="date" id="regPlacementEnd"></div>
         </div>
         <div style="margin-top:14px;text-align:center;">
           <button class="btn btn-green" onclick="doLearnerRegister()" style="width:100%;">Register</button>

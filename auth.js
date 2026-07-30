@@ -546,14 +546,25 @@ function onRotationBlockChange() {
 async function doLearnerRegister() {
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim().toLowerCase();
+  const personalEmail = document.getElementById('regPersonalEmail').value.trim().toLowerCase();
+  const phone = document.getElementById('regPhone').value.trim();
   const grade = document.getElementById('regGrade').value;
   const placement = document.getElementById('regPlacement').value;
   const placementStart = document.getElementById('regPlacementStart').value;
   const placementEnd = document.getElementById('regPlacementEnd').value;
   const rotationBlock = document.getElementById('regRotationBlock').value;
 
-  if (!name || !email || !grade || !placement) { showToast('Please fill in all required fields'); return; }
+  // Every field is mandatory. Rotation block is the one exception: its empty
+  // value means "custom dates", and picking a block just auto-fills the two
+  // date fields below — so the dates are what actually get required.
+  if (!name || !email || !personalEmail || !phone || !grade || !placement || !placementStart || !placementEnd) {
+    showToast('Please fill in all fields'); return;
+  }
   if (!email.endsWith('@nhs.net') && !email.endsWith('@nbt.nhs.uk')) { showToast('Please use an NHS email (@nhs.net or @nbt.nhs.uk)'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(personalEmail)) { showToast('Please enter a valid personal email'); return; }
+  if (personalEmail === email) { showToast('Your personal email must be different from your NHS email'); return; }
+  if (phone.replace(/\D/g, '').length < 10) { showToast('Please enter a valid mobile number'); return; }
+  if (placementEnd < placementStart) { showToast('Placement end date must be after the start date'); return; }
 
   // Check for existing learner with same email (case-insensitive).
   // anon can't SELECT learners directly (RLS) — use SECURITY DEFINER RPC,
@@ -586,7 +597,8 @@ async function doLearnerRegister() {
         p_name: name, p_email: email, p_grade: grade, p_placement: placement,
         p_placement_start: placementStart || null,
         p_placement_end: placementEnd || null,
-        p_rotation_block: rotationBlock || null
+        p_rotation_block: rotationBlock || null,
+        p_phone: phone, p_personal_email: personalEmail
       })
     });
     if (!regRes.ok) {
