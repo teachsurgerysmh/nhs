@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://rufihxjquwrluaenmbaa.supabase.co https://www.gov.uk; img-src 'self' data: https:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';">
 <link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
-<link rel="stylesheet" href="styles.css?v=3.12.27">
+<link rel="stylesheet" href="styles.css?v=3.12.31">
 </head>
 <body>
 
@@ -103,16 +103,18 @@
 
 <div id="surveyCardContainer"></div>
 
-<!-- Featured link: General Surgery Induction Handbook (sign-in required) -->
-<div style="max-width:1100px;margin:22px auto 0;padding:0 16px;">
-  <a href="induction.html" style="text-decoration:none;display:block;">
-    <div style="background:linear-gradient(135deg,#003087 0%,#001a4d 100%);border:1px solid rgba(65,182,230,0.35);border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;box-shadow:0 8px 28px rgba(0,0,0,0.25);">
-      <div style="flex:1;min-width:240px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#41b6e6;margin-bottom:6px;">Sign-in required</div>
-        <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px;">General Surgery Induction Handbook</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.65);">Bleeps, referrals, algorithms &amp; day-1 essentials for Southmead surgical trainees</div>
+<!-- Featured link: General Surgery Induction Handbook (sign-in required).
+     Styling lives in styles.css (.handbook-*) rather than inline, so the mobile
+     media query can compact it — inline styles can't respond to viewport. -->
+<div class="handbook-banner" id="handbookBanner">
+  <a href="induction.html">
+    <div class="handbook-card">
+      <div class="handbook-text">
+        <div class="handbook-eyebrow">Sign-in required</div>
+        <div class="handbook-title">General Surgery Induction Handbook</div>
+        <div class="handbook-sub">Bleeps, referrals, algorithms &amp; day-1 essentials for Southmead surgical trainees</div>
       </div>
-      <div style="background:#009639;color:#fff;font-weight:700;font-size:14px;padding:12px 26px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,150,57,0.4);">Open Handbook →</div>
+      <div class="handbook-cta">Open<span class="handbook-cta-long"> Handbook</span> →</div>
     </div>
   </a>
 </div>
@@ -766,16 +768,16 @@
   </div>
 </div>
 
-<script src="demodata.js?v=3.12.27"></script>
-<script src="config.js?v=3.12.27"></script>
-<script src="auth.js?v=3.12.27"></script>
-<script src="sessions.js?v=3.12.27"></script>
-<script src="messaging.js?v=3.12.27"></script>
-<script src="learner.js?v=3.12.27"></script>
-<script src="actions.js?v=3.12.27"></script>
-<script src="surveys.js?v=3.12.27"></script>
-<script src="analytics.js?v=3.12.27"></script>
-<script src="errorlog.js?v=3.12.27"></script>
-<script src="app.js?v=3.12.27"></script>
+<script src="demodata.js?v=3.12.31"></script>
+<script src="config.js?v=3.12.31"></script>
+<script src="auth.js?v=3.12.31"></script>
+<script src="sessions.js?v=3.12.31"></script>
+<script src="messaging.js?v=3.12.31"></script>
+<script src="learner.js?v=3.12.31"></script>
+<script src="actions.js?v=3.12.31"></script>
+<script src="surveys.js?v=3.12.31"></script>
+<script src="analytics.js?v=3.12.31"></script>
+<script src="errorlog.js?v=3.12.31"></script>
+<script src="app.js?v=3.12.31"></script>
 </body>
 </html>

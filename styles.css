@@ -953,3 +953,73 @@ body.is-learner .learner-only-block { display: block !important; }
 @media (max-width: 380px) {
   .qi-kpi-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Induction handbook banner + survey pills ────────────────────────────
+   Both are HOMEPAGE furniture, not chrome. Two problems fixed here:
+
+   1. Nothing hid the handbook banner when the view changed, so it sat on top
+      of the calendar, roster, feedback and QI dashboard too. switchView() now
+      ties it to the home view alongside the survey pills.
+
+   2. On a 375px phone the card was 231px tall — with the pills above it you
+      scrolled past ~640px before reaching a single session, and after login
+      the welcome banner is hidden so it all floats up into view at once.
+      Below 640px the card collapses to a single non-wrapping row (~64px):
+      the sub-line goes (the title already says what it is) and the text block
+      gets min-width:0 so it shrinks instead of pushing the button onto its
+      own line. Same colours, just not half the screen. */
+.handbook-banner { max-width: 1100px; margin: 22px auto 0; padding: 0 16px; }
+.handbook-banner a { text-decoration: none; display: block; }
+.handbook-card {
+  background: linear-gradient(135deg, #003087 0%, #001a4d 100%);
+  border: 1px solid rgba(65,182,230,0.35);
+  border-radius: 14px; padding: 20px 24px;
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+}
+.handbook-text { flex: 1; min-width: 240px; }
+.handbook-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: #41b6e6; margin-bottom: 6px;
+}
+.handbook-title { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.handbook-sub { font-size: 13px; color: rgba(255,255,255,0.65); }
+.handbook-cta {
+  background: #009639; color: #fff; font-weight: 700; font-size: 14px;
+  padding: 12px 26px; border-radius: 8px; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,150,57,0.4);
+}
+
+.survey-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 16px; border-radius: 999px; background: transparent;
+  font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background .15s, color .15s;
+}
+
+@media (max-width: 640px) {
+  .handbook-banner { margin-top: 12px; padding: 0 12px; }
+  .handbook-card {
+    padding: 12px 14px; gap: 12px; flex-wrap: nowrap;
+    border-radius: 11px; box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  }
+  .handbook-text { min-width: 0; }
+  /* The title is what people are looking for, so it gets the space: the
+     "sign-in required" eyebrow and the word "Handbook" in the button both go,
+     and the title is allowed two lines rather than being ellipsised to
+     "General Surgery Ind…". */
+  .handbook-eyebrow { display: none; }
+  .handbook-title {
+    font-size: 15px; line-height: 1.3; margin-bottom: 0;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .handbook-sub { display: none; }
+  .handbook-cta { font-size: 14px; padding: 10px 16px; border-radius: 7px; }
+  .handbook-cta-long { display: none; }
+
+  /* Two pills at the desktop size total ~360px and wrap to two rows in 343px
+     of usable width. Trimmed just enough to sit on one line. */
+  .survey-pill { padding: 6px 12px; font-size: 12px; gap: 5px; }
+  .survey-pill .survey-pill-icon { font-size: 12px; }
+}

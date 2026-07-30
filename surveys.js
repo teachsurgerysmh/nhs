@@ -879,13 +879,12 @@ async function handleSurveyEmailClick() {
 // permanent furniture for something most people fill in once. Tapping a pill
 // reveals its three role choices inline and collapses the other.
 function renderSurveyCard() {
+  // Sizing lives in .survey-pill (styles.css) so the mobile media query can
+  // shrink them onto one row; only the per-arm colour stays inline.
   const pill = (id, colorVar, icon, label) =>
-    `<button id="surveyPill_${id}" onclick="toggleSurveyPill('${id}')"
-       style="display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:999px;
-              border:1px solid var(--${colorVar});background:transparent;color:var(--${colorVar});
-              font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
-              transition:background .15s,color .15s;">
-       <span style="font-size:14px;">${icon}</span>${label}</button>`;
+    `<button id="surveyPill_${id}" class="survey-pill" onclick="toggleSurveyPill('${id}')"
+       style="border:1px solid var(--${colorVar});color:var(--${colorVar});">
+       <span class="survey-pill-icon" style="font-size:14px;">${icon}</span>${label}</button>`;
 
   return `
     <div style="max-width:1100px;margin:14px auto 0;padding:0 16px;text-align:center;">

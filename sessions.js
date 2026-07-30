@@ -164,12 +164,17 @@ function switchView(view) {
     renderEvents();
   }
 
-  // The survey pills live outside every view container, so nothing was ever
-  // hiding them — they rendered on top of the calendar, the roster, the QI
-  // dashboard, everything. Tie them to the home view in one place rather than
+  // The survey pills and the handbook banner both live outside every view
+  // container, so nothing was ever hiding them — they rendered on top of the
+  // calendar, the roster, the QI dashboard, everything. The handbook card is
+  // 231px tall on a phone, so on mobile it pushed the actual content of every
+  // page below the fold. Tie both to the home view in one place rather than
   // repeating a hide in all fifteen branches above.
-  const surveyHost = document.getElementById('surveyCardContainer');
-  if (surveyHost) surveyHost.style.display = (view === 'list' || !view) ? '' : 'none';
+  const isHome = (view === 'list' || !view);
+  ['surveyCardContainer', 'handbookBanner'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isHome ? '' : 'none';
+  });
 }
 
 // ===================== FILTERING =====================

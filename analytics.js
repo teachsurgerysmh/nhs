@@ -239,6 +239,8 @@ function renderQIDashboard() {
       </div>
     </div>
 
+    ${renderQITrafficBanner(d)}
+
     <div class="qi-section-title">Top-line KPIs</div>
     <div class="qi-kpi-grid">
       ${kpi('Sessions',        k.total_sessions,       (k.completed_sessions||0) + ' completed · ' + (k.cancelled_sessions||0) + ' cancelled')}
@@ -408,6 +410,58 @@ function renderQIDashboard() {
   c.innerHTML = html;
   renderQIWeeklyChart();
   renderQIInductionChart();
+}
+
+// ===================== TRAFFIC QUALITY =====================
+// NBT Mimecast pre-fetches every link in every email, so any metric that counts
+// a GET on an emailed URL is inflated by an unknown amount. This sits ABOVE the
+// KPIs deliberately: an unfiltered handbook figure was once read as "70% of
+// readers turned away" when the true number was zero, and the same trap applies
+// to feedback-link opens (54% discounted) and absence replies (90%).
+//
+// Committed actions are NOT affected and are not discounted here — feedback
+// submissions, certificates, attendance and logins all require a POST after a
+// click and every one carries an actor. Those numbers stand as they are.
+function renderQITrafficBanner(d) {
+  const t = d.traffic;
+  if (!t || t.available === false || !t.kpis || !t.kpis.total_events) return '';
+  const k = t.kpis;
+  const num = v => (v === null || v === undefined ? 0 : Number(v));
+  const discounted = num(k.total_named_automation) + num(k.total_probable_prefetch);
+  if (!discounted) return '';
+
+  const worst = (t.by_event || [])
+    .filter(r => num(r.raw_events) >= 10 && num(r.pct_discounted) >= 25)
+    .sort((a, b) => num(b.raw_events) - num(b.human_attributable) - (num(a.raw_events) - num(a.human_attributable)))
+    .slice(0, 6);
+
+  return `
+    <div class="qi-card" style="border-left:4px solid var(--nhs-orange);background:#fffaf0;margin-bottom:18px;">
+      <div style="font-weight:600;color:var(--nhs-dark-blue);margin-bottom:6px;">
+        Traffic quality — ${discounted.toLocaleString()} of ${num(k.total_events).toLocaleString()} logged events are not people
+      </div>
+      <div style="font-size:13px;color:var(--nhs-dark-blue);line-height:1.55;margin-bottom:10px;">
+        ${num(k.total_named_automation)} carry an outright automation user-agent;
+        ${num(k.total_probable_prefetch)} are emailed-link opens with no actor arriving in bursts —
+        the NBT Mimecast pre-fetch signature. <strong>Reach metrics below are inflated by this; committed
+        actions (feedback submitted, certificates, attendance, logins) are not affected.</strong>
+      </div>
+      ${worst.length ? `<table class="qi-table" style="margin-top:6px;">
+        <thead><tr><th>Metric</th><th>Raw</th><th>Real</th><th>Discounted</th></tr></thead>
+        <tbody>
+          ${worst.map(r => `<tr>
+            <td><code style="font-size:11px;">${esc(r.event_type)}</code></td>
+            <td>${r.raw_events}</td>
+            <td><strong>${r.human_attributable}</strong></td>
+            <td style="color:var(--nhs-red);font-weight:600;">${r.pct_discounted}%</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : ''}
+      <div style="font-size:11px;color:var(--nhs-grey);margin-top:8px;line-height:1.5;">
+        Quote the <strong>Real</strong> column. Nothing is deleted — the raw rows remain in
+        <code>qi_events</code>, and the split is reproducible from <code>qi_traffic_quality</code>.
+      </div>
+    </div>`;
 }
 
 // ===================== INDUCTION HANDBOOK SECTION =====================
@@ -751,6 +805,14 @@ function exportQICSV() {
   rows.push(['== PDSA Cycles ==']);
   rows.push(['cycle','title','version','started_at','invites','confirmed','confirm_pct','attendance','feedback','mean_rating']);
   (_qiData.pdsa_metrics || []).forEach(p => rows.push([p.cycle_number, p.title, p.app_version, p.started_at, p.invites_sent, p.invites_confirmed, p.confirmation_rate_pct, p.attendances, p.feedback_count, p.mean_rating]));
+
+  const tq = _qiData.traffic;
+  if (tq && tq.available !== false) {
+    rows.push([]);
+    rows.push(['== Traffic quality (bot / prefetch classification) ==']);
+    rows.push(['event_type','raw_events','named_automation','probable_prefetch','human_attributable','pct_discounted','distinct_actors','prefetch_exposed']);
+    (tq.by_event || []).forEach(r => rows.push([r.event_type, r.raw_events, r.named_automation, r.probable_prefetch, r.human_attributable, r.pct_discounted, r.distinct_actors, r.prefetch_exposed]));
+  }
 
   const ind = _qiData.induction;
   if (ind && ind.available !== false) {
