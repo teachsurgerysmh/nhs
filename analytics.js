@@ -49,6 +49,9 @@ const QI_EVENT_TYPES = new Set([
   'induction_nav_click','induction_link_click','induction_copy',
   'induction_session_summary',
   'intro_video_played','intro_video_completed',
+  // takeflow.html — the public, no-sign-in flowchart page the office posters
+  // point at. Separate from the handbook because it carries no contact details.
+  'takeflow_opened',
   // Invite links (time-limited non-NHS registration)
   'invite_created','invite_revoked','invite_link_opened',
   'invite_link_redeemed','invite_link_rejected',
