@@ -1199,10 +1199,25 @@ async function _applyPasskeySession(result) {
   }
 }
 
+// Only one WebAuthn ceremony can be in flight per page at a time. The
+// conditional (autofill) request from initPasskeyUI() runs silently in the
+// background and stays pending until the user picks a suggestion — if a
+// manual login click or enrolPasskey() then starts a second ceremony, the
+// browser throws "A request is already pending." So every entry point calls
+// _pkAbortConditional() first to cancel any outstanding background request.
+let _pkConditionalAbort = null;
+function _pkAbortConditional() {
+  if (_pkConditionalAbort) {
+    try { _pkConditionalAbort.abort(); } catch (_) {}
+    _pkConditionalAbort = null;
+  }
+}
+
 // email is optional. Omit it and the browser offers whatever passkey it
 // holds for this site — no typing at all. mediation 'conditional' drives
 // the iOS autofill-style suggestion above the keyboard.
 async function doPasskeyLogin(email, mediation) {
+  if (mediation !== 'conditional') _pkAbortConditional();
   const options = await callPasskey({ action: 'auth_options', email: email || '' }, false);
   const pk = Object.assign({}, options);
   pk.challenge = _pkB64uToBuf(options.challenge);
@@ -1212,8 +1227,17 @@ async function doPasskeyLogin(email, mediation) {
     delete pk.allowCredentials;
   }
   const getOpts = { publicKey: pk };
-  if (mediation) getOpts.mediation = mediation;
-  const a = await navigator.credentials.get(getOpts);
+  if (mediation) {
+    getOpts.mediation = mediation;
+    _pkConditionalAbort = new AbortController();
+    getOpts.signal = _pkConditionalAbort.signal;
+  }
+  let a;
+  try {
+    a = await navigator.credentials.get(getOpts);
+  } finally {
+    if (mediation) _pkConditionalAbort = null;
+  }
   if (!a) return false;
   const payload = {
     id: a.id,
@@ -1250,6 +1274,7 @@ async function passkeyLoginClick(kind) {
 // add a passkey to an account you've already proved you own.
 async function enrolPasskey(silent) {
   try {
+    _pkAbortConditional();
     if (!(await passkeyPlatformAvailable())) {
       if (!silent) showToast('This device does not support Face ID / Touch ID sign-in');
       return false;

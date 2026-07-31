@@ -518,6 +518,7 @@ async function checkForNotifications() {
 // Check for today's sessions on load
 async function checkTodayReminder() {
   if (!isAdmin || isDemoMode) return;
+  if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
   const shown = sessionStorage.getItem('sst_today_reminded');
   if (shown === new Date().toDateString()) return;
