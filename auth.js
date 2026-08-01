@@ -427,11 +427,18 @@ async function completeAccountSetup(learnerId) {
   }
 }
 
+// ── Forgot password ──
+// authenticate v10's reset_password requires a verification_token issued by a
+// purpose='reset' email code. Three steps: request code → verify code → set
+// password. Sending email + new_password alone always 400s.
+let fpVerificationToken = null;
+
 function showForgotPassword() {
   document.getElementById('learnerLoginForm').style.display = 'none';
   document.getElementById('learnerRegisterForm').style.display = 'none';
   document.getElementById('learnerPinDisplay').style.display = 'none';
   document.getElementById('learnerModalTitle').textContent = 'Reset Password';
+  fpVerificationToken = null;
   // Create forgot password form
   let fpDiv = document.getElementById('forgotPasswordForm');
   if (!fpDiv) {
@@ -441,9 +448,14 @@ function showForgotPassword() {
   }
   fpDiv.style.display = '';
   fpDiv.innerHTML = `
-    <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">Enter your NHS email to reset your password.</p>
-    <label>NHS Email</label>
-    <input type="email" id="fpEmail" placeholder="name@nhs.net or name@nbt.nhs.uk">
+    <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">Enter your email and we'll send you a 6-digit reset code.</p>
+    <label>Email</label>
+    <input type="email" id="fpEmail" placeholder="name@nhs.net or name@nbt.nhs.uk" autocomplete="username">
+    <div id="fpCodeFields" style="display:none;margin-top:12px;">
+      <label>6-digit code <span style="font-weight:400;color:var(--nhs-grey);">— check your junk folder</span></label>
+      <input type="text" id="fpCode" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+      <div style="margin-top:6px;font-size:12px;"><a href="#" onclick="fpResendCode();return false;">Send a new code</a></div>
+    </div>
     <div id="fpNewFields" style="display:none;margin-top:12px;">
       <label>New Password</label>
       <input type="password" id="fpNewPin1" placeholder="Enter new password" autocomplete="new-password">
@@ -451,7 +463,7 @@ function showForgotPassword() {
       <input type="password" id="fpNewPin2" placeholder="Confirm new password" autocomplete="new-password">
     </div>
     <div style="margin-top:14px;text-align:center;">
-      <button class="btn btn-green" id="fpSubmitBtn" onclick="handleForgotPassword()" style="width:100%;">Verify Email</button>
+      <button class="btn btn-green" id="fpSubmitBtn" onclick="handleForgotPassword()" style="width:100%;">Send Code</button>
     </div>
     <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--nhs-grey);">
       <a href="#" onclick="showLearnerLoginForm();document.getElementById('forgotPasswordForm').style.display='none';return false;">Back to login</a>
@@ -461,33 +473,79 @@ function showForgotPassword() {
 async function handleForgotPassword() {
   const email = document.getElementById('fpEmail').value.trim().toLowerCase();
   if (!email) { showToast('Please enter your email'); return; }
+  const codeFields = document.getElementById('fpCodeFields');
   const newFields = document.getElementById('fpNewFields');
-  if (newFields.style.display === 'none') {
-    // Step 1: verify email exists (server-side)
+  const btn = document.getElementById('fpSubmitBtn');
+
+  // Step 1: request a reset code by email
+  if (codeFields.style.display === 'none') {
+    btn.disabled = true;
     try {
-      const result = await callAuth({ action: 'verify_email', type: 'learner', email });
-      newFields.style.display = '';
+      await callAuth({ action: 'request_email_code', type: 'learner', email, purpose: 'reset' });
+      codeFields.style.display = '';
       document.getElementById('fpEmail').setAttribute('readonly', true);
-      document.getElementById('fpSubmitBtn').textContent = 'Reset Password';
-      document.getElementById('fpSubmitBtn').setAttribute('onclick', `doResetPassword('${email}', ${result.id})`);
-      showToast('Email verified! Set your new password.');
-    } catch(e) { showToast('No account found with that email'); }
+      btn.textContent = 'Verify Code';
+      // Worded the same whether or not the account exists — never confirm
+      // which addresses are registered.
+      showToast('If an account exists for that email, a code is on its way.', 5000);
+    } catch(e) {
+      logError('forgot_password_request_code', e, { email });
+      showToast(e.message || 'Could not send a code. Please try again.');
+    } finally { btn.disabled = false; }
+    return;
   }
+
+  // Step 2: exchange the code for a verification token
+  if (newFields.style.display === 'none') {
+    const code = document.getElementById('fpCode').value.trim();
+    if (!/^\d{6}$/.test(code)) { showToast('Enter the 6-digit code from the email'); return; }
+    btn.disabled = true;
+    try {
+      const result = await callAuth({ action: 'verify_email_code', type: 'learner', email, code, purpose: 'reset' });
+      fpVerificationToken = result.verification_token;
+      newFields.style.display = '';
+      document.getElementById('fpCode').setAttribute('readonly', true);
+      btn.textContent = 'Reset Password';
+      showToast('Code verified — set your new password.');
+    } catch(e) {
+      showToast(e.message || 'Incorrect or expired code.');
+    } finally { btn.disabled = false; }
+    return;
+  }
+
+  // Step 3: set the new password
+  await doResetPassword(email);
 }
 
-async function doResetPassword(email, learnerId) {
+async function doResetPassword(email) {
   const p1 = document.getElementById('fpNewPin1').value.trim();
   const p2 = document.getElementById('fpNewPin2').value.trim();
   if (!p1 || p1.length < 4) { showToast('Password must be at least 4 characters'); return; }
   if (p1 !== p2) { showToast('Passwords do not match'); return; }
+  if (!fpVerificationToken) { showToast('Please verify your email code first'); return; }
+  const btn = document.getElementById('fpSubmitBtn');
+  btn.disabled = true;
   try {
-    await callAuth({ action: 'reset_password', type: 'learner', email, new_password: p1 });
-    logQI('password_reset', { actor_type: 'learner', actor_email: email, metadata: { who: 'learner' } });
+    await callAuth({ action: 'reset_password', type: 'learner', email, new_password: p1, verification_token: fpVerificationToken });
+    logQI('password_reset', { actor_type: 'learner', actor_email: email, metadata: { who: 'learner', method: 'email_code' } });
+    fpVerificationToken = null;
     showToast('Password reset! You can now log in.');
     document.getElementById('forgotPasswordForm').style.display = 'none';
     showLearnerLoginForm();
     document.getElementById('learnerEmail').value = email;
-  } catch(e) { showToast('Reset failed. Try again.'); }
+  } catch(e) {
+    logError('forgot_password_reset', e, { email });
+    showToast(e.message || 'Reset failed. Try again.');
+  } finally { btn.disabled = false; }
+}
+
+async function fpResendCode() {
+  const email = document.getElementById('fpEmail').value.trim().toLowerCase();
+  if (!email) { showToast('Please enter your email'); return; }
+  try {
+    await callAuth({ action: 'request_email_code', type: 'learner', email, purpose: 'reset' });
+    showToast('New code sent. It expires in 15 minutes.');
+  } catch(e) { showToast(e.message || 'Could not resend — please wait a minute and try again.'); }
 }
 
 // ── Admin/Learner View Toggle ──
@@ -854,8 +912,13 @@ async function doLearnerRegister() {
       })
     });
     if (!regRes.ok) {
+      // The RPC raises readable, user-facing messages (duplicate name, bad
+      // phone, personal email same as main). Show those verbatim rather than
+      // a raw status + JSON blob.
       const errBody = await regRes.text();
-      throw new Error(`Registration failed: ${regRes.status}${errBody ? ' — ' + errBody : ''}`);
+      let msg = '';
+      try { msg = (JSON.parse(errBody).message || '').trim(); } catch(_) {}
+      throw new Error(msg || `Registration failed: ${regRes.status}${errBody ? ' — ' + errBody : ''}`);
     }
     const result = await regRes.json();
     // Set password server-side
@@ -904,8 +967,15 @@ async function doLearnerRegister() {
     }
   } catch(e) {
     console.error('Registration error:', e);
-    if (e.message && e.message.includes('409')) {
+    logError('learner_register', e, { email });
+    const msg = (e && e.message || '').trim();
+    if (/learners_email_key|duplicate key/i.test(msg)) {
+      // Unique index on email — not the name guard, which raises its own text.
       showToast('An account with this email already exists. Please login.');
+    } else if (msg && !/^Registration failed:/.test(msg) && !msg.startsWith('{')) {
+      // register_learner's own messages are written for the user; the name
+      // guard's in particular tells them which account to use instead.
+      showToast(msg, 9000);
     } else {
       showToast('Registration failed. Please try again.');
     }

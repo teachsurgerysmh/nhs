@@ -25,7 +25,11 @@ const QI_EVENT_TYPES = new Set([
   // Attendance
   'attendance_self_marked','attendance_admin_marked','attendance_via_feedback',
   'attendance_approved','attendance_rejected','attendance_removed',
-  'absence_reason_given',
+  // absence_link_opened = the link was fetched (prefetchable, a reach metric).
+  // absence_reason_given = a reason was actually recorded. Before 2026-07-31
+  // the submit path was broken, so every absence_reason_given row older than
+  // that is really just a link open — see migration_v3.12.35c.
+  'absence_link_opened','absence_reason_given',
   // Feedback
   'feedback_request_sent','feedback_reminder_sent','feedback_submitted',
   'feedback_qr_scan','feedback_link_opened',
@@ -128,7 +132,9 @@ function logQILandingFromURL() {
                                        { session_id: parseInt(p.get('session')) || null,
                                          metadata: { teacher_email: (function(t){ try { return atob(t||'').split(':').slice(1).join(':'); } catch(e){ return null; } })(p.get('token')) },
                                          source: 'email' });
-    if (p.get('absence_token'))  logQI('absence_reason_given', { metadata: { reason: p.get('reason') || null }, source: 'email' });
+    // Landing only — this fires on a bare GET, so Mimecast triggers it too.
+    // The reason itself is logged in learner.js when the button is pressed.
+    if (p.get('absence_token'))  logQI('absence_link_opened', { metadata: { reason: p.get('reason') || null }, source: 'email' });
   } catch (e) { console.warn('[qi] landing log failed:', e); }
 }
 

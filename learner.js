@@ -2309,6 +2309,24 @@ const ABSENCE_REASONS = {
   other: 'Other reason'
 };
 
+// Token for the absence link currently on screen. Held in memory rather than
+// in the URL so the reason buttons never navigate — see the two-step note below.
+let _absenceToken = null;
+let _absenceInfo = null;
+
+// Both calls go through SECURITY DEFINER RPCs. The table has no anon policies
+// at all now: it used to carry `anon SELECT USING (true)`, which made all 76
+// rows — learner_id, session_id, the stated reason and the tokens themselves —
+// readable by anyone holding the public anon key.
+async function absenceRpc(fn, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST', headers, body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`${fn} failed: ${res.status}`);
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
 async function handleAbsenceURLParams() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('absence_token');
@@ -2317,42 +2335,95 @@ async function handleAbsenceURLParams() {
 
   // Clear URL params
   window.history.replaceState({}, '', window.location.pathname);
+  _absenceToken = token;
 
   const container = document.getElementById('absenceLandingView');
   container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div>';
   switchView('absenceLanding');
 
   try {
-    const records = await sbGet('absence_reasons', `token=eq.${encodeURIComponent(token)}&select=*`);
-    if (records.length === 0) {
+    const info = await absenceRpc('lookup_absence_token', { p_token: token });
+    if (!info || !info.found) {
       container.innerHTML = renderAbsenceLanding('error', 'This link has expired or is invalid.');
       return true;
     }
-    const record = records[0];
-    if (record.submitted_at) {
+    if (info.already_submitted) {
       container.innerHTML = renderAbsenceLanding('already', 'You have already submitted your response. Thank you!');
       return true;
     }
+    _absenceInfo = info;
 
-    if (reason && reason !== 'other') {
-      // Direct submission from email button
-      await sbUpdate('absence_reasons', record.id, {
-        reason: reason,
-        submitted_at: new Date().toISOString()
-      });
-      container.innerHTML = renderAbsenceLanding('success', `Thank you for letting us know. Your response has been recorded: <strong>${ABSENCE_REASONS[reason] || reason}</strong>`);
+    // TWO-STEP, ALWAYS. This page is reached by clicking a link in an email,
+    // and NBT's Mimecast pre-fetches every link in every message — so anything
+    // that writes on GET fires itself before the human sees it. Arriving with
+    // &reason=... only pre-selects; nothing is recorded until a button here is
+    // pressed. Same reason the teacher confirm/decline links are two-step.
+    if (reason && reason !== 'other' && ABSENCE_REASONS[reason]) {
+      container.innerHTML = renderAbsenceConfirm(reason, info);
     } else if (reason === 'other') {
-      // Show text input form
-      container.innerHTML = renderAbsenceOtherForm(token, record.id);
+      container.innerHTML = renderAbsenceOtherForm(info);
     } else {
-      // Show all options (fallback)
-      container.innerHTML = renderAbsenceChoices(token, record);
+      container.innerHTML = renderAbsenceChoices(info);
     }
   } catch(e) {
     console.error('Absence token error:', e);
+    logError('absence_lookup', e, {});
     container.innerHTML = renderAbsenceLanding('error', 'Something went wrong. Please try again later.');
   }
   return true;
+}
+
+function absenceHeader(info) {
+  const who = info && info.learner_first_name ? `Hi ${info.learner_first_name},` : '';
+  const what = info && info.session_topic
+    ? `<p style="font-size:13px;color:var(--nhs-grey);margin-bottom:4px;">${info.session_topic}${info.session_date ? ' · ' + info.session_date : ''}</p>`
+    : '';
+  return `<img src="${LOGO_URL}" alt="Logo" style="height:60px;margin-bottom:16px;">
+    <h2 style="color:var(--nhs-dark-blue);margin-bottom:8px;">Southmead Surgical Teaching</h2>
+    ${what}
+    ${who ? `<p style="font-size:14px;color:var(--nhs-dark-blue);margin-bottom:4px;">${who}</p>` : ''}`;
+}
+
+function renderAbsenceConfirm(reason, info) {
+  return `<div style="max-width:500px;margin:60px auto;text-align:center;padding:30px;">
+    ${absenceHeader(info)}
+    <p style="font-size:14px;color:var(--nhs-grey);margin:12px 0 16px;">Just to confirm, your reason for missing the session was:</p>
+    <div style="padding:14px;margin-bottom:18px;background:white;border:1.5px solid var(--nhs-blue);border-radius:8px;font-size:15px;color:var(--nhs-dark-blue);font-weight:600;">${ABSENCE_REASONS[reason]}</div>
+    <button class="btn btn-green" style="padding:12px 36px;font-size:15px;width:100%;max-width:400px;" onclick="submitAbsenceReason('${reason}')">Confirm</button>
+    <div style="margin-top:14px;font-size:13px;">
+      <a href="#" onclick="showAbsenceChoices();return false;" style="color:var(--nhs-blue);">Choose a different reason</a>
+    </div>
+  </div>`;
+}
+
+function showAbsenceChoices() {
+  document.getElementById('absenceLandingView').innerHTML = renderAbsenceChoices(_absenceInfo);
+}
+
+async function submitAbsenceReason(reason, otherText) {
+  if (!_absenceToken) { showToast('This link is no longer valid'); return; }
+  const container = document.getElementById('absenceLandingView');
+  const btn = container.querySelector('button.btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const r = await absenceRpc('submit_absence_reason', {
+      p_token: _absenceToken, p_reason: reason, p_other_text: otherText || null
+    });
+    if (r && r.ok) {
+      logQI('absence_reason_given', { metadata: { reason }, source: 'email' });
+      container.innerHTML = renderAbsenceLanding('success',
+        `Thank you for letting us know. Your response has been recorded: <strong>${ABSENCE_REASONS[reason] || reason}</strong>`);
+    } else if (r && r.status === 'already_submitted') {
+      container.innerHTML = renderAbsenceLanding('already', 'You have already submitted your response. Thank you!');
+    } else {
+      container.innerHTML = renderAbsenceLanding('error', 'This link has expired or is invalid.');
+    }
+  } catch(e) {
+    console.error('Absence submit error:', e);
+    logError('absence_submit', e, { reason });
+    if (btn) { btn.disabled = false; btn.textContent = 'Try again'; }
+    showToast('Could not save your response. Please try again.');
+  }
 }
 
 function renderAbsenceLanding(type, message) {
@@ -2367,43 +2438,38 @@ function renderAbsenceLanding(type, message) {
   </div>`;
 }
 
-function renderAbsenceOtherForm(token, recordId) {
+function renderAbsenceOtherForm(info) {
   return `<div style="max-width:500px;margin:60px auto;text-align:center;padding:30px;">
-    <img src="${LOGO_URL}" alt="Logo" style="height:60px;margin-bottom:16px;">
-    <h2 style="color:var(--nhs-dark-blue);margin-bottom:8px;">Southmead Surgical Teaching</h2>
-    <p style="font-size:14px;color:var(--nhs-grey);margin-bottom:20px;">Please let us know why you couldn't attend:</p>
+    ${absenceHeader(info)}
+    <p style="font-size:14px;color:var(--nhs-grey);margin:12px 0 20px;">Please let us know why you couldn't attend:</p>
     <textarea id="absenceOtherText" rows="4" placeholder="Please briefly describe the reason..." style="width:100%;max-width:400px;padding:12px;font-size:14px;border:1.5px solid var(--nhs-pale-grey);border-radius:8px;margin-bottom:16px;"></textarea>
     <br>
-    <button class="btn btn-green" style="padding:12px 36px;font-size:15px;" onclick="submitAbsenceOther(${recordId})">Submit</button>
+    <button class="btn btn-green" style="padding:12px 36px;font-size:15px;" onclick="submitAbsenceOther()">Submit</button>
+    <div style="margin-top:14px;font-size:13px;">
+      <a href="#" onclick="showAbsenceChoices();return false;" style="color:var(--nhs-blue);">Choose a different reason</a>
+    </div>
   </div>`;
 }
 
-async function submitAbsenceOther(recordId) {
+async function submitAbsenceOther() {
   const text = document.getElementById('absenceOtherText').value.trim();
   if (!text) { showToast('Please enter a reason'); return; }
-  try {
-    await sbUpdate('absence_reasons', recordId, {
-      reason: 'other',
-      other_text: text,
-      submitted_at: new Date().toISOString()
-    });
-    document.getElementById('absenceLandingView').innerHTML = renderAbsenceLanding('success', 'Thank you for your feedback. Your response has been recorded.');
-  } catch(e) { showToast('Failed to submit. Please try again.'); }
+  await submitAbsenceReason('other', text);
 }
 
-function renderAbsenceChoices(token, record) {
+// Buttons, not links: a link with the reason in its href is exactly what
+// Mimecast pre-fetches. These stay on the page and only write on a real click.
+function renderAbsenceChoices(info) {
   let buttonsHtml = '';
   for (const [key, label] of Object.entries(ABSENCE_REASONS)) {
-    if (key === 'other') {
-      buttonsHtml += `<a href="?absence_token=${encodeURIComponent(token)}&reason=other" style="display:block;padding:14px;margin:6px 0;background:white;border:1.5px solid var(--nhs-pale-grey);border-radius:8px;text-decoration:none;color:var(--nhs-dark-blue);font-size:14px;text-align:center;">${label}</a>`;
-    } else {
-      buttonsHtml += `<a href="?absence_token=${encodeURIComponent(token)}&reason=${key}" style="display:block;padding:14px;margin:6px 0;background:white;border:1.5px solid var(--nhs-pale-grey);border-radius:8px;text-decoration:none;color:var(--nhs-dark-blue);font-size:14px;text-align:center;">${label}</a>`;
-    }
+    const onclick = key === 'other'
+      ? `document.getElementById('absenceLandingView').innerHTML = renderAbsenceOtherForm(_absenceInfo)`
+      : `submitAbsenceReason('${key}')`;
+    buttonsHtml += `<button type="button" onclick="${onclick}" style="display:block;width:100%;padding:14px;margin:6px 0;background:white;border:1.5px solid var(--nhs-pale-grey);border-radius:8px;color:var(--nhs-dark-blue);font-size:14px;text-align:center;cursor:pointer;font-family:inherit;">${label}</button>`;
   }
   return `<div style="max-width:500px;margin:60px auto;text-align:center;padding:30px;">
-    <img src="${LOGO_URL}" alt="Logo" style="height:60px;margin-bottom:16px;">
-    <h2 style="color:var(--nhs-dark-blue);margin-bottom:8px;">Southmead Surgical Teaching</h2>
-    <p style="font-size:14px;color:var(--nhs-grey);margin-bottom:20px;">We noticed you couldn't make the session. Could you let us know why?</p>
+    ${absenceHeader(info)}
+    <p style="font-size:14px;color:var(--nhs-grey);margin:12px 0 20px;">We noticed you couldn't make the session. Could you let us know why?</p>
     <div style="max-width:400px;margin:0 auto;">${buttonsHtml}</div>
   </div>`;
 }
