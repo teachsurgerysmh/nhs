@@ -391,6 +391,72 @@ function generateSurveyToken() {
   return 'sv_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 6);
 }
 
+// ===================== SURVEY INVITES =====================
+// An invite token says WHO WAS ASKED. It is never sent to save_survey_answer
+// and never stored beside an answer — survey_responses keeps the random
+// 'sv_...' respondent token above. All this buys us is the ability to stop
+// emailing people who have already replied.
+let _surveyInvite = null;
+
+async function surveyInviteRpc(fn, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST', headers, body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`${fn} failed: ${res.status}`);
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+async function openSurveyFromInvite(inviteToken) {
+  let info = null;
+  try {
+    info = await surveyInviteRpc('check_survey_invite', { p_token: inviteToken });
+  } catch (e) {
+    logError('survey_invite_check', e, {});
+  }
+
+  if (!info || !info.valid) {
+    // Fall back to the open survey rather than dead-ending on a stale link.
+    showToast('That survey link has expired — opening the current survey.', 5000);
+    openSurvey('trainee_post');
+    return;
+  }
+
+  if (info.already_completed) {
+    _surveyInvite = null;
+    switchView('survey');
+    document.getElementById('surveyView').innerHTML = `
+      <div style="max-width:520px;margin:60px auto;text-align:center;padding:30px;">
+        <div style="font-size:48px;margin-bottom:12px;">👍</div>
+        <h2 style="color:var(--nhs-dark-blue);margin-bottom:12px;">Already done — thank you</h2>
+        <p style="font-size:15px;color:var(--nhs-grey);">
+          Our records show this survey has been completed${info.first_name ? ', ' + info.first_name : ''}.
+          There's nothing else you need to do.</p>
+        <p style="font-size:12px;color:var(--nhs-grey);margin-top:18px;">
+          We can see that you replied, but not what you said — answers are stored
+          separately from invitations.</p>
+      </div>`;
+    return;
+  }
+
+  _surveyInvite = inviteToken;
+  openSurvey(info.form_type);
+}
+
+// Called once the survey is finished. Sends ONLY the invite token — no
+// respondent token, no answers — so the two can never be joined up.
+async function markSurveyInviteComplete() {
+  if (!_surveyInvite) return;
+  const tok = _surveyInvite;
+  _surveyInvite = null;
+  try {
+    await surveyInviteRpc('complete_survey_invite', { p_token: tok });
+  } catch (e) {
+    // Worst case they get one more reminder; never block the thank-you screen.
+    logError('survey_invite_complete', e, {});
+  }
+}
+
 // ===================== LAUNCH SURVEY =====================
 function openSurvey(formType, token) {
   const form = SURVEY_FORMS[formType];
@@ -806,6 +872,7 @@ async function submitSurvey() {
   surveyState.currentSection = form.sections.length;
   logQI(isPostForm(surveyState.formType) ? 'post_survey_completed' : 'baseline_survey_completed',
         { metadata: { form: surveyState.formType, token: surveyState.token, answer_count: Object.keys(surveyState.answers).length } });
+  markSurveyInviteComplete();
   renderSurvey();
   window.scrollTo(0, 0);
 }

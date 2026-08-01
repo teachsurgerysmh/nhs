@@ -330,6 +330,16 @@ async function init() {
     window.history.replaceState({}, document.title, window.location.pathname);
     return;
   }
+  // Personalised survey invite: ?invite=X
+  // The invite token identifies who was ASKED, never what they answered — the
+  // respondent token written to survey_responses stays random and unlinked.
+  // It exists so reminders can skip people who have already replied.
+  if (params.get('invite')) {
+    const invite = params.get('invite');
+    window.history.replaceState({}, document.title, window.location.pathname);
+    await openSurveyFromInvite(invite);
+    return;
+  }
   // Direct survey link: ?view=survey&type=X
   if (params.get('view') === 'survey' && params.get('type')) {
     const surveyToken = params.get('token') || null;
