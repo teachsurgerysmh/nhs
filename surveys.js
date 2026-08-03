@@ -415,12 +415,10 @@ async function openSurveyFromInvite(inviteToken) {
     logError('survey_invite_check', e, {});
   }
 
-  if (!info || !info.valid) {
-    // Fall back to the open survey rather than dead-ending on a stale link.
-    showToast('That survey link has expired — opening the current survey.', 5000);
-    openSurvey('trainee_post');
-    return;
-  }
+  // Not a survey invite at all. Return false so the caller can decide — the
+  // ?invite= parameter is shared with the account-invite flow, and only the
+  // caller knows whether both lookups have now missed.
+  if (!info || !info.valid) return false;
 
   if (info.already_completed) {
     _surveyInvite = null;
@@ -436,11 +434,17 @@ async function openSurveyFromInvite(inviteToken) {
           We can see that you replied, but not what you said — answers are stored
           separately from invitations.</p>
       </div>`;
-    return;
+    return true;
   }
 
   _surveyInvite = inviteToken;
   openSurvey(info.form_type);
+  // Recorded here, not in check_survey_invite — the sender calls that one on
+  // every invite before mailing, which would mark them all opened before
+  // anybody had seen them.
+  surveyInviteRpc('mark_survey_invite_opened', { p_token: inviteToken })
+    .catch(e => logError('survey_invite_open', e, {}));
+  return true;
 }
 
 // Called once the survey is finished. Sends ONLY the invite token — no

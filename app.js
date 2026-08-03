@@ -292,10 +292,16 @@ async function init() {
   // an invite link, and both could in principle be present.
   const inSetup = await handleSetupLink();
 
+  // ?invite= is used by TWO different flows: account invites (below) and
+  // personalised survey invitations. handleInviteLink() strips the parameter
+  // from the URL before we get a chance to read it again, so grab it first.
+  const rawInvite = new URLSearchParams(window.location.search).get('invite');
+
   // ?invite=<token> — time-limited link letting someone without an NHS account
   // register as verified. Handled before the main render so the banner is up
   // by the time the page is interactive.
-  if (!inSetup) await handleInviteLink();
+  let inviteOutcome = null;
+  if (!inSetup) inviteOutcome = await handleInviteLink();
 
   await Promise.all([loadEvents(), fetchBankHolidays()]);
   renderAll();
@@ -334,11 +340,20 @@ async function init() {
   // The invite token identifies who was ASKED, never what they answered — the
   // respondent token written to survey_responses stays random and unlinked.
   // It exists so reminders can skip people who have already replied.
-  if (params.get('invite')) {
-    const invite = params.get('invite');
+  //
+  // Reached only when the account-invite lookup above did not recognise the
+  // token ('not_found'), because the two flows share the parameter. If this
+  // lookup misses too, THEN we report the failure — that is the point at which
+  // we know it is neither kind of invite.
+  const surveyInvite = params.get('invite') || (inviteOutcome === 'not_found' ? rawInvite : null);
+  if (surveyInvite) {
     window.history.replaceState({}, document.title, window.location.pathname);
-    await openSurveyFromInvite(invite);
-    return;
+    const handled = await openSurveyFromInvite(surveyInvite);
+    if (handled) return;
+    if (inviteOutcome === 'not_found') {
+      showToast('That invite link is not recognised. Please ask the teaching team for a new one.', 6000);
+      logQI('invite_link_rejected', { metadata: { reason: 'not_found' } });
+    }
   }
   // Direct survey link: ?view=survey&type=X
   if (params.get('view') === 'survey' && params.get('type')) {

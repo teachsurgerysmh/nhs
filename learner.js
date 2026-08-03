@@ -1388,7 +1388,7 @@ async function generateCertificate() {
     <img src="${CERT_LOGO_URL}" alt="Southmead Surgical Teaching" class="cert-logo">
     <h1>CERTIFICATE OF ATTENDANCE</h1>
     <h2>Southmead Surgical Teaching Programme</h2>
-    <div class="cert-nhs">North Bristol NHS Trust | Southmead Hospital</div>
+    <div class="cert-nhs">Bristol NHS Foundation Trust | Southmead Hospital</div>
   </div>
   <div class="cert-body">
     <div style="text-align:center;font-size:12px;color:#768692;">This is to certify that</div>
@@ -1445,7 +1445,7 @@ async function generateTeacherCertificate() {
     <img src="${CERT_LOGO_URL}" alt="Southmead Surgical Teaching" class="cert-logo">
     <h1>CERTIFICATE OF TEACHING</h1>
     <h2>Southmead Surgical Teaching Programme</h2>
-    <div class="cert-nhs">North Bristol NHS Trust | Southmead Hospital</div>
+    <div class="cert-nhs">Bristol NHS Foundation Trust | Southmead Hospital</div>
   </div>
   <div class="cert-body">
     <div style="text-align:center;font-size:12px;color:#768692;">This is to certify that</div>
@@ -1503,7 +1503,7 @@ async function generateSessionTeacherCert(sessionId) {
     <img src="${CERT_LOGO_URL}" alt="Southmead Surgical Teaching" class="cert-logo">
     <h1>CERTIFICATE OF TEACHING</h1>
     <h2>Southmead Surgical Teaching Programme</h2>
-    <div class="cert-nhs">North Bristol NHS Trust | Southmead Hospital</div>
+    <div class="cert-nhs">Bristol NHS Foundation Trust | Southmead Hospital</div>
   </div>
   <div class="cert-body">
     <div style="text-align:center;font-size:12px;color:#768692;">This is to certify that</div>

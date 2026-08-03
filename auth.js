@@ -771,14 +771,18 @@ async function handleInviteLink() {
   } catch (e) { console.warn('invite check failed', e); }
 
   if (!info || !info.valid) {
+    // `?invite=` is shared with personalised survey invitations. A token this
+    // table doesn't know might still be a valid survey invite, so say nothing
+    // and let the caller try that before showing an error. Expired/revoked/
+    // exhausted ARE account invites, so those still report immediately.
+    if (!info || info.reason === 'not_found') return 'not_found';
     const why = { expired: 'This invite link has expired.',
                   revoked: 'This invite link has been withdrawn.',
-                  exhausted: 'This invite link has already been used the maximum number of times.',
-                  not_found: 'That invite link is not recognised.' }[info && info.reason] ||
+                  exhausted: 'This invite link has already been used the maximum number of times.' }[info.reason] ||
                 'That invite link is no longer valid.';
     showToast(why + ' Please ask the teaching team for a new one.', 6000);
-    logQI('invite_link_rejected', { metadata: { reason: (info && info.reason) || 'unknown' } });
-    return;
+    logQI('invite_link_rejected', { metadata: { reason: info.reason || 'unknown' } });
+    return 'rejected';
   }
 
   try { sessionStorage.setItem(INVITE_KEY, token); } catch (_) {}

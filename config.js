@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.37';
-const APP_BUILD = '2026-08-01';
+const APP_VERSION = 'v3.12.39';
+const APP_BUILD = '2026-08-03';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
 // ===================== SAFE COLUMN LISTS (exclude pin_code) =====================
@@ -22,7 +22,7 @@ document.getElementById('versionTag').textContent = APP_VERSION;
 // version.json must be bumped to match APP_VERSION on every deploy.
 async function checkForAppUpdate() {
   // Don't interrupt magic-link / one-click flows (feedback, attendance, survey, email actions)
-  if (/(?:feedback|attend|survey|action|absence_token|token)=/.test(location.search)) return;
+  if (/(?:feedback|attend|survey|action|absence_token|token|invite|setup|report)=/.test(location.search)) return;
   try {
     const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return;
@@ -142,7 +142,7 @@ let currentLearner = null;
 let currentTeacher = null;
 const MANAGERS = ['suketu.batra@nbt.nhs.uk','ilgin.kilic@nbt.nhs.uk','nitin.arvind@nbt.nhs.uk'];
 const SIGNING_CONSULTANT = 'Mr Nitin Arvind';
-const SIGNING_TITLE = 'Surgical Tutor & Supervisor for Southmead Surgical Teaching Programme\nConsultant UGI Surgeon, North Bristol NHS Trust';
+const SIGNING_TITLE = 'Surgical Tutor & Supervisor for Southmead Surgical Teaching Programme\nConsultant UGI Surgeon, Bristol NHS Foundation Trust';
 let currentView = 'list';
 let currentFilter = 'upcoming';
 let calMonth = new Date().getMonth();
