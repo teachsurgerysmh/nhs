@@ -499,6 +499,12 @@ async function submitFeedback() {
         logQI('attendance_via_feedback', { session_id: sessionId });
       }
     } catch(ae) { console.log('Auto-attendance skip:', ae); }
+    // If the dashboard is the visible view, refresh it so this session flips
+    // to "✓ Done" and the pending-feedback nudge updates.
+    try {
+      const dv = document.getElementById('dashboardView');
+      if (dv && dv.offsetParent !== null && typeof loadDashboard === 'function') loadDashboard();
+    } catch (_) {}
     // Offer inline rating on the feedback flow
     setTimeout(() => askInlineRating('feedback_form'), 600);
   } catch(e) {
@@ -959,6 +965,19 @@ async function loadDashboard() {
     const attendedSessions = events.filter(e => attendedSessionIds.includes(e.id));
     const totalHours = attendedSessions.reduce((sum, e) => sum + cpdHoursFromTime(e.time), 0);
 
+    // Which of my attended sessions already have my feedback? (authenticated
+    // learners can SELECT their own feedback rows.) Used to show a per-session
+    // "Give feedback" button that opens the SAME modal as the feedback QR/email
+    // — and to hide it once done, since feedback has no dedup constraint.
+    let myFeedbackIds = new Set();
+    try {
+      const fb = await sbGet('feedback', `learner_id=eq.${currentLearner.id}&select=session_id`);
+      myFeedbackIds = new Set(fb.map(f => f.session_id));
+    } catch (e) { /* non-fatal — buttons still work, just no ✓ state */ }
+    const myEmail = (currentLearner.email || '').toLowerCase();
+    const iTaught = s => !!(s.teacherEmail && s.teacherEmail.toLowerCase() === myEmail);
+    const pendingFeedback = attendedSessions.filter(s => !iTaught(s) && !myFeedbackIds.has(s.id));
+
     // Placement progress
     let placementProgress = 0;
     if (currentLearner.placement_start && currentLearner.placement_end) {
@@ -1005,10 +1024,18 @@ async function loadDashboard() {
     if (attendedSessions.length === 0) {
       html += '<div style="text-align:center;padding:20px;color:var(--nhs-grey);">No sessions attended yet. Mark your attendance on session cards!</div>';
     } else {
-      html += '<table class="attendance-table"><thead><tr><th>Date</th><th>Topic</th><th>Teacher</th></tr></thead><tbody>';
+      if (pendingFeedback.length > 0) {
+        html += `<div style="background:#fff4e5;border:1px solid #f5d9a8;border-radius:8px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:#8a5a00;font-weight:600;">
+          📝 ${pendingFeedback.length} session${pendingFeedback.length > 1 ? 's' : ''} still need${pendingFeedback.length > 1 ? '' : 's'} your feedback — about 60 seconds each, and it completes your CPD record.</div>`;
+      }
+      html += '<table class="attendance-table"><thead><tr><th>Date</th><th>Topic</th><th>Teacher</th><th style="text-align:center;">Feedback</th></tr></thead><tbody>';
       attendedSessions.sort((a, b) => { const da = eventToDate(a), db = eventToDate(b); return (db||0)-(da||0); });
       attendedSessions.forEach(s => {
-        html += `<tr><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td></tr>`;
+        let fb;
+        if (iTaught(s)) fb = '<span style="color:var(--nhs-grey);font-size:12px;">You taught this</span>';
+        else if (myFeedbackIds.has(s.id)) fb = '<span style="color:var(--nhs-green);font-weight:700;font-size:13px;">✓ Done</span>';
+        else fb = `<button class="btn btn-green" style="padding:5px 13px;font-size:12px;" onclick="openFeedbackModal(${s.id})">Give feedback</button>`;
+        html += `<tr><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td><td style="text-align:center;">${fb}</td></tr>`;
       });
       html += '</tbody></table>';
     }
@@ -1018,6 +1045,7 @@ async function loadDashboard() {
     if (attendedSessions.length > 0) {
       html += `<div style="text-align:center;margin-top:16px;">
         <button class="btn btn-green" style="padding:12px 32px;font-size:14px;" onclick="generateCertificate()">Generate Certificate</button>
+        <div style="font-size:12px;color:var(--nhs-grey);margin-top:6px;">Signed by ${SIGNING_CONSULTANT} · ${fmtCpdHours(totalHours)} CPD hours</div>
       </div>`;
     }
 

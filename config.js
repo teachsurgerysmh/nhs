@@ -4,7 +4,7 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.39';
+const APP_VERSION = 'v3.12.40';
 const APP_BUILD = '2026-08-03';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
