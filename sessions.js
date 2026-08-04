@@ -318,26 +318,38 @@ function renderEvents() {
 
 function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+// ===================== TEACHER REQUEST / RESPONSE STATE =====================
+// One source of truth for "was the teacher requested, and did they respond?",
+// shared by the list badge, the calendar glyph and the session detail modal.
+// A session only reads as "awaiting" once we have ACTUALLY requested the teacher
+// (a confirmation/reminder email is logged for it) — otherwise a teacher who was
+// simply typed into the schedule would wrongly show as "awaiting a reply".
+function teacherRequested(ev) {
+  const r = (typeof reminderSends !== 'undefined') ? reminderSends[String(ev.id)] : null;
+  return !!(r && r.count > 0 && (r.lastType === 'confirmation' || r.lastType === 'reminder'));
+}
+// Returns 'confirmed' | 'declined' | 'reschedule_requested' | 'awaiting' | ''
+function teacherResponseState(ev) {
+  const tc = ev.teacherConfirmed;
+  if (tc === 'confirmed' || tc === 'declined' || tc === 'reschedule_requested') return tc;
+  const d = eventToDate(ev);
+  const future = d && d >= new Date();
+  if (teacherRequested(ev) && ev.teacher && ev.status === 'upcoming' && future) return 'awaiting';
+  return '';
+}
+const TEACHER_RESP_META = {
+  confirmed:            { label: 'Confirmed',            short: 'Teacher confirmed',           icon: '✅', bg: '#e6f4ea', col: '#009639' },
+  declined:             { label: 'Declined',             short: 'Teacher declined',            icon: '❌', bg: '#fbe9e7', col: '#da291c' },
+  reschedule_requested: { label: 'Reschedule requested', short: 'Reschedule requested',        icon: '🔄', bg: '#fff4e5', col: '#ed8b00' },
+  awaiting:             { label: 'Awaiting response',    short: 'Requested — awaiting reply',  icon: '⏳', bg: '#f0f4f5', col: '#768692' },
+};
+
 // ===================== TEACHER RESPONSE BADGE =====================
-// Reflects schedule.teacher_confirmed — set when a teacher clicks the
-// confirm/decline/reschedule link in a reminder or confirmation email.
 // Admin/manager only. Returns '' when nothing meaningful to show.
 function teacherResponseBadge(ev, opts) {
-  if (!isAdmin) return '';
-  const tc = ev.teacherConfirmed;
-  const map = {
-    confirmed:            { label: 'Confirmed',    icon: '✅', bg: '#e6f4ea', col: '#009639' },
-    declined:             { label: 'Declined',     icon: '❌', bg: '#fbe9e7', col: '#da291c' },
-    reschedule_requested: { label: 'Reschedule requested', icon: '🔄', bg: '#fff4e5', col: '#ed8b00' },
-  };
-  let m = map[tc];
-  // No response yet: only nudge for an assigned, upcoming, future session
-  if (!m) {
-    const evDate = eventToDate(ev);
-    const future = evDate && evDate >= new Date();
-    if (!(ev.teacher && ev.status === 'upcoming' && future)) return '';
-    m = { label: 'Awaiting response', icon: '⏳', bg: '#f0f4f5', col: '#768692' };
-  }
+  if (!(typeof isManager === 'function' ? isManager() : isAdmin)) return '';
+  const m = TEACHER_RESP_META[teacherResponseState(ev)];
+  if (!m) return '';
   const big = opts && opts.big;
   const pad = big ? '4px 10px' : '2px 8px';
   const fs = big ? '12px' : '11px';
@@ -345,11 +357,21 @@ function teacherResponseBadge(ev, opts) {
     + `font-size:${fs};font-weight:600;background:${m.bg};color:${m.col};white-space:nowrap;">${m.icon} ${m.label}</span>`;
 }
 
+// ===================== CALENDAR RESPONSE GLYPH =====================
+// Tiny leading marker on a calendar chip so managers can see at a glance whether
+// the assigned teacher was requested and how they responded. Managers only.
+// Returns { glyph, note } — both '' when there is nothing to show.
+function calTeacherGlyph(ev) {
+  if (!(typeof isManager === 'function' ? isManager() : isAdmin)) return { glyph: '', note: '' };
+  const m = TEACHER_RESP_META[teacherResponseState(ev)];
+  return m ? { glyph: m.icon, note: m.short } : { glyph: '', note: '' };
+}
+
 // ===================== LAST-EMAILED BADGE =====================
 // Reflects email_log — shows when the teacher was last emailed (confirmation/
 // reminder) and how many times. Admin/manager only. Returns '' if never sent.
 function reminderSentBadge(ev, opts) {
-  if (!isAdmin) return '';
+  if (!(typeof isManager === 'function' ? isManager() : isAdmin)) return '';
   const r = (typeof reminderSends !== 'undefined') ? reminderSends[String(ev.id)] : null;
   if (!r || !r.lastAt) return '';
   const d = new Date(r.lastAt);
@@ -410,7 +432,9 @@ function renderCalendar() {
         if (e.status === 'tbd') return; // tbd without a real session → don't show
       }
       const label = e.topic || e.teacher || e.status;
-      html += `<div class="cal-event status-${e.status}" onclick="event.stopPropagation();showDetail(${e.id})" title="${esc(label)}">${esc(label)}</div>`;
+      const g = calTeacherGlyph(e);
+      const titleTxt = g.note ? (label + ' — ' + g.note) : label;
+      html += `<div class="cal-event status-${e.status}" onclick="event.stopPropagation();showDetail(${e.id})" title="${esc(titleTxt)}">${g.glyph ? g.glyph + ' ' : ''}${esc(label)}</div>`;
     });
     // Show clickable "available" slot on empty Tue/Wed (skip if we already drew real open slots)
     if ((hasEmptySlot || isEmptyTueWed) && cellDate >= today && !publicAvailableShown) {
@@ -584,6 +608,8 @@ function showDetail(id) {
   const footer = document.getElementById('detailFooter');
   const topicDisplay = ev.topic || ev.teacher || 'TBD';
   const isAdminView = isAdmin && !adminViewAsLearner;
+  // Managers (incl. admin) may see read-only request/response info even without full admin controls
+  const isMgrView = (typeof isManager === 'function' ? isManager() : isAdmin) && !adminViewAsLearner;
 
   let html = '';
 
@@ -628,7 +654,7 @@ function showDetail(id) {
     html += `<div class="detail-field"><div class="detail-label">Room</div><div class="detail-value">${esc(ev.room)}</div></div>`;
   }
   html += `<div class="detail-field"><div class="detail-label">Status</div><div class="detail-value"><span class="card-status status-pill-${ev.status}" style="font-size:12px;">${ev.status}</span>${!ev.published ? ' <span class="card-draft-badge">DRAFT</span>' : ''}</div></div>`;
-  if (isAdminView && ev.teacher) {
+  if (isMgrView && ev.teacher) {
     const respBadge = teacherResponseBadge(ev, { big: true });
     if (respBadge) html += `<div class="detail-field"><div class="detail-label">Teacher Response</div><div class="detail-value">${respBadge}</div></div>`;
     const sentBadge = reminderSentBadge(ev, { big: true });
