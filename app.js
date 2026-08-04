@@ -362,6 +362,24 @@ async function init() {
     openSurvey(params.get('type'), surveyToken);
     return;
   }
+  // Direct link to the LEARNER dashboard — feedback buttons AND the Generate
+  // Certificate button both live there. The feedback/certificate QRs use this
+  // so a scan always lands on the learner view, not a teacher/admin's default
+  // dashboard. If they're not signed in as a learner, prompt learner login and
+  // return here afterwards.
+  if (params.get('view') === 'dashboard') {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    if (currentLearner) {
+      switchView('dashboard');
+      if (typeof loadDashboard === 'function') loadDashboard();
+    } else {
+      sessionStorage.setItem('sst_return_to', location.origin + location.pathname + '?view=dashboard');
+      sessionStorage.setItem('sst_return_to_ts', String(Date.now()));
+      showToast('Log in as a learner to leave feedback and get your certificate', 4500);
+      if (typeof openLearnerLoginModal === 'function') openLearnerLoginModal();
+    }
+    return;
+  }
   // Handle action URL params (confirm/decline/reschedule from email links)
   const hasAction = await handleActionParams();
   if (hasAction) {
