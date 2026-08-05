@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#003087">
+<title>Southmead Surgical Teaching — Links</title>
+<link rel="icon" type="image/png" href="logo_transparent.png">
+<!--
+  Link-in-bio page (self-hosted Linktree alternative) for @teachsurgerysmh.
+  Background art: design-drafts/nanobanana-output (Bristol skyline + instruments),
+  served as links_bg.png. Glassmorphism cards over the artwork's gradient middle.
+  Public contact is ALWAYS teachsurgerysmh@gmail.com — never a personal address.
+-->
+<style>
+  :root{
+    --navy:#003087; --aqua:#00a9ce; --ice:#cadcfc;
+    --glass:rgba(255,255,255,.12); --glass-hi:rgba(255,255,255,.2);
+    --stroke:rgba(255,255,255,.28); --ink:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    min-height:100vh; min-height:100dvh;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    color:var(--ink);
+    background:#012156 url('links_bg.png') no-repeat center top / cover;
+    background-attachment:fixed;
+    display:flex; justify-content:center;
+  }
+  /* soft vignette so glass + text always read, whatever the crop */
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:linear-gradient(180deg,rgba(1,20,60,.35) 0%,rgba(1,20,60,.05) 30%,rgba(1,20,60,.12) 70%,rgba(1,20,60,.5) 100%);
+  }
+  .wrap{
+    position:relative; width:100%; max-width:460px;
+    padding:max(28px,env(safe-area-inset-top)) 22px 42px;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  header{text-align:center; margin-bottom:8px}
+  header img.logo{width:200px; max-width:70%; height:auto; filter:drop-shadow(0 6px 18px rgba(0,0,0,.45))}
+  h1{font-size:26px; font-weight:800; letter-spacing:-.01em; margin-top:10px; text-shadow:0 2px 14px rgba(0,0,0,.35)}
+  .handle{display:inline-block; margin-top:6px; font-weight:700; font-size:14px; color:var(--aqua);
+    letter-spacing:.06em; text-decoration:none}
+  .tag{margin-top:8px; font-size:13.5px; color:var(--ice); line-height:1.45}
+  a.btn{
+    display:flex; align-items:center; gap:14px;
+    padding:16px 18px; border-radius:20px; text-decoration:none; color:var(--ink);
+    background:var(--glass); border:1px solid var(--stroke);
+    -webkit-backdrop-filter:blur(16px) saturate(1.5); backdrop-filter:blur(16px) saturate(1.5);
+    box-shadow:0 8px 28px rgba(0,10,40,.35), inset 0 1px 0 rgba(255,255,255,.25);
+    transition:transform .16s ease, background .16s ease, box-shadow .16s ease;
+  }
+  a.btn:hover, a.btn:focus-visible{ transform:translateY(-2px); background:var(--glass-hi);
+    box-shadow:0 12px 34px rgba(0,10,40,.45), inset 0 1px 0 rgba(255,255,255,.3) }
+  a.btn:active{ transform:translateY(0) scale(.985) }
+  .ico{
+    flex:0 0 46px; width:46px; height:46px; border-radius:14px;
+    display:grid; place-items:center; font-size:23px;
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22);
+  }
+  .btn b{display:block; font-size:16.5px; font-weight:800; letter-spacing:-.01em}
+  .btn small{display:block; margin-top:2px; font-size:12.5px; color:var(--ice); font-weight:500}
+  .btn .chev{margin-left:auto; font-size:18px; color:var(--ice); opacity:.8}
+  a.btn.primary{
+    background:linear-gradient(135deg, rgba(0,169,206,.5), rgba(0,94,184,.42));
+    border-color:rgba(255,255,255,.4);
+  }
+  a.btn.primary .ico{ background:rgba(255,255,255,.2) }
+  .row{display:flex; gap:12px}
+  .row a.btn{flex:1; padding:14px 14px; border-radius:18px; gap:10px}
+  .row .ico{flex-basis:38px; width:38px; height:38px; border-radius:11px; font-size:19px}
+  .row b{font-size:14.5px}
+  .row small{font-size:11.5px}
+  .section{margin-top:6px; text-align:center; font-size:11.5px; font-weight:800; letter-spacing:.22em;
+    color:var(--ice); text-transform:uppercase; opacity:.85}
+  footer{margin-top:14px; text-align:center; font-size:12.5px; color:var(--ice); line-height:1.7}
+  footer a{color:#fff; font-weight:700; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.35)}
+  @media (prefers-reduced-motion: reduce){ a.btn{transition:none} }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <img class="logo" src="logo_transparent.png" alt="Southmead Surgical Teaching">
+      <h1>Southmead Surgical Teaching</h1>
+      <a class="handle" href="https://instagram.com/teachsurgerysmh">@TEACHSURGERYSMH</a>
+      <p class="tag">Weekly protected teaching for resident doctors in General Surgery at Southmead Hospital · Bristol NHS Foundation Trust</p>
+    </header>
+
+    <a class="btn primary" href="./">
+      <span class="ico">🏥</span>
+      <span><b>Open the teaching site</b><small>Sessions, sign-in &amp; everything below</small></span>
+      <span class="chev">›</span>
+    </a>
+
+    <a class="btn" href="induction.html">
+      <span class="ico">📖</span>
+      <span><b>Induction Handbook</b><small>How the unit actually runs — in your pocket</small></span>
+      <span class="chev">›</span>
+    </a>
+
+    <a class="btn" href="./?view=dashboard">
+      <span class="ico">🎓</span>
+      <span><b>Feedback &amp; CPD certificate</b><small>Log in → your attended sessions → one tap</small></span>
+      <span class="chev">›</span>
+    </a>
+
+    <a class="btn" href="takeflow.html">
+      <span class="ico">🩺</span>
+      <span><b>Take &amp; Post-Take flowcharts</b><small>Which team, which day — no login needed</small></span>
+      <span class="chev">›</span>
+    </a>
+
+    <div class="section">60-second surveys · anonymous</div>
+    <div class="row">
+      <a class="btn" href="./?view=survey&amp;type=trainee">
+        <span class="ico">📊</span>
+        <span><b>Pre-service</b><small>Just starting</small></span>
+      </a>
+      <a class="btn" href="./?view=survey&amp;type=trainee_post">
+        <span class="ico">📈</span>
+        <span><b>Post-service</b><small>Rotating away</small></span>
+      </a>
+    </div>
+
+    <footer>
+      <a href="mailto:teachsurgerysmh@gmail.com">teachsurgerysmh@gmail.com</a><br>
+      Southmead Hospital · Bristol NHS Foundation Trust
+    </footer>
+  </main>
+</body>
+</html>
