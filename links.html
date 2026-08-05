@@ -89,25 +89,31 @@
       <p class="tag">Weekly protected teaching for resident doctors in General Surgery at Southmead Hospital · Bristol NHS Foundation Trust</p>
     </header>
 
-    <a class="btn primary" href="./">
+    <a class="btn primary" href="./?src=links" data-qi="site">
       <span class="ico">🏥</span>
       <span><b>Open the teaching site</b><small>Sessions, sign-in &amp; everything below</small></span>
       <span class="chev">›</span>
     </a>
 
-    <a class="btn" href="induction.html">
+    <a class="btn" href="induction.html" data-qi="handbook">
       <span class="ico">📖</span>
       <span><b>Induction Handbook</b><small>How the unit actually runs — in your pocket</small></span>
       <span class="chev">›</span>
     </a>
 
-    <a class="btn" href="./?view=dashboard">
+    <a class="btn" href="./?view=dashboard&amp;src=links" data-qi="dashboard">
       <span class="ico">🎓</span>
       <span><b>Feedback &amp; CPD certificate</b><small>Log in → your attended sessions → one tap</small></span>
       <span class="chev">›</span>
     </a>
 
-    <a class="btn" href="takeflow.html">
+    <a class="btn" href="./?request=1&amp;src=links" data-qi="book_session">
+      <span class="ico">🗓️</span>
+      <span><b>Book a teaching session</b><small>Claim an open slot — teach the next cohort</small></span>
+      <span class="chev">›</span>
+    </a>
+
+    <a class="btn" href="takeflow.html" data-qi="takeflow">
       <span class="ico">🩺</span>
       <span><b>Take &amp; Post-Take flowcharts</b><small>Which team, which day — no login needed</small></span>
       <span class="chev">›</span>
@@ -115,14 +121,32 @@
 
     <div class="section">60-second surveys · anonymous</div>
     <div class="row">
-      <a class="btn" href="./?view=survey&amp;type=trainee">
+      <a class="btn" href="./?view=survey&amp;type=trainee&amp;src=links" data-qi="survey_pre">
         <span class="ico">📊</span>
         <span><b>Pre-service</b><small>Just starting</small></span>
       </a>
-      <a class="btn" href="./?view=survey&amp;type=trainee_post">
+      <a class="btn" href="./?view=survey&amp;type=trainee_post&amp;src=links" data-qi="survey_post">
         <span class="ico">📈</span>
         <span><b>Post-service</b><small>Rotating away</small></span>
       </a>
+    </div>
+
+    <div class="section">Want something taught?</div>
+    <div class="btn" id="ideaCard" style="cursor:default;flex-direction:column;align-items:stretch;gap:10px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span class="ico">💡</span>
+        <span><b>Suggest a teaching topic</b><small>Goes straight to the teaching team — no login</small></span>
+      </div>
+      <form id="ideaForm" style="display:flex;flex-direction:column;gap:10px;">
+        <input id="ideaTopic" type="text" maxlength="200" placeholder="e.g. Stoma complications for the on-call SHO" required
+          style="width:100%;padding:13px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);color:#fff;font-size:15px;outline:none;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);">
+        <input id="ideaBy" type="text" maxlength="60" placeholder="Your name (optional)"
+          style="width:100%;padding:11px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.10);color:#fff;font-size:14px;outline:none;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);">
+        <button id="ideaSend" type="submit"
+          style="padding:13px;border:none;border-radius:14px;background:linear-gradient(135deg,#00a9ce,#005eb8);color:#fff;font-size:15.5px;font-weight:800;cursor:pointer;">
+          Send suggestion</button>
+        <div id="ideaMsg" style="display:none;font-size:13.5px;line-height:1.5;color:#cadcfc;text-align:center;"></div>
+      </form>
     </div>
 
     <footer>
@@ -130,5 +154,57 @@
       Southmead Hospital · Bristol NHS Foundation Trust
     </footer>
   </main>
+
+<script>
+// ---- QI logging + topic suggestions (self-contained; page loads no app JS) ----
+// Same public anon key the whole site ships with; inserts are fire-and-forget.
+(function(){
+  var SB='https://rufihxjquwrluaenmbaa.supabase.co';
+  var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1ZmloeGpxdXdybHVhZW5tYmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyOTg4NDMsImV4cCI6MjA5Mzg3NDg0M30.6o8GrCPcQ__JjrGLUiqQwdgWcM1Qk_02TvLvTOwUjyg';
+  function qi(type, meta){
+    try{
+      fetch(SB+'/rest/v1/qi_events',{method:'POST',keepalive:true,
+        headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({event_type:type,actor_type:'public',metadata:meta||{},source:'links',
+          user_agent:(navigator.userAgent||'').slice(0,250)})
+      }).catch(function(){});
+    }catch(e){}
+  }
+  qi('links_page_view',{});
+  document.querySelectorAll('a.btn[data-qi]').forEach(function(a){
+    a.addEventListener('click',function(){ qi('links_click',{target:a.getAttribute('data-qi')}); });
+  });
+
+  // Suggest-a-topic → SECURITY DEFINER RPC (validates, rate-limits, emails the team)
+  var form=document.getElementById('ideaForm'), msg=document.getElementById('ideaMsg'),
+      btn=document.getElementById('ideaSend');
+  form.addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var topic=document.getElementById('ideaTopic').value.trim();
+    var by=document.getElementById('ideaBy').value.trim();
+    if(topic.length<3){ msg.style.display='block'; msg.textContent='A few words is perfect — just a bit more detail.'; return; }
+    btn.disabled=true; btn.textContent='Sending…';
+    fetch(SB+'/rest/v1/rpc/suggest_topic_idea',{method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({p_topic:topic,p_by:by||null})
+    }).then(function(r){ return r.json().catch(function(){return null;}).then(function(j){return {ok:r.ok,j:j};}); })
+      .then(function(res){
+        if(res.ok){
+          form.querySelectorAll('input,button').forEach(function(el){el.style.display='none';});
+          msg.style.display='block'; msg.style.color='#8fe3c0'; msg.style.fontWeight='700';
+          msg.textContent = (res.j==='duplicate')
+            ? '💡 Already on the list — thanks, it all counts!'
+            : '✅ Sent to the teaching team — thank you!';
+        } else {
+          btn.disabled=false; btn.textContent='Send suggestion';
+          msg.style.display='block';
+          msg.textContent=(res.j&&res.j.message)||'Could not send just now — please try again.';
+        }
+      })
+      .catch(function(){ btn.disabled=false; btn.textContent='Send suggestion';
+        msg.style.display='block'; msg.textContent='Could not send just now — please try again.'; });
+  });
+})();
+</script>
 </body>
 </html>

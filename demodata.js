@@ -107,7 +107,7 @@ const DEMO_IDEAS = [
   { id: 4001, category: 'Core Topics (Tuesday)', topic: 'Emergency Laparotomy', assigned_to: 'Mr James Whitfield', created_at: '2026-05-01T10:00:00Z' },
   { id: 4002, category: 'Core Topics (Tuesday)', topic: 'Bowel Obstruction Management', assigned_to: '', created_at: '2026-05-05T14:00:00Z' },
   { id: 4003, category: 'Clinical Skills (Wednesday)', topic: 'Chest Drain Insertion', assigned_to: 'Ms Priya Sharma', created_at: '2026-05-08T09:00:00Z' },
-  { id: 4004, category: 'Junior Doctor Requests', topic: 'MRCS Exam Tips', assigned_to: '', created_at: '2026-05-15T11:00:00Z' },
+  { id: 4004, category: 'Teaching Topic Requests', topic: 'MRCS Exam Tips', assigned_to: '', created_at: '2026-05-15T11:00:00Z' },
   { id: 4005, category: 'General Ideas', topic: 'Surgical Audit & QI Projects', assigned_to: '', created_at: '2026-05-20T16:00:00Z' },
 ];
 

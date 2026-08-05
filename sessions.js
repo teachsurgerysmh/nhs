@@ -501,7 +501,7 @@ async function renderIdeas() {
     html += '<h3 style="color:var(--nhs-dark-blue);margin:0;">Topic Ideas</h3>';
     if (isAdmin) html += '<button class="btn btn-green" style="font-size:0.85rem;padding:8px 16px;" onclick="showAddIdeaModal()">+ Add Idea</button>';
     html += '</div>';
-    const categoryOrder = ['Core Topics (Tuesday)', 'Clinical Skills (Wednesday)', 'General Ideas', "Lydia's Suggestions", 'Junior Doctor Requests', 'Planning Notes'];
+    const categoryOrder = ['Core Topics (Tuesday)', 'Clinical Skills (Wednesday)', 'General Ideas', "Lydia's Suggestions", 'Teaching Topic Requests', 'Planning Notes'];
     const sortedCats = Object.keys(groups).sort((a, b) => {
       const ai = categoryOrder.indexOf(a), bi = categoryOrder.indexOf(b);
       if (ai >= 0 && bi >= 0) return ai - bi; if (ai >= 0) return -1; if (bi >= 0) return 1; return a.localeCompare(b);
