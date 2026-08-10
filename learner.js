@@ -2167,21 +2167,31 @@ async function applyNewRotation() {
           try { await sbUpdate('contacts', existing[0].contact_id, { role: grade, specialty: placement }); } catch(ce) {}
         }
       } else {
-        // Create new learner and auto-link to contact
+        // Create new learner, then link to (or auto-create) its contact —
+        // same link_or_create_contact_for_learner RPC as self-registration,
+        // so every pre-created cohort account shows up in Contacts too
+        // (migration_v3.12.51).
         const result = await sbInsert('learners', {
           name, email, grade, placement,
           placement_start: start, placement_end: end,
           rotation_block: block || null,
           pin_code: null, verified: true, followup_eligible: true
         });
-        // Auto-link contact
-        try {
-          const contactMatch = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=id`);
-          if (contactMatch.length > 0 && result.length > 0) {
-            await sbUpdate('learners', result[0].id, { contact_id: contactMatch[0].id });
-            await sbUpdate('contacts', contactMatch[0].id, { role: grade, specialty: placement });
-          }
-        } catch(ce) {}
+        if (result.length > 0) {
+          try {
+            const linkRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/link_or_create_contact_for_learner`, {
+              method: 'POST', headers,
+              body: JSON.stringify({
+                p_learner_id: result[0].id, p_name: name, p_email: email,
+                p_phone: null, p_grade: grade, p_specialty: placement
+              })
+            });
+            if (linkRes.ok) {
+              const newContactId = await linkRes.json();
+              if (newContactId) await sbUpdate('contacts', newContactId, { role: grade, specialty: placement });
+            }
+          } catch(ce) {}
+        }
       }
       count++;
     } catch(e) { console.warn('Failed to process:', name, e); }

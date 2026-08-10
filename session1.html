@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Session 1 · Southmead Surgical Teaching</title>
+<link rel="icon" href="logo_transparent.png">
+<style>
+:root{
+  --blue:#005EB8; --navy:#003087; --sky:#41B6E6; --green:#007F3B; --red:#DA291C;
+  --amber:#FFB81C; --bg:#F0F4F5; --ink:#212B32; --grey:#4C6272; --line:#D8DDE0; --card:#FFFFFF;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+button{font-family:inherit}
+
+/* ============ DECK (presenter / slides mode) ============ */
+#deck{position:fixed;inset:0;display:none}
+body.mode-present #deck, body.mode-slides #deck{display:block}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;padding:4.5vh 5.5vw 10vh;overflow-y:auto}
+.slide.on{display:flex}
+.slide::before{content:'';margin-top:auto}
+.slide::after{content:'';margin-bottom:auto}
+.slide h2{font-size:min(4.6vh,34px);margin:0 0 1.8vh;color:var(--navy)}
+.slide h2 .tag{display:inline-block;font-size:.55em;font-weight:700;background:var(--blue);color:#fff;border-radius:999px;padding:.25em .9em;vertical-align:middle;margin-right:.6em}
+.kicker{font-size:min(2.2vh,15px);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin:0 0 .8vh}
+.case{background:#fff;border-left:6px solid var(--blue);border-radius:10px;padding:1.8vh 1.6vw;font-size:min(2.9vh,21px);margin:0 0 2vh;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.note{color:var(--grey);font-size:min(2.2vh,15px)}
+.cols{display:flex;gap:1.6vw;align-items:stretch;flex-wrap:wrap}
+.cols>*{flex:1;min-width:260px}
+
+/* progress + nav */
+#bar{position:fixed;left:0;top:0;height:5px;background:var(--blue);width:0;transition:width .3s;z-index:40}
+#nav{position:fixed;bottom:0;left:0;right:0;height:7vh;min-height:46px;display:none;align-items:center;gap:10px;padding:0 14px;background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border-top:1px solid var(--line);z-index:40}
+body.mode-present #nav, body.mode-slides #nav{display:flex}
+#nav .arrow{border:none;background:var(--blue);color:#fff;font-size:20px;width:42px;height:34px;border-radius:8px;cursor:pointer}
+#nav .arrow:active{transform:scale(.96)}
+#pgnum{font-weight:700;color:var(--grey);font-size:14px;min-width:64px}
+#chips{display:flex;gap:6px;overflow-x:auto;flex:1}
+#chips button{border:1px solid var(--line);background:#fff;color:var(--grey);border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+#chips button.here{background:var(--navy);color:#fff;border-color:var(--navy)}
+#conndot{width:10px;height:10px;border-radius:50%;background:#bbb;flex:none}
+#conndot.ok{background:var(--green)} #conndot.bad{background:var(--red)}
+#livecount{font-size:12.5px;color:var(--grey);font-weight:600;white-space:nowrap}
+
+/* reveal cards */
+.rv{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.7vh 1.5vw;margin:0 0 1.4vh;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.rv .rv-q{font-weight:700;font-size:min(2.7vh,20px);color:var(--navy);display:flex;justify-content:space-between;gap:8px}
+.rv .rv-q::after{content:"tap ▾";font-size:.7em;color:var(--sky);font-weight:600;align-self:center;white-space:nowrap}
+.rv.open .rv-q::after{content:"▴"}
+.rv .rv-a{display:none;margin-top:1vh;font-size:min(2.5vh,18px);line-height:1.45}
+.rv.open .rv-a{display:block}
+.rv ul{margin:.3em 0 .2em 1.2em;padding:0}
+.rv li{margin:.28em 0}
+
+/* MCQ options + tallies */
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:1.5vh 1.4vw;margin:1.4vh 0}
+.opt{position:relative;background:#fff;border:2px solid var(--line);border-radius:12px;padding:1.8vh 3em 1.8vh 1.4vw;font-size:min(2.8vh,20px);cursor:pointer;text-align:left;overflow:hidden}
+.opt b{color:var(--blue);margin-right:.5em}
+.opt .fill{position:absolute;inset:0;width:0;background:rgba(0,94,184,.12);transition:width .5s;z-index:0}
+.opt .lbl{position:relative;z-index:1}
+.opt .n{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--grey);font-size:.85em;z-index:1}
+.opt.correct{border-color:var(--green);background:#E7F3EC}
+.opt.correct b{color:var(--green)}
+.opt.wrongpick{border-color:var(--red)}
+.opt.picked{border-color:var(--blue)}
+.explain{display:none;background:#E7F3EC;border-left:6px solid var(--green);border-radius:10px;padding:1.5vh 1.2vw;font-size:min(2.6vh,19px);margin-top:1.2vh;line-height:1.45}
+.explain.show{display:block}
+.btn{border:none;border-radius:10px;padding:1.4vh 2vw;font-size:min(2.5vh,17px);font-weight:700;cursor:pointer}
+.btn.reveal{background:var(--green);color:#fff;align-self:flex-start;margin-top:1.6vh}
+.btn.ghost{background:#fff;border:2px solid var(--blue);color:var(--blue)}
+.joinhint{align-self:flex-end;background:var(--amber);color:#3b2f00;font-weight:700;border-radius:999px;padding:.6vh 1.3em;font-size:min(2.1vh,14px);margin:0 0 1vh;white-space:nowrap}
+.answct{font-weight:700;color:var(--grey);font-size:min(2.3vh,15px);margin-top:.6vh}
+
+/* boards */
+.board{display:flex;flex-wrap:wrap;gap:1.2vh 1vw;align-content:flex-start;flex:1;overflow-y:auto;padding-bottom:1vh}
+.bcard{background:#FFF9E6;border:1px solid #EAD48A;border-radius:10px;padding:1.3vh 1vw;font-size:min(2.6vh,19px);max-width:32vw;min-width:180px;box-shadow:0 2px 5px rgba(0,0,0,.08);cursor:pointer;animation:pop .35s}
+.bcard.win{background:#E7F3EC;border-color:#9CCDB0}
+.bcard.done{opacity:.45;text-decoration:line-through}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.boardempty{color:var(--grey);font-size:min(2.6vh,18px);font-style:italic}
+
+/* drug round game */
+.drugs{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5vh 1.1vw;margin-top:1.4vh}
+.drug{background:#fff;border:2px solid var(--line);border-radius:12px;padding:1.6vh 1vw;cursor:pointer;text-align:center}
+.drug .dn{font-weight:800;font-size:min(2.5vh,18px)}
+.drug .ds{font-size:min(1.9vh,13px);color:var(--grey)}
+.drug .dstate{margin-top:.7vh;font-weight:800;font-size:min(2.2vh,15px);border-radius:999px;padding:.25em .8em;display:inline-block;background:var(--bg);color:var(--grey)}
+.drug[data-pick="continue"] .dstate{background:#E7F3EC;color:var(--green)}
+.drug[data-pick="hold"] .dstate{background:#FBE9E7;color:var(--red)}
+.drug[data-pick="adjust"] .dstate{background:#FFF3D6;color:#8a6d00}
+.drug.right{border-color:var(--green)} .drug.wrong{border-color:var(--red)}
+.drug .dwhy{display:none;font-size:min(1.9vh,13px);margin-top:.5vh;color:var(--ink)}
+.drug.checked .dwhy{display:block}
+
+/* calculator */
+.calc{background:#fff;border:2px solid var(--blue);border-radius:14px;padding:1.8vh 1.4vw}
+.calc label{font-weight:700;font-size:min(2.4vh,17px)}
+.calc input{font-size:min(3.2vh,24px);width:7em;padding:.3em .5em;border:2px solid var(--line);border-radius:8px;margin:0 .5em}
+.calc table{width:100%;border-collapse:collapse;margin-top:1.2vh;font-size:min(2.5vh,18px)}
+.calc td{padding:.5vh .4vw;border-bottom:1px solid var(--line)}
+.calc td:last-child{font-weight:800;color:var(--navy);text-align:right;white-space:nowrap}
+
+/* anatomy */
+.anat{flex:1;display:flex;min-height:0}
+.anat svg{width:100%;height:100%;max-height:66vh}
+.hot{cursor:pointer}
+.hot circle{fill:#fff;stroke:var(--red);stroke-width:3;r:11}
+.hot text{font-size:13px;font-weight:800;fill:var(--red)}
+.alabel{opacity:0;pointer-events:none;transition:opacity .25s}
+.alabel.show{opacity:1}
+.alabel text{font-size:16px;font-weight:700;fill:var(--navy)}
+.alabel line{stroke:var(--grey);stroke-width:1.4;stroke-dasharray:3 3}
+.terr{opacity:0;transition:opacity .4s;pointer-events:none}
+.terr.show{opacity:1}
+.anatbtns{display:flex;gap:8px;flex-wrap:wrap;margin:.6vh 0}
+.anatbtns .btn{padding:.9vh 1.4vw;font-size:min(2.2vh,14px)}
+.anatbtns .btn.tog{background:#fff;border:2px solid var(--line);color:var(--ink)}
+.anatbtns .btn.tog.onn{border-color:var(--navy);background:var(--navy);color:#fff}
+
+/* expand cards (urology) */
+.xgrid{display:grid;grid-template-columns:1fr 1fr;gap:1.5vh 1.3vw}
+.xc{background:#fff;border:1px solid var(--line);border-left:6px solid var(--blue);border-radius:12px;padding:1.6vh 1.3vw;cursor:pointer}
+.xc h3{margin:0;font-size:min(2.7vh,19px);color:var(--navy)}
+.xc .xb{display:none;font-size:min(2.3vh,16px);line-height:1.45;margin-top:.8vh}
+.xc.open .xb{display:block}
+.xc ul{margin:.2em 0 .2em 1.1em;padding:0}
+.xc li{margin:.3em 0}
+.xc.danger{border-left-color:var(--red)} .xc.danger h3{color:var(--red)}
+
+/* title + misc */
+.titleslide{justify-content:center;align-items:center;text-align:center;background:linear-gradient(160deg,var(--navy) 0%,var(--blue) 70%,#0072CE 100%);color:#fff}
+.titleslide img{height:min(13vh,110px);max-width:80vw;object-fit:contain;margin-bottom:3vh}
+.titleslide h1{font-size:min(7vh,54px);margin:.2vh 0}
+.titleslide .sub{font-size:min(3vh,22px);opacity:.9;margin:.8vh 0 0}
+.titleslide .by{margin-top:4vh;font-size:min(2.4vh,17px);opacity:.85}
+.badge-live{display:inline-block;background:var(--amber);color:#3b2f00;font-weight:800;border-radius:999px;padding:.4em 1.2em;margin-top:2.5vh;font-size:min(2.4vh,16px)}
+.agenda{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2vh 1.4vw;flex:1;align-content:center}
+.ag{background:#fff;border-radius:14px;padding:2.4vh 1.5vw;border-top:6px solid var(--blue);box-shadow:0 2px 6px rgba(0,0,0,.07)}
+.ag b{display:block;font-size:min(3vh,21px);color:var(--navy)}
+.ag span{color:var(--grey);font-size:min(2.3vh,15px)}
+.qrwrap{display:flex;gap:3vw;align-items:center;justify-content:center;flex:1}
+.qrwrap img{height:min(46vh,340px);border:10px solid #fff;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.qrsteps{font-size:min(3.2vh,24px);line-height:1.9}
+.qrsteps .url{font-weight:800;color:var(--navy);background:#fff;border-radius:8px;padding:.15em .5em}
+.bigemoji{font-size:min(9vh,64px);text-align:center}
+.take{display:grid;grid-template-columns:1fr 1fr;gap:1.6vh 1.3vw;flex:1;align-content:center}
+.take .tk{background:#fff;border-radius:12px;border-left:6px solid var(--green);padding:2vh 1.5vw;font-size:min(2.7vh,19px)}
+.take .tk b{color:var(--navy)}
+
+/* ============ AUDIENCE MODE ============ */
+#aud{display:none;position:fixed;inset:0;flex-direction:column;background:var(--bg)}
+body.mode-audience #aud{display:flex}
+#aud header{background:var(--navy);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px}
+#aud header img{height:30px}
+#aud header .ht{font-weight:800;font-size:15px}
+#aud header .hs{font-size:11.5px;opacity:.8}
+#audstate{width:10px;height:10px;border-radius:50%;background:#bbb;flex:none}
+#audstate.ok{background:#6CE9A6} #audstate.bad{background:#ff9c8f}
+#aud main{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column}
+.acard{background:#fff;border-radius:16px;padding:20px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.acard h3{margin:0 0 6px;color:var(--navy);font-size:19px}
+.acard .acase{background:var(--bg);border-left:4px solid var(--blue);border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:12px}
+.aopt{display:block;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;margin:8px 0;cursor:pointer}
+.aopt b{color:var(--blue);margin-right:6px}
+.aopt.sel{border-color:var(--blue);background:#E8F1FA}
+.aopt.correct{border-color:var(--green);background:#E7F3EC}
+.aopt.wrongpick{border-color:var(--red);background:#FBE9E7}
+.amsg{text-align:center;color:var(--grey);font-size:14px;margin-top:10px}
+.aemoji{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.aemoji button{font-size:16px;padding:14px 8px;border:2px solid var(--line);border-radius:14px;background:#fff;cursor:pointer}
+.aemoji button .e{font-size:30px;display:block}
+.aemoji button.sel{border-color:var(--blue);background:#E8F1FA}
+.awaiting{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--grey)}
+.awaiting img{height:56px;max-width:82vw;object-fit:contain;opacity:.9;margin-bottom:16px}
+.awaiting .big{font-size:20px;font-weight:800;color:var(--navy)}
+#aud textarea{width:100%;border:2px solid var(--line);border-radius:12px;padding:12px;font-size:16px;font-family:inherit;min-height:84px;resize:vertical}
+.asend{width:100%;margin-top:10px;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}
+.asend:disabled{opacity:.5}
+.mine{margin-top:14px}
+.mine .mi{background:#FFF9E6;border:1px solid #EAD48A;border-radius:10px;padding:9px 12px;font-size:14px;margin:6px 0}
+.aexplain{background:#E7F3EC;border-left:4px solid var(--green);border-radius:8px;padding:10px 12px;font-size:14.5px;margin-top:12px;line-height:1.45}
+.abar{height:26px;background:var(--bg);border-radius:6px;margin:5px 0;position:relative;overflow:hidden}
+.abar .f{position:absolute;inset:0;width:0;background:rgba(0,94,184,.25);transition:width .5s}
+.abar.c .f{background:rgba(0,127,59,.3)}
+.abar span{position:absolute;left:8px;top:3px;font-size:13px;font-weight:700;z-index:1}
+.abar em{position:absolute;right:8px;top:3px;font-size:13px;font-weight:800;font-style:normal;z-index:1}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;font-size:14px;opacity:0;transition:opacity .3s;z-index:60;pointer-events:none}
+#toast.show{opacity:1}
+@media (max-width:820px){
+  .opts{grid-template-columns:1fr}
+  .drugs{grid-template-columns:1fr 1fr}
+  .xgrid{grid-template-columns:1fr}
+  .agenda{grid-template-columns:1fr 1fr}
+  .take{grid-template-columns:1fr}
+  .bcard{max-width:80vw}
+  .qrwrap{flex-direction:column;gap:2vh}
+}
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+<div id="toast"></div>
+
+<!-- ================= AUDIENCE ================= -->
+<div id="aud">
+  <header>
+    <img src="logo_transparent.png" alt="Southmead Surgical Teaching">
+    <div class="hs" style="margin-left:auto">Session 1 · live</div>
+    <div id="audstate"></div>
+  </header>
+  <main id="audmain"></main>
+</div>
+
+<!-- ================= DECK ================= -->
+<div id="deck">
+
+<!-- 0 · TITLE -->
+<section class="slide titleslide on" data-sec="Start">
+  <img src="logo_transparent.png" alt="Southmead Surgical Teaching">
+  <div class="kicker" style="color:#B8D8F2">Session 1</div>
+  <h1>Foundations for the Front Line</h1>
+  <p class="sub">Opioid prescribing · AKI bundle · UGI &amp; LGI anatomy · Urology on-call · Your first week</p>
+  <div class="badge-live">📱 Interactive — keep your phone out</div>
+  <p class="by">Dr Suketu Batra · August 2026</p>
+</section>
+
+<!-- 1 · JOIN -->
+<section class="slide">
+  <h2>Join in before we start</h2>
+  <div class="qrwrap">
+    <img src="qr_session1.png" alt="QR code">
+    <div class="qrsteps">
+      1&nbsp;·&nbsp;Scan the QR (or type the link)<br>
+      <span class="url">teachsurgerysmh.github.io/nhs/session1.html</span><br>
+      2&nbsp;·&nbsp;Keep the page open — questions appear as we go<br>
+      3&nbsp;·&nbsp;Everything you post is <b>anonymous</b>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · MOOD POLL -->
+<section class="slide" data-live="mood">
+  <div class="joinhint">📱 vote on your phone</div>
+  <h2><span class="tag">LIVE</span>Week 1 in one tap</h2>
+  <p class="case">Honest answers — it's anonymous. How has the first week actually been?</p>
+  <div class="tally" id="tally-mood" style="flex:1"></div>
+  <p class="note">We'll come back to this at the end — with your wins and your challenges.</p>
+</section>
+
+<!-- 3 · AGENDA -->
+<section class="slide">
+  <h2>Tonight — 45 minutes</h2>
+  <div class="agenda">
+    <div class="ag"><b>💊 Opioids</b><span>Starting, converting, staying safe · 10 min</span></div>
+    <div class="ag"><b>🫘 AKI bundle</b><span>Spot it, stage it, act on it · 8 min</span></div>
+    <div class="ag"><b>🍽️ UGI anatomy</b><span>Coeliac trunk &amp; the bleeding ulcer · 6 min</span></div>
+    <div class="ag"><b>🌀 LGI anatomy</b><span>SMA vs IMA &amp; watershed zones · 6 min</span></div>
+    <div class="ag"><b>🚽 Urology on-call</b><span>Bonus: surviving the night shift · 7 min</span></div>
+    <div class="ag"><b>🗣️ Your first week</b><span>Wins, challenges, group fixes · 8 min</span></div>
+  </div>
+</section>
+
+<!-- 4 · OPIOIDS: CASE + LADDER -->
+<section class="slide" data-sec="Opioids">
+  <div class="kicker">Opioid prescribing</div>
+  <h2>Day 1 post-laparotomy, pain 8/10 — now what?</h2>
+  <p class="case">Ward round done, you're holding the drug chart. Before reaching for morphine, build the base of the ladder properly.</p>
+  <div class="rv"><div class="rv-q">Step 1 — non-opioid, always regular</div><div class="rv-a">Paracetamol 1 g QDS <b>regular</b>, not PRN (reduce if &lt;50 kg or significant liver disease). NSAIDs only if no renal impairment, no GI bleed risk, and the surgical team is happy — many post-op surgical patients fail at least one of those.</div></div>
+  <div class="rv"><div class="rv-q">Step 2 — weak opioid</div><div class="rv-a">Codeine 30–60 mg QDS (max 240 mg/day ≈ only ~24 mg oral morphine — it's weaker than people think). ~10% of patients can't metabolise it at all. <b>Stop it</b> when you start a strong opioid — never run both.</div></div>
+  <div class="rv"><div class="rv-q">Step 3 — strong opioid</div><div class="rv-a">Morphine first line. Immediate-release (oramorph) to find the dose, modified-release to hold it. And a surgical reflex worth building: <b>pain out of proportion or escalating = ask why</b> (leak, ischaemia, compartment, retention) — don't just up-titrate.</div></div>
+</section>
+
+<!-- 5 · STARTING STRONG OPIOIDS -->
+<section class="slide">
+  <div class="kicker">Opioid prescribing</div>
+  <h2>Starting morphine — the numbers</h2>
+  <div class="rv open"><div class="rv-q">Opioid-naïve adult</div><div class="rv-a">Oramorph <b>5 mg</b> up to 2–4-hourly PRN (2.5 mg if elderly or frail). Titrate to effect. Needing more than 2–3 PRN doses a day? The background needs sorting, not more PRNs.</div></div>
+  <div class="rv"><div class="rv-q">Converting to modified-release</div><div class="rv-a">Add up 24 h of use → give as MR morphine (Zomorph/MST) <b>split BD</b>. Example: 30 mg used in 24 h → MR 15 mg BD.</div></div>
+  <div class="rv"><div class="rv-q">The 1/6 rule for breakthrough</div><div class="rv-a">PRN dose = <b>1/10 to 1/6 of the total daily background dose</b>, given up to 2–4-hourly. Recalculate it every time the background changes.</div></div>
+  <div class="rv"><div class="rv-q">What you co-prescribe, every time</div><div class="rv-a">A <b>regular laxative</b> (constipation is near-universal and doesn't wear off) + a <b>PRN antiemetic</b> (nausea usually settles in days). Forgetting the laxative is the classic F1 letter-of-complaint.</div></div>
+</section>
+
+<!-- 6 · CONVERSIONS + CALCULATOR -->
+<section class="slide">
+  <div class="kicker">Opioid prescribing</div>
+  <h2>Conversions you'll actually use</h2>
+  <div class="cols">
+    <div>
+      <div class="rv open"><div class="rv-q">The four to memorise (from oral morphine)</div><div class="rv-a">
+        <ul>
+          <li>Codeine → morphine: <b>÷ 10</b></li>
+          <li>Oral morphine → oral oxycodone: <b>÷ 1.5–2</b> (use ÷2 and titrate — safer)</li>
+          <li>Oral morphine → s/c morphine: <b>÷ 2</b></li>
+          <li>Oral morphine → s/c diamorphine: <b>÷ 3</b></li>
+        </ul>
+        When switching drug or route, err low and use PRNs to catch up — you can always give more, you can't take it back.
+      </div></div>
+    </div>
+    <div class="calc">
+      <label>Try it — total daily <u>oral morphine</u> (mg): <input type="number" id="calcin" min="0" max="1000" inputmode="numeric" placeholder="60"></label>
+      <table id="calcout">
+        <tr><td>Breakthrough PRN (1/10–1/6)</td><td id="c-prn">—</td></tr>
+        <tr><td>Oral oxycodone / 24 h (÷2)</td><td id="c-oxy">—</td></tr>
+        <tr><td>s/c morphine / 24 h (÷2)</td><td id="c-scm">—</td></tr>
+        <tr><td>s/c diamorphine / 24 h (÷3)</td><td id="c-dia">—</td></tr>
+      </table>
+      <p class="note">Teaching aid only — confirm in the BNF or with pharmacy before prescribing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · MCQ op1 -->
+<section class="slide" data-live="op1">
+  <div class="joinhint">📱 answer on your phone</div>
+  <div class="kicker">Opioid prescribing</div>
+  <h2><span class="tag">LIVE</span>Question 1</h2>
+  <p class="case" id="case-op1"></p>
+  <div class="opts" id="opts-op1"></div>
+  <div class="answct" id="ct-op1"></div>
+  <button class="btn reveal" data-q="op1">Reveal answer</button>
+  <div class="explain" id="explain-op1"></div>
+</section>
+
+<!-- 8 · MCQ op2 -->
+<section class="slide" data-live="op2">
+  <div class="joinhint">📱 answer on your phone</div>
+  <div class="kicker">Opioid prescribing</div>
+  <h2><span class="tag">LIVE</span>Question 2</h2>
+  <p class="case" id="case-op2"></p>
+  <div class="opts" id="opts-op2"></div>
+  <div class="answct" id="ct-op2"></div>
+  <button class="btn reveal" data-q="op2">Reveal answer</button>
+  <div class="explain" id="explain-op2"></div>
+</section>
+
+<!-- 9 · OPIOID SAFETY -->
+<section class="slide">
+  <div class="kicker">Opioid prescribing</div>
+  <h2>Staying safe (and keeping your patients safe)</h2>
+  <div class="rv"><div class="rv-q">Toxicity — what kills is respiratory depression</div><div class="rv-a">Sedation comes <b>before</b> respiratory depression — a drowsy patient on opioids is a warning, not a comfort. RR &lt;8 or unrousable → ABCDE, stop opioids, give <b>naloxone</b> per trust protocol (typically 400-microgram increments IV, repeated — short half-life, so watch for re-sedation).</div></div>
+  <div class="rv"><div class="rv-q">Renal impairment</div><div class="rv-a">eGFR &lt;30: morphine metabolites accumulate → switch to <b>oxycodone</b> (reduced dose). Severe/dialysis: fentanyl or alfentanil, with senior/palliative advice. This is also why you re-check opioid charts in every AKI — the two topics tonight are the same patient.</div></div>
+  <div class="rv"><div class="rv-q">Discharge scripts (controlled drugs)</div><div class="rv-a">CD prescriptions need formulation, strength, dose, and <b>total quantity in words and figures</b>. Send home the smallest sensible supply with a clear weaning plan — post-op opioids are for weeks, not months. Advise not to drive while drowsy or after dose changes.</div></div>
+</section>
+
+<!-- 10 · AKI DEFINITION -->
+<section class="slide" data-sec="AKI">
+  <div class="kicker">AKI</div>
+  <h2>Spot it and stage it (KDIGO)</h2>
+  <p class="case">AKI = creatinine rise ≥26 µmol/L within 48 h, <b>or</b> ≥1.5× baseline within 7 days, <b>or</b> urine output &lt;0.5 ml/kg/h for 6 h. Stage by the <b>worst</b> criterion.</p>
+  <div class="rv"><div class="rv-q">Stage 1</div><div class="rv-a">Creatinine 1.5–1.9× baseline (or ≥26 rise) · UO &lt;0.5 ml/kg/h for 6–12 h</div></div>
+  <div class="rv"><div class="rv-q">Stage 2</div><div class="rv-a">Creatinine 2.0–2.9× baseline · UO &lt;0.5 ml/kg/h for ≥12 h</div></div>
+  <div class="rv"><div class="rv-q">Stage 3</div><div class="rv-a">Creatinine ≥3× baseline, or ≥354 µmol/L, or started on renal replacement · UO &lt;0.3 ml/kg/h for ≥24 h or anuria ≥12 h</div></div>
+  <p class="note">Know the baseline — a creatinine of 110 can be a bad AKI in a patient whose baseline is 55. And on a surgical ward, think causes in three columns: pre-renal (hypovolaemia, sepsis) · renal (drugs, contrast) · post-renal (blocked catheter, retention, ureteric injury).</p>
+</section>
+
+<!-- 11 · MCQ aki1 -->
+<section class="slide" data-live="aki1">
+  <div class="joinhint">📱 answer on your phone</div>
+  <div class="kicker">AKI</div>
+  <h2><span class="tag">LIVE</span>Question 3</h2>
+  <p class="case" id="case-aki1"></p>
+  <div class="opts" id="opts-aki1"></div>
+  <div class="answct" id="ct-aki1"></div>
+  <button class="btn reveal" data-q="aki1">Reveal answer</button>
+  <div class="explain" id="explain-aki1"></div>
+</section>
+
+<!-- 12 · AKI BUNDLE -->
+<section class="slide">
+  <div class="kicker">AKI</div>
+  <h2>The AKI bundle — do all of it, same day</h2>
+  <div class="cols">
+    <div>
+      <div class="rv"><div class="rv-q">1 · Assess volume &amp; sepsis</div><div class="rv-a">Fluid status examination, fluid balance chart, NEWS. Hypovolaemic → fluid challenge and reassess. Septic → Sepsis 6 now.</div></div>
+      <div class="rv"><div class="rv-q">2 · Dip the urine</div><div class="rv-a">Urinalysis on every AKI, documented. Blood + protein → think intrinsic renal disease and discuss.</div></div>
+      <div class="rv"><div class="rv-q">3 · Medication review</div><div class="rv-a">The drug chart is the commonest fixable cause — next slide is exactly this.</div></div>
+    </div>
+    <div>
+      <div class="rv"><div class="rv-q">4 · Exclude obstruction</div><div class="rv-a">Palpable bladder? Catheter blocked? Bladder scan. Renal USS within <b>24 h</b> if the cause isn't obvious — sooner if pyonephrosis is suspected (that's an emergency, later slide).</div></div>
+      <div class="rv"><div class="rv-q">5 · Bloods &amp; monitoring</div><div class="rv-a">VBG for a fast K⁺, repeat U&amp;E, strict fluid balance ± hourly urine output (catheterise in stage ≥2), daily weight.</div></div>
+      <div class="rv"><div class="rv-q">6 · Escalate</div><div class="rv-a">Stage 3, oliguria despite filling, K⁺ ≥6.0, or no clear cause → senior + renal/critical care early. Don't sit on a rising creatinine overnight.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 · DRUG ROUND GAME -->
+<section class="slide">
+  <div class="kicker">AKI</div>
+  <h2>The drug chart game — continue, hold, or adjust?</h2>
+  <p class="note">Your laparotomy patient now has stage 2 AKI. Tap each drug to cycle your answer, then check. (Shout them out as we go.)</p>
+  <div class="drugs" id="drugs"></div>
+  <div style="display:flex;gap:10px;margin-top:1.4vh">
+    <button class="btn reveal" id="drugcheck">Check answers</button>
+    <button class="btn ghost" id="drugreset">Reset</button>
+  </div>
+</section>
+
+<!-- 14 · MCQ aki2 + ESCALATION -->
+<section class="slide" data-live="aki2">
+  <div class="joinhint">📱 answer on your phone</div>
+  <div class="kicker">AKI</div>
+  <h2><span class="tag">LIVE</span>Question 4 — the K⁺ is back…</h2>
+  <p class="case" id="case-aki2"></p>
+  <div class="opts" id="opts-aki2"></div>
+  <div class="answct" id="ct-aki2"></div>
+  <button class="btn reveal" data-q="aki2">Reveal answer</button>
+  <div class="explain" id="explain-aki2"></div>
+  <div class="rv" style="margin-top:1.2vh"><div class="rv-q">When does an AKI need dialysis? — A·E·I·O·U</div><div class="rv-a"><b>A</b>cidosis (refractory, pH &lt;7.15) · <b>E</b>lectrolytes (refractory K⁺ ≥6.5) · <b>I</b>ntoxicants (certain poisonings) · <b>O</b>verload (fluid, refractory) · <b>U</b>raemia (pericarditis, encephalopathy). These are the words that get ICU/renal moving on the phone.</div></div>
+</section>
+
+<!-- 15 · UGI ANATOMY -->
+<section class="slide" data-sec="UGI">
+  <div class="kicker">UGI anatomy</div>
+  <h2>The coeliac trunk — tap a dot, name the vessel</h2>
+  <div class="anatbtns">
+    <button class="btn tog" id="ugi-all">Reveal all labels</button>
+  </div>
+  <div class="anat">
+  <svg viewBox="0 0 800 540" xmlns="http://www.w3.org/2000/svg" id="ugisvg" role="img" aria-label="Schematic of the coeliac trunk and stomach blood supply">
+    <!-- organs -->
+    <path d="M175,70 Q320,40 350,120 Q355,175 290,185 Q200,195 150,150 Q130,100 175,70 Z" fill="#E8D5C8" stroke="#C9AE9C" stroke-width="2"/>
+    <text x="215" y="125" font-size="16" fill="#8a6f5d" font-weight="700">Liver</text>
+    <ellipse cx="672" cy="225" rx="42" ry="70" fill="#C9AECF" stroke="#A98BB3" stroke-width="2" transform="rotate(18 672 225)"/>
+    <text x="648" y="230" font-size="15" fill="#6d5477" font-weight="700">Spleen</text>
+    <!-- aorta -->
+    <rect x="421" y="30" width="20" height="480" rx="10" fill="#B2464C" opacity="0.35"/>
+    <text x="452" y="500" font-size="15" fill="#8c2f35" font-weight="700">Aorta</text>
+    <!-- stomach (drawn over the aorta so the aorta reads as behind) -->
+    <path d="M395,140 Q400,95 460,95 Q540,95 555,165 Q568,235 520,295 Q470,350 380,352 Q320,352 295,330 L285,308 Q340,318 385,300 Q440,275 448,210 Q450,170 420,158 Q405,152 395,140 Z"
+          fill="#F8D3AB" opacity="0.85" stroke="#D99A62" stroke-width="2.5"/>
+    <text x="455" y="205" font-size="16" fill="#a3672f" font-weight="700">Stomach</text>
+    <!-- duodenum -->
+    <path d="M295,330 Q240,335 222,375 Q205,415 235,450 Q270,482 330,470" fill="none" stroke="#D99A62" stroke-width="16" stroke-linecap="round" opacity="0.6"/>
+    <text x="205" y="480" font-size="15" fill="#a3672f" font-weight="700">Duodenum</text>
+    <!-- vessels -->
+    <path id="v-ct"  d="M431,262 L413,248" stroke="#DA291C" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path id="v-lg"  d="M413,248 Q404,205 403,168 Q417,185 429,203" stroke="#DA291C" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path id="v-sp"  d="M413,248 Q470,272 505,252 Q540,232 575,250 Q610,266 645,250" stroke="#DA291C" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+    <path id="v-sg"  d="M628,240 Q590,190 560,150 M645,248 Q625,200 610,165" stroke="#DA291C" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path id="v-lgo" d="M638,262 Q560,330 480,345" stroke="#DA291C" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path id="v-ch"  d="M413,248 Q370,250 335,244" stroke="#DA291C" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+    <path id="v-ph"  d="M335,244 Q318,205 305,170" stroke="#DA291C" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path id="v-rg"  d="M322,222 Q345,262 380,290" stroke="#DA291C" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path id="v-gda" d="M335,244 Q322,290 303,330" stroke="#DA291C" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path id="v-rgo" d="M303,330 Q380,368 480,345" stroke="#DA291C" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path id="v-spd" d="M303,330 Q285,365 272,395" stroke="#DA291C" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <!-- labels -->
+    <g class="alabel" id="lab-ct"><line x1="422" y1="255" x2="480" y2="300"/><text x="485" y="308">Coeliac trunk (T12)</text></g>
+    <g class="alabel" id="lab-lg"><line x1="403" y1="165" x2="330" y2="70"/><text x="240" y="62">Left gastric a.</text></g>
+    <g class="alabel" id="lab-sp"><line x1="540" y1="240" x2="580" y2="390"/><text x="540" y="412">Splenic a.</text></g>
+    <g class="alabel" id="lab-sg"><line x1="600" y1="180" x2="660" y2="110"/><text x="600" y="98">Short gastric aa.</text></g>
+    <g class="alabel" id="lab-lgo"><line x1="565" y1="315" x2="640" y2="430"/><text x="590" y="452">Left gastro-omental a.</text></g>
+    <g class="alabel" id="lab-ch"><line x1="370" y1="247" x2="420" y2="440"/><text x="330" y="462">Common hepatic a.</text></g>
+    <g class="alabel" id="lab-ph"><line x1="315" y1="200" x2="250" y2="230"/><text x="105" y="235">Hepatic a. proper</text></g>
+    <g class="alabel" id="lab-rg"><line x1="348" y1="262" x2="392" y2="248"/><text x="378" y="243">Right gastric a.</text></g>
+    <g class="alabel" id="lab-gda"><line x1="318" y1="290" x2="160" y2="315"/><text x="60" y="310">Gastroduodenal a.</text></g>
+    <g class="alabel" id="lab-rgo"><line x1="390" y1="362" x2="360" y2="420"/><text x="290" y="440">Right gastro-omental a.</text></g>
+    <g class="alabel" id="lab-spd"><line x1="283" y1="368" x2="180" y2="400"/><text x="45" y="418">Sup. pancreaticoduodenal a.</text></g>
+    <!-- hotspots -->
+    <g class="hot" data-lab="lab-ct"><circle cx="422" cy="255"/><text x="417" y="260">?</text></g>
+    <g class="hot" data-lab="lab-lg"><circle cx="403" cy="180"/><text x="398" y="185">?</text></g>
+    <g class="hot" data-lab="lab-sp"><circle cx="540" cy="240"/><text x="535" y="245">?</text></g>
+    <g class="hot" data-lab="lab-sg"><circle cx="600" cy="185"/><text x="595" y="190">?</text></g>
+    <g class="hot" data-lab="lab-lgo"><circle cx="565" cy="315"/><text x="560" y="320">?</text></g>
+    <g class="hot" data-lab="lab-ch"><circle cx="370" cy="247"/><text x="365" y="252">?</text></g>
+    <g class="hot" data-lab="lab-ph"><circle cx="315" cy="200"/><text x="310" y="205">?</text></g>
+    <g class="hot" data-lab="lab-rg"><circle cx="348" cy="262"/><text x="343" y="267">?</text></g>
+    <g class="hot" data-lab="lab-gda"><circle cx="318" cy="290"/><text x="313" y="295">?</text></g>
+    <g class="hot" data-lab="lab-rgo"><circle cx="390" cy="362"/><text x="385" y="367">?</text></g>
+    <g class="hot" data-lab="lab-spd"><circle cx="283" cy="368"/><text x="278" y="373">?</text></g>
+  </svg>
+  </div>
+  <p class="note">Three branches at T12 → left gastric · splenic · common hepatic. Lesser curve: left + right gastric. Greater curve: the two gastro-omentals. Fundus: short gastrics from the splenic.</p>
+</section>
+
+<!-- 16 · MCQ ugi1 -->
+<section class="slide" data-live="ugi1">
+  <div class="joinhint">📱 answer on your phone</div>
+  <div class="kicker">UGI anatomy</div>
+  <h2><span class="tag">LIVE</span>Question 5</h2>
+  <p class="case" id="case-ugi1"></p>
+  <div class="opts" id="opts-ugi1"></div>
+  <div class="answct" id="ct-ugi1"></div>
+  <button class="btn reveal" data-q="ugi1">Reveal answer</button>
+  <div class="explain" id="explain-ugi1"></div>
+  <div class="rv" style="margin-top:1.2vh"><div class="rv-q">Duodenum in 20 seconds</div><div class="rv-a">Four parts; D1 is the ulcer zone (the <b>gastroduodenal artery</b> lies directly behind it). D2 holds the ampulla — where foregut becomes midgut, and why coeliac trunk hands over to SMA. D3 crosses under the SMA in front of the aorta.</div></div>
+</section>
+
+<!-- 17 · LGI ANATOMY -->
+<section class="slide" data-sec="LGI">
+  <div class="kicker">LGI anatomy</div>
+  <h2>Colon blood supply — SMA vs IMA</h2>
+  <div class="anatbtns">
+    <button class="btn tog" id="t-sma">SMA territory (midgut)</button>
+    <button class="btn tog" id="t-ima">IMA territory (hindgut)</button>
+    <button class="btn tog" id="lgi-all">Reveal all labels</button>
+  </div>
+  <div class="anat">
+  <svg viewBox="0 0 800 540" xmlns="http://www.w3.org/2000/svg" id="lgisvg" role="img" aria-label="Schematic of colonic blood supply">
+    <!-- colon frame -->
+    <path d="M155,455 Q130,430 132,390 L138,205 Q140,150 195,142 L590,128 Q640,124 646,175 L648,390 Q648,440 606,452 Q566,462 552,432 Q542,408 526,436 L521,502"
+          fill="none" stroke="#E0B98A" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- territory overlays -->
+    <path class="terr" id="terr-sma" d="M155,455 Q130,430 132,390 L138,205 Q140,150 195,142 L440,133" fill="none" stroke="#FFB81C" stroke-width="34" stroke-linecap="round" opacity="0"/>
+    <path class="terr" id="terr-ima" d="M440,133 L590,128 Q640,124 646,175 L648,390 Q648,440 606,452 Q566,462 552,432 Q542,408 526,436 L521,502" fill="none" stroke="#41B6E6" stroke-width="34" stroke-linecap="round" opacity="0"/>
+    <text x="60" y="300" font-size="15" fill="#a3672f" font-weight="700">Ascending</text>
+    <text x="330" y="110" font-size="15" fill="#a3672f" font-weight="700">Transverse</text>
+    <text x="672" y="300" font-size="15" fill="#a3672f" font-weight="700">Descending</text>
+    <text x="440" y="492" font-size="15" fill="#a3672f" font-weight="700">Rectum</text>
+    <text x="584" y="498" font-size="15" fill="#a3672f" font-weight="700">Sigmoid</text>
+    <!-- vessels -->
+    <path id="v-sma" d="M400,530 L395,300" stroke="#DA291C" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path id="v-ic"  d="M395,330 Q280,370 175,432" stroke="#DA291C" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+    <path id="v-rc"  d="M395,300 Q260,290 150,280" stroke="#DA291C" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+    <path id="v-mc"  d="M395,300 Q390,220 385,152" stroke="#DA291C" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+    <path id="v-ima" d="M430,530 Q436,470 445,420" stroke="#DA291C" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path id="v-lc"  d="M445,420 Q560,340 632,270" stroke="#DA291C" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+    <path id="v-sig" d="M445,420 Q515,425 575,445" stroke="#DA291C" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path id="v-sr"  d="M445,420 Q485,450 516,486" stroke="#DA291C" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <!-- marginal artery -->
+    <path id="v-marg" d="M180,430 Q165,300 175,180 Q185,158 240,155 L580,142 Q625,142 630,190 L636,375 Q634,420 600,436" stroke="#DA291C" stroke-width="2.5" fill="none" stroke-dasharray="7 5" opacity="0.85"/>
+    <!-- watershed stars -->
+    <text x="600" y="120" font-size="30" fill="#DA291C">★</text>
+    <text x="490" y="428" font-size="26" fill="#DA291C">★</text>
+    <!-- labels -->
+    <g class="alabel" id="lab-sma2"><line x1="398" y1="430" x2="330" y2="480"/><text x="180" y="500">Superior mesenteric a.</text></g>
+    <g class="alabel" id="lab-ic"><line x1="280" y1="382" x2="255" y2="420"/><text x="185" y="440">Ileocolic a.</text></g>
+    <g class="alabel" id="lab-rc"><line x1="265" y1="288" x2="245" y2="245"/><text x="185" y="238">Right colic a.</text></g>
+    <g class="alabel" id="lab-mc"><line x1="389" y1="215" x2="350" y2="230"/><text x="235" y="238">Middle colic a.</text></g>
+    <g class="alabel" id="lab-ima2"><line x1="437" y1="470" x2="430" y2="510"/><text x="390" y="528">Inferior mesenteric a.</text></g>
+    <g class="alabel" id="lab-lc"><line x1="545" y1="355" x2="545" y2="330"/><text x="482" y="322">Left colic a.</text></g>
+    <g class="alabel" id="lab-sig2"><line x1="510" y1="430" x2="530" y2="395"/><text x="490" y="388">Sigmoid aa.</text></g>
+    <g class="alabel" id="lab-sr"><line x1="480" y1="452" x2="590" y2="520"/><text x="595" y="528">Superior rectal a.</text></g>
+    <g class="alabel" id="lab-marg"><line x1="176" y1="240" x2="120" y2="200"/><text x="30" y="190">Marginal a. (Drummond)</text></g>
+    <!-- hotspots -->
+    <g class="hot" data-lab="lab-sma2"><circle cx="398" cy="430"/><text x="393" y="435">?</text></g>
+    <g class="hot" data-lab="lab-ic"><circle cx="280" cy="382"/><text x="275" y="387">?</text></g>
+    <g class="hot" data-lab="lab-rc"><circle cx="265" cy="288"/><text x="260" y="293">?</text></g>
+    <g class="hot" data-lab="lab-mc"><circle cx="389" cy="215"/><text x="384" y="220">?</text></g>
+    <g class="hot" data-lab="lab-ima2"><circle cx="437" cy="470"/><text x="432" y="475">?</text></g>
+    <g class="hot" data-lab="lab-lc"><circle cx="545" cy="355"/><text x="540" y="360">?</text></g>
+    <g class="hot" data-lab="lab-sig2"><circle cx="510" cy="430"/><text x="505" y="435">?</text></g>
+    <g class="hot" data-lab="lab-sr"><circle cx="480" cy="452"/><text x="475" y="457">?</text></g>
+    <g class="hot" data-lab="lab-marg"><circle cx="176" cy="240"/><text x="171" y="245">?</text></g>
+  </svg>
+  </div>
+  <p class="note">★ = watershed zones: splenic flexure (Griffiths' point) and rectosigmoid (Sudeck's point) — first to suffer in hypotension, classic sites for ischaemic colitis.</p>
+</section>
+
+<!-- 18 · MCQ lgi1 + OPS TABLE -->
+<section class="slide" data-live="lgi1">
+  <div class="joinhint">📱 answer on your phone</div>
+  <div class="kicker">LGI anatomy</div>
+  <h2><span class="tag">LIVE</span>Question 6</h2>
+  <p class="case" id="case-lgi1"></p>
+  <div class="opts" id="opts-lgi1"></div>
+  <div class="answct" id="ct-lgi1"></div>
+  <button class="btn reveal" data-q="lgi1">Reveal answer</button>
+  <div class="explain" id="explain-lgi1"></div>
+  <div class="rv" style="margin-top:1.2vh"><div class="rv-q">Why anatomy = the operation (30 seconds)</div><div class="rv-a">Right hemicolectomy → ileocolic ± right colic. Extended right → + middle colic. Left hemicolectomy → left colic. Anterior resection → IMA (± high/low tie). The resection follows the vessel, and the vessel carries the lymph nodes — that's the whole logic of cancer surgery. (You met these names in the terminology module.)</div></div>
+</section>
+
+<!-- 19 · UROLOGY CARDS -->
+<section class="slide" data-sec="Urology">
+  <div class="kicker">Bonus · Urology on-call</div>
+  <h2>Night shift survival — tap a scenario</h2>
+  <div class="xgrid">
+    <div class="xc"><h3>🚫 Acute urinary retention</h3><div class="xb"><ul>
+      <li>Painful, palpable bladder → bladder scan → catheterise (14–16&nbsp;Ch), <b>document the residual</b>, send a CSU.</li>
+      <li>Treat causes: constipation, opioids/anticholinergics, UTI, clots. Plan the TWOC before you forget.</li>
+      <li>Residual &gt;1 L + renal impairment = high-pressure chronic retention → watch for <b>post-obstructive diuresis</b> (&gt;200 ml/h): monitor, replace, U&amp;Es.</li>
+    </ul></div></div>
+    <div class="xc"><h3>🧱 Catheter won't pass / blocked / bypassing</h3><div class="xb"><ul>
+      <li>Won't pass: plenty of lidocaine gel + time, then a <b>16&nbsp;Ch (larger and stiffer — not smaller)</b>. Never force. Failed twice → urology, don't traumatise the urethra.</li>
+      <li>Never inflate the balloon without urine draining.</li>
+      <li>Blocked: flush 50 ml saline; still blocked → change it. Bypassing with a patent catheter is usually bladder spasm — and check for constipation.</li>
+    </ul></div></div>
+    <div class="xc"><h3>🩸 Clot retention / frank haematuria</h3><div class="xb"><ul>
+      <li>Clot retention needs a <b>3-way catheter (20–22&nbsp;Ch)</b> + washout until clear, then irrigation — a standard catheter will just block.</li>
+      <li>FBC, G&amp;S, review anticoagulants, cause needs follow-up (tumour until proven otherwise in the older patient) → urology.</li>
+    </ul></div></div>
+    <div class="xc"><h3>🔒 Paraphimosis</h3><div class="xb"><ul>
+      <li>Retracted foreskin stuck behind the glans → swells. Analgesia, firm compression, reduce. Can't reduce → urology (dorsal slit).</li>
+      <li>Commonest iatrogenic cause: catheterising and <b>forgetting to pull the foreskin back down</b>. Make it a habit.</li>
+    </ul></div></div>
+  </div>
+</section>
+
+<!-- 20 · MCQ uro1 + NEVER MISS -->
+<section class="slide" data-live="uro1">
+  <div class="joinhint">📱 answer on your phone</div>
+  <div class="kicker">Bonus · Urology on-call</div>
+  <h2><span class="tag">LIVE</span>Question 7</h2>
+  <p class="case" id="case-uro1"></p>
+  <div class="opts" id="opts-uro1"></div>
+  <div class="answct" id="ct-uro1"></div>
+  <button class="btn reveal" data-q="uro1">Reveal answer</button>
+  <div class="explain" id="explain-uro1"></div>
+  <div class="xgrid" style="margin-top:1.2vh">
+    <div class="xc danger open"><h3>⚠️ Never miss #1 — testicular torsion</h3><div class="xb">Sudden severe unilateral pain ± vomiting; high-riding, tender testis. <b>Clinical diagnosis — do not wait for imaging.</b> Salvage ~90% under 6 h. NBM + urology immediately.</div></div>
+    <div class="xc danger open"><h3>⚠️ Never miss #2 — infected obstructed kidney</h3><div class="xb">Fever/sepsis + loin pain + hydronephrosis or a known stone = <b>pus under pressure</b>. Antibiotics alone will not fix it — needs urgent decompression (nephrostomy or stent). Sepsis 6 + urology now, tonight.</div></div>
+  </div>
+</section>
+
+<!-- 21 · WINS BOARD -->
+<section class="slide" data-sec="Week 1" data-live="win" data-board="win">
+  <div class="joinhint">📱 post on your phone</div>
+  <h2><span class="tag">LIVE</span>One win (or surprise) from week 1</h2>
+  <p class="note">Anything counts — first catheter, a thank-you, finding the good coffee. Posts appear here as you send them.</p>
+  <div class="board" id="board-win"><div class="boardempty">Waiting for your posts…</div></div>
+</section>
+
+<!-- 22 · CHALLENGES BOARD -->
+<section class="slide" data-live="challenge" data-board="challenge">
+  <div class="joinhint">📱 post on your phone</div>
+  <h2><span class="tag">LIVE</span>What's been hard — and how do we fix it together?</h2>
+  <p class="note">Post a challenge, then we'll take them one by one as a group: who's had the same? what worked? (Tap a card to mark it discussed.) Think bleeps &amp; prioritising · escalating to seniors · prescribing · IT/access · rota &amp; rest.</p>
+  <div class="board" id="board-challenge"><div class="boardempty">Waiting for your posts…</div></div>
+</section>
+
+<!-- 23 · CLOSE -->
+<section class="slide">
+  <h2>Take these home</h2>
+  <div class="take">
+    <div class="tk"><b>Opioids:</b> PRN = 1/6 of daily dose · laxative every time · eGFR &lt;30 → oxycodone · sedation precedes respiratory depression.</div>
+    <div class="tk"><b>AKI:</b> stage by the worst criterion · dip the urine · fix the drug chart · exclude obstruction · escalate K⁺ ≥6.0.</div>
+    <div class="tk"><b>Anatomy:</b> posterior D1 ulcer = gastroduodenal a. · anterior resection = IMA · watershed = splenic flexure &amp; rectosigmoid.</div>
+    <div class="tk"><b>Urology:</b> torsion and the infected obstructed kidney cannot wait for the morning. Everything else usually can.</div>
+    <div class="tk"><b>Week 1:</b> the challenges on that board are shared — so are the fixes. Ask early, escalate early, look after each other.</div>
+    <div class="tk"><b>Next:</b> same time next week. Feedback link lands in your email — it takes one tap and genuinely shapes these sessions.</div>
+  </div>
+  <p class="note" style="text-align:center">Written by Dr Suketu Batra · Southmead Surgical Teaching · teachsurgerysmh.github.io/nhs</p>
+</section>
+
+</div><!-- /deck -->
+
+<!-- nav -->
+<div id="nav">
+  <button class="arrow" id="prev" aria-label="Previous">‹</button>
+  <button class="arrow" id="next" aria-label="Next">›</button>
+  <span id="pgnum"></span>
+  <div id="chips"></div>
+  <span id="livecount"></span>
+  <div id="conndot" title="live connection"></div>
+</div>
+
+<script>
+'use strict';
+/* ================= CONFIG ================= */
+var SB_URL='https://rufihxjquwrluaenmbaa.supabase.co';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1ZmloeGpxdXdybHVhZW5tYmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyOTg4NDMsImV4cCI6MjA5Mzg3NDg0M30.6o8GrCPcQ__JjrGLUiqQwdgWcM1Qk_02TvLvTOwUjyg';
+var DECK='s1-aug2026';
+var POLL_MS=2500;
+
+var LIVE={
+  mood:{type:'poll',title:'Week 1 in one tap',options:[
+    {k:'thriving',e:'😄',t:'Thriving'},
+    {k:'ok',e:'🙂',t:'Doing OK'},
+    {k:'surviving',e:'😅',t:'Surviving'},
+    {k:'exhausted',e:'😴',t:'Running on empty'},
+    {k:'overwhelmed',e:'🫠',t:'Overwhelmed'}]},
+  op1:{type:'mcq',correct:'b',
+    case:'Mr T takes MST (modified-release morphine) 30 mg BD after his laparotomy. He asks for something for breakthrough pain. What do you prescribe as the PRN oramorph dose?',
+    options:{a:'2.5 mg',b:'10 mg',c:'30 mg',d:'60 mg'},
+    explain:'Breakthrough = 1/10–1/6 of the total daily background dose. MST 30 mg BD = 60 mg/day → 6–10 mg PRN (up to 2–4-hourly). And if he needs more than 2–3 PRNs a day, the background dose needs reviewing — not more PRNs.'},
+  op2:{type:'mcq',correct:'c',
+    case:'82-year-old, day 1 after an emergency laparotomy. eGFR 22. Pain not controlled on regular paracetamol + codeine. Best next step?',
+    options:{a:'Start MST 15 mg BD',b:'Oramorph 10 mg 4-hourly PRN',c:'Stop codeine, start oxycodone IR 1–2 mg PRN',d:'Add regular ibuprofen'},
+    explain:'eGFR <30: morphine’s active metabolites accumulate → sedation and respiratory depression, so oxycodone at a reduced dose is the usual choice (severe/end-stage failure: fentanyl or alfentanil with senior advice). NSAIDs are contraindicated here — and always stop the weak opioid when starting a strong one.'},
+  aki1:{type:'mcq',correct:'c',
+    case:'Your patient’s baseline creatinine is 70 µmol/L; today it is 152 µmol/L. Urine output has been 20 ml/h for the last 7 h (he weighs 80 kg). What AKI stage?',
+    options:{a:'No AKI',b:'Stage 1',c:'Stage 2',d:'Stage 3'},
+    explain:'152/70 ≈ 2.2× baseline → stage 2 by creatinine (2.0–2.9×). By urine output he is oliguric (<0.5 ml/kg/h = <40 ml/h here) for 7 h → only stage 1 by that criterion — and you stage by the WORST one. Stage 3 = ≥3× baseline, creatinine ≥354, or needing renal replacement.'},
+  aki2:{type:'mcq',correct:'b',
+    case:'The repeat bloods are back: K⁺ 7.1, and the ECG shows broad QRS complexes. Which drug first?',
+    options:{a:'Insulin–dextrose infusion',b:'IV calcium gluconate 10%',c:'Nebulised salbutamol',d:'Calcium Resonium'},
+    explain:'Protect the myocardium first: 10 ml of 10% calcium gluconate IV over 5–10 min, repeated until the ECG improves. THEN shift potassium in (insulin–dextrose, salbutamol) and remove it / treat the cause. Resonium is far too slow to matter acutely. Get senior help — this is peri-arrest.'},
+  ugi1:{type:'mcq',correct:'b',
+    case:'A patient with known duodenal ulcer disease has brisk haematemesis and melaena. Endoscopy shows a posterior D1 ulcer with active bleeding. Which artery is responsible?',
+    options:{a:'Left gastric artery',b:'Gastroduodenal artery',c:'Splenic artery',d:'Superior mesenteric artery'},
+    explain:'The gastroduodenal artery runs directly behind the first part of the duodenum — posterior D1 ulcers erode straight into it. (Posterior gastric ulcers threaten the left gastric or splenic vessels.) This is the vessel under-run at laparotomy when endoscopic control fails.'},
+  lgi1:{type:'mcq',correct:'b',
+    case:'In theatre for an anterior resection, the consultant ligates the main vessel close to the aorta — a “high tie”. Which vessel?',
+    options:{a:'Superior mesenteric artery',b:'Inferior mesenteric artery',c:'Middle colic artery',d:'Internal iliac artery'},
+    explain:'The IMA supplies the hindgut — left colic, sigmoid branches, and it continues as the superior rectal artery. After a high tie the remaining colon survives on the marginal artery of Drummond, which is why splenic-flexure (watershed) perfusion matters for the anastomosis.'},
+  uro1:{type:'mcq',correct:'c',
+    case:'19-year-old man, 3 hours of sudden severe left testicular pain with vomiting. The testis is high-riding and exquisitely tender. Best next step?',
+    options:{a:'Urgent Doppler ultrasound',b:'Urine dip and empirical antibiotics',c:'Immediate urology referral for exploration',d:'Analgesia and review in the morning'},
+    explain:'Torsion is a CLINICAL diagnosis — imaging must never delay exploration when suspicion is high. Salvage is ~90% within 6 h of onset and falls sharply after. NBM, analgesia, and call urology the moment you suspect it.'},
+  win:{type:'text',title:'One win (or surprise) from week 1',ph:'First catheter? A thank-you? Found the good coffee? Post it…'},
+  challenge:{type:'text',title:'One challenge you hit this week',ph:'Bleeps, prescribing, escalating, IT, rota…'}
+};
+
+/* ================= MODE + HELPERS ================= */
+var qsp=new URLSearchParams(location.search);
+var MODE=qsp.has('present')?'present':(qsp.has('slides')?'slides':'audience');
+document.body.classList.add('mode-'+MODE);
+function $(id){return document.getElementById(id)}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+var H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+var connEl=(MODE==='audience')?$('audstate'):$('conndot');
+function conn(ok){if(connEl){connEl.className=(connEl.id==='audstate'?'':'')+(ok?'ok':'bad')}}
+function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show')},2200)}
+
+var DEVICE=localStorage.getItem('s1_device');
+if(!DEVICE){DEVICE='d-'+Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10);localStorage.setItem('s1_device',DEVICE)}
+
+function sbSelect(params){
+  return fetch(SB_URL+'/rest/v1/live_responses?'+params,{headers:H})
+    .then(function(r){conn(r.ok);return r.ok?r.json():[]})
+    .catch(function(){conn(false);return[]});
+}
+function sbSubmit(q,ans,multi,dev){
+  return fetch(SB_URL+'/rest/v1/rpc/live_submit',{method:'POST',headers:H,
+    body:JSON.stringify({p_deck:DECK,p_question:q,p_device:dev||DEVICE,p_answer:ans,p_multi:!!multi})})
+    .then(function(r){conn(r.ok);if(!r.ok)throw new Error('submit failed');return r.json()});
+}
+function counts(rows){var c={};rows.forEach(function(r){c[r.answer]=(c[r.answer]||0)+1});return c}
+
+/* my answers persist across reloads */
+var mine=JSON.parse(localStorage.getItem('s1_mine_'+DECK)||'{}');
+function saveMine(){localStorage.setItem('s1_mine_'+DECK,JSON.stringify(mine))}
+
+/* ================= AUDIENCE ================= */
+if(MODE==='audience'){
+  var audMain=$('audmain');
+  var curKey=null,curRevealed=null;
+
+  function waiting(msg,sub){
+    audMain.innerHTML='<div class="awaiting"><img src="logo_dark.png" alt="">'+
+      '<div class="big">'+esc(msg)+'</div><p>'+esc(sub||'')+'</p></div>';
+  }
+  function renderState(key,revealed){
+    var q=LIVE[key];
+    if(!q){waiting('👀 Eyes up front','Questions will appear here as we go.');return}
+    if(q.type==='poll'){
+      var sel=mine[key];
+      var h='<div class="acard"><h3>'+esc(q.title)+'</h3><div class="aemoji">';
+      q.options.forEach(function(o){
+        h+='<button data-k="'+o.k+'" class="'+(sel===o.k?'sel':'')+'"><span class="e">'+o.e+'</span>'+esc(o.t)+'</button>';
+      });
+      h+='</div><div class="amsg">'+(sel?'✓ Recorded — tap another to change':'Anonymous — tap one')+'</div></div>';
+      audMain.innerHTML=h;
+      audMain.querySelectorAll('.aemoji button').forEach(function(b){
+        b.onclick=function(){
+          mine[key]=b.dataset.k;saveMine();
+          sbSubmit(key,b.dataset.k).catch(function(){toast('Couldn’t send — check signal')});
+          renderState(key,revealed);
+        };
+      });
+    }else if(q.type==='mcq'){
+      var sel2=mine[key];
+      var h2='<div class="acard"><h3>Question</h3><div class="acase">'+esc(q.case)+'</div>';
+      Object.keys(q.options).forEach(function(k){
+        var cls='aopt';
+        if(revealed){if(k===q.correct)cls+=' correct';else if(sel2===k)cls+=' wrongpick';}
+        else if(sel2===k)cls+=' sel';
+        h2+='<button class="'+cls+'" data-k="'+k+'" '+(revealed?'disabled':'')+'><b>'+k.toUpperCase()+'</b>'+esc(q.options[k])+'</button>';
+      });
+      if(revealed){
+        var right=sel2===q.correct;
+        h2+='<div class="aexplain"><b>'+(sel2?(right?'✓ You got it. ':'✗ Not this time. '):'')+'</b>'+esc(q.explain)+'</div><div id="atally"></div>';
+      }else{
+        h2+='<div class="amsg">'+(sel2?'✓ Answer sent — you can change it until the reveal':'Anonymous — tap your answer')+'</div>';
+      }
+      h2+='</div>';
+      audMain.innerHTML=h2;
+      if(!revealed){
+        audMain.querySelectorAll('.aopt').forEach(function(b){
+          b.onclick=function(){
+            mine[key]=b.dataset.k;saveMine();
+            sbSubmit(key,b.dataset.k).catch(function(){toast('Couldn’t send — check signal')});
+            renderState(key,false);
+          };
+        });
+      }else{
+        sbSelect('deck=eq.'+DECK+'&question_key=eq.'+key+'&select=answer&limit=1000').then(function(rows){
+          var c=counts(rows),tot=rows.length||1,el=$('atally');if(!el)return;
+          var h3='<div style="margin-top:12px">';
+          Object.keys(q.options).forEach(function(k){
+            var n=c[k]||0,pc=Math.round(100*n/tot);
+            h3+='<div class="abar'+(k===q.correct?' c':'')+'"><div class="f" style="width:'+pc+'%"></div><span>'+k.toUpperCase()+'</span><em>'+n+'</em></div>';
+          });
+          el.innerHTML=h3+'</div>';
+        });
+      }
+    }else if(q.type==='text'){
+      var sent=mine['posts_'+key]||[];
+      var h4='<div class="acard"><h3>'+esc(q.title)+'</h3>'+
+        '<textarea id="atext" maxlength="220" placeholder="'+esc(q.ph)+'"></textarea>'+
+        '<button class="asend" id="asend">Post to the big screen (anonymous)</button>';
+      if(sent.length){h4+='<div class="mine"><b style="font-size:13px;color:var(--grey)">Your posts:</b>';
+        sent.forEach(function(s){h4+='<div class="mi">'+esc(s)+'</div>'});h4+='</div>'}
+      h4+='</div>';
+      audMain.innerHTML=h4;
+      $('asend').onclick=function(){
+        var v=$('atext').value.trim();
+        if(!v)return;
+        if(v.length<2){toast('A little more detail…');return}
+        $('asend').disabled=true;
+        sbSubmit(key,v,true).then(function(){
+          (mine['posts_'+key]=mine['posts_'+key]||[]).push(v);saveMine();
+          renderState(key,revealed);
+        }).catch(function(){toast('Couldn’t send — try again');$('asend').disabled=false});
+      };
+    }
+  }
+
+  function pollState(){
+    sbSelect('deck=eq.'+DECK+'&question_key=eq._state&device_id=eq.presenter&select=answer&limit=1').then(function(rows){
+      var s=(rows[0]&&rows[0].answer)||'idle';
+      var parts=s.split(':'),key=parts[0],revealed=parts[1]==='revealed';
+      if(key===curKey&&revealed===curRevealed)return;
+      curKey=key;curRevealed=revealed;
+      if(key==='idle'||key==='end'||!LIVE[key]){
+        waiting(key==='end'?'That’s a wrap 👏':'👀 Eyes up front','Questions appear here when Suketu opens them. Keep this page open.');
+      }else{
+        renderState(key,revealed);
+      }
+    });
+  }
+  waiting('Connecting…','');
+  pollState();
+  setInterval(pollState,POLL_MS);
+}
+
+/* ================= DECK (present + slides) ================= */
+if(MODE!=='audience'){
+  var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var cur=0,revealedMap={},stateSent='';
+
+  /* populate MCQ slides from LIVE config */
+  Object.keys(LIVE).forEach(function(key){
+    var q=LIVE[key];
+    if(q.type!=='mcq')return;
+    var cs=$('case-'+key),op=$('opts-'+key);
+    if(!cs||!op)return;
+    cs.textContent=q.case;
+    Object.keys(q.options).forEach(function(k){
+      var b=document.createElement('button');
+      b.className='opt';b.dataset.k=k;
+      b.innerHTML='<div class="fill"></div><span class="lbl"><b>'+k.toUpperCase()+'</b>'+esc(q.options[k])+'</span><span class="n"></span>';
+      b.onclick=function(){
+        if(revealedMap[key])return;
+        op.querySelectorAll('.opt').forEach(function(x){x.classList.remove('picked')});
+        b.classList.add('picked');
+      };
+      op.appendChild(b);
+    });
+    $('explain-'+key).textContent=q.explain;
+  });
+
+  /* reveal buttons */
+  document.querySelectorAll('.btn.reveal[data-q]').forEach(function(btn){
+    btn.onclick=function(){
+      var key=btn.dataset.q;revealedMap[key]=true;
+      var q=LIVE[key],op=$('opts-'+key);
+      op.querySelectorAll('.opt').forEach(function(x){
+        if(x.dataset.k===q.correct)x.classList.add('correct');
+        else if(x.classList.contains('picked'))x.classList.add('wrongpick');
+      });
+      $('explain-'+key).classList.add('show');
+      btn.style.display='none';
+      pushState();
+      refreshLive(true);
+    };
+  });
+
+  /* reveal cards */
+  document.querySelectorAll('.rv').forEach(function(rv){
+    rv.addEventListener('click',function(){rv.classList.toggle('open')});
+  });
+  /* expand cards */
+  document.querySelectorAll('.xc').forEach(function(xc){
+    xc.addEventListener('click',function(){xc.classList.toggle('open')});
+  });
+
+  /* calculator */
+  var ci=$('calcin');
+  if(ci){ci.addEventListener('input',function(){
+    var v=parseFloat(ci.value);
+    function set(id,txt){$(id).textContent=txt}
+    if(!v||v<=0){set('c-prn','—');set('c-oxy','—');set('c-scm','—');set('c-dia','—');return}
+    function r1(x){return Math.round(x*10)/10}
+    set('c-prn',r1(v/10)+'–'+r1(v/6)+' mg');
+    set('c-oxy',r1(v/2)+' mg');
+    set('c-scm',r1(v/2)+' mg');
+    set('c-dia',r1(v/3)+' mg');
+  })}
+
+  /* drug round game */
+  var DRUGS=[
+    {n:'Ramipril',s:'ACE inhibitor',a:'hold',w:'Hold — reduces renal perfusion in AKI'},
+    {n:'Ibuprofen',s:'NSAID',a:'hold',w:'Stop — directly nephrotoxic'},
+    {n:'Paracetamol',s:'1 g QDS',a:'continue',w:'Continue — safe in AKI'},
+    {n:'Metformin',s:'for T2DM',a:'hold',w:'Hold — lactic acidosis risk'},
+    {n:'Gentamicin',s:'antibiotic',a:'adjust',w:'Only if essential — dose by levels, micro advice'},
+    {n:'Zomorph',s:'MR morphine',a:'adjust',w:'Switch — metabolites accumulate; oxycodone, reduced'},
+    {n:'Enoxaparin',s:'VTE prophylaxis',a:'adjust',w:'Renal-dose if CrCl <30 — check the chart'},
+    {n:'Amlodipine',s:'antihypertensive',a:'continue',w:'Continue — unless hypotensive'}
+  ];
+  var CYCLE=[null,'continue','hold','adjust'];
+  var dg=$('drugs');
+  if(dg){
+    DRUGS.forEach(function(d,i){
+      var el=document.createElement('div');
+      el.className='drug';el.dataset.i=i;
+      el.innerHTML='<div class="dn">'+esc(d.n)+'</div><div class="ds">'+esc(d.s)+'</div><div class="dstate">tap me</div><div class="dwhy">'+esc(d.w)+'</div>';
+      el.onclick=function(){
+        if(el.classList.contains('checked'))return;
+        var curp=CYCLE.indexOf(el.dataset.pick||null);
+        var nxt=CYCLE[(curp+1)%CYCLE.length];
+        if(nxt){el.dataset.pick=nxt;el.querySelector('.dstate').textContent=nxt.toUpperCase()}
+        else{delete el.dataset.pick;el.querySelector('.dstate').textContent='tap me'}
+      };
+      dg.appendChild(el);
+    });
+    $('drugcheck').onclick=function(){
+      dg.querySelectorAll('.drug').forEach(function(el){
+        var d=DRUGS[+el.dataset.i];
+        el.classList.add('checked');
+        el.classList.add(el.dataset.pick===d.a?'right':'wrong');
+        el.querySelector('.dstate').textContent=d.a.toUpperCase();
+      });
+    };
+    $('drugreset').onclick=function(){
+      dg.querySelectorAll('.drug').forEach(function(el){
+        el.classList.remove('checked','right','wrong');delete el.dataset.pick;
+        el.querySelector('.dstate').textContent='tap me';
+      });
+    };
+  }
+
+  /* anatomy hotspots */
+  document.querySelectorAll('.hot').forEach(function(h){
+    h.addEventListener('click',function(){
+      var lab=$(h.dataset.lab);
+      if(lab)lab.classList.toggle('show');
+    });
+  });
+  function revealAll(svgId){
+    document.querySelectorAll('#'+svgId+' .alabel').forEach(function(l){l.classList.add('show')});
+  }
+  if($('ugi-all'))$('ugi-all').onclick=function(){revealAll('ugisvg')};
+  if($('lgi-all'))$('lgi-all').onclick=function(){revealAll('lgisvg')};
+  if($('t-sma'))$('t-sma').onclick=function(){this.classList.toggle('onn');$('terr-sma').classList.toggle('show')};
+  if($('t-ima'))$('t-ima').onclick=function(){this.classList.toggle('onn');$('terr-ima').classList.toggle('show')};
+
+  /* nav */
+  function go(n){
+    n=Math.max(0,Math.min(slides.length-1,n));
+    slides[cur].classList.remove('on');
+    cur=n;
+    slides[cur].classList.add('on');
+    $('pgnum').textContent=(cur+1)+' / '+slides.length;
+    $('bar').style.width=(100*(cur+1)/slides.length)+'%';
+    updateChips();
+    pushState();
+    refreshLive(true);
+  }
+  $('prev').onclick=function(){go(cur-1)};
+  $('next').onclick=function(){go(cur+1)};
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(cur+1)}
+    if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1)}
+    if(e.key==='Home')go(0);
+    if(e.key==='End')go(slides.length-1);
+  });
+  var tx=null;
+  document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(tx===null)return;
+    var dx=e.changedTouches[0].clientX-tx;tx=null;
+    if(Math.abs(dx)>70){dx<0?go(cur+1):go(cur-1)}
+  },{passive:true});
+
+  /* section chips */
+  var chips=$('chips');
+  slides.forEach(function(s,i){
+    if(s.dataset.sec){
+      var b=document.createElement('button');
+      b.textContent=s.dataset.sec;b.dataset.i=i;
+      b.onclick=function(){go(i)};
+      chips.appendChild(b);
+    }
+  });
+  function updateChips(){
+    var best=null;
+    chips.querySelectorAll('button').forEach(function(b){
+      if(+b.dataset.i<=cur)best=b;
+      b.classList.remove('here');
+    });
+    if(best)best.classList.add('here');
+  }
+
+  /* presenter state + live tallies */
+  function pushState(){
+    if(MODE!=='present')return;
+    var s=slides[cur],key=s.dataset.live;
+    var st=key?(revealedMap[key]?key+':revealed':key):'idle';
+    if(cur===slides.length-1)st='end';
+    if(st===stateSent)return;
+    stateSent=st;
+    sbSubmit('_state',st,false,'presenter').catch(function(){stateSent=''});
+  }
+
+  var discussed={};
+  function refreshLive(force){
+    if(MODE!=='present')return;
+    var s=slides[cur],key=s.dataset.live;
+    if(!key)return;
+    var q=LIVE[key];
+    if(q.type==='mcq'||q.type==='poll'){
+      sbSelect('deck=eq.'+DECK+'&question_key=eq.'+key+'&select=answer&limit=1000').then(function(rows){
+        var c=counts(rows),tot=rows.length;
+        $('livecount').textContent=tot+' answered';
+        if(q.type==='poll'){
+          var el=$('tally-mood');if(!el)return;
+          var max=1;q.options.forEach(function(o){max=Math.max(max,c[o.k]||0)});
+          var h='<div style="display:flex;gap:2vw;align-items:flex-end;height:100%;padding:2vh 0">';
+          q.options.forEach(function(o){
+            var n=c[o.k]||0,pc=Math.round(90*n/max);
+            h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'+
+               '<div style="font-weight:800;font-size:min(3.4vh,26px);color:var(--navy)">'+n+'</div>'+
+               '<div style="width:70%;background:var(--blue);border-radius:10px 10px 0 0;height:'+pc+'%;min-height:6px;transition:height .5s"></div>'+
+               '<div class="bigemoji" style="font-size:min(6vh,44px)">'+o.e+'</div>'+
+               '<div style="font-size:min(2.2vh,15px);font-weight:700;color:var(--grey);text-align:center">'+esc(o.t)+'</div></div>';
+          });
+          el.innerHTML=h+'</div>';
+        }else{
+          var op=$('opts-'+key);if(!op)return;
+          var showN=revealedMap[key]||tot>0;
+          op.querySelectorAll('.opt').forEach(function(x){
+            var n=c[x.dataset.k]||0;
+            x.querySelector('.fill').style.width=(tot?Math.round(100*n/tot):0)+'%';
+            x.querySelector('.n').textContent=showN&&tot?n:'';
+          });
+          $('ct-'+key).textContent=tot?tot+' answered':'waiting for answers…';
+        }
+      });
+    }else if(q.type==='text'){
+      sbSelect('deck=eq.'+DECK+'&question_key=eq.'+key+'&select=id,answer&order=created_at.desc&limit=200').then(function(rows){
+        $('livecount').textContent=rows.length+' posts';
+        var bd=$('board-'+key);if(!bd)return;
+        if(!rows.length){bd.innerHTML='<div class="boardempty">Waiting for your posts…</div>';return}
+        var have={};
+        bd.querySelectorAll('.bcard').forEach(function(x){have[x.dataset.id]=x});
+        var empty=bd.querySelector('.boardempty');if(empty)empty.remove();
+        rows.forEach(function(r){
+          if(have[r.id]){delete have[r.id];return}
+          var d=document.createElement('div');
+          d.className='bcard'+(key==='win'?' win':'')+(discussed[r.id]?' done':'');
+          d.dataset.id=r.id;d.textContent=r.answer;
+          d.onclick=function(){discussed[r.id]=!discussed[r.id];d.classList.toggle('done')};
+          bd.insertBefore(d,bd.firstChild);
+        });
+        Object.keys(have).forEach(function(id){have[id].remove()});
+      });
+    }
+  }
+  if(MODE==='present'){
+    setInterval(refreshLive,POLL_MS);
+    setInterval(pushState,8000); /* heartbeat in case a write failed */
+  }else{
+    $('livecount').textContent='browse mode';
+    $('conndot').style.display='none';
+  }
+
+  go(0);
+}
+</script>
+</body>
+</html>

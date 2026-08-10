@@ -941,13 +941,27 @@ async function doLearnerRegister() {
       contact_channels: 1 + (phone ? 1 : 0) + (personalEmail ? 1 : 0)
     } });
 
-    // Auto-link to contact if email matches
+    // Every account shows up in the Contacts directory: link to a matching
+    // contact by email, or auto-create one, via a SECURITY DEFINER RPC
+    // (anon can't INSERT into contacts directly — same return=representation
+    // + RLS trap as register_learner; see migration_v3.12.51). F1s/F2s still
+    // won't appear in the teacher picker/messaging views — those filter on
+    // role text containing Consultant/Registrar/Fellow/ANP, and role here is
+    // just the learner's grade, so junior grades fall out for free.
     try {
-      const contactMatch = await sbGet('contacts', `email=ilike.${encodeURIComponent(email)}&select=${CONTACT_FIELDS}`);
-      if (contactMatch.length > 0) {
-        await sbUpdate('learners', currentLearner.id, { contact_id: contactMatch[0].id });
-        currentLearner.contact_id = contactMatch[0].id;
-        setAuthSession('sst_learner', JSON.stringify(currentLearner));
+      const linkRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/link_or_create_contact_for_learner`, {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          p_learner_id: currentLearner.id, p_name: name, p_email: email,
+          p_phone: phone, p_grade: grade, p_specialty: placement
+        })
+      });
+      if (linkRes.ok) {
+        const newContactId = await linkRes.json();
+        if (newContactId) {
+          currentLearner.contact_id = newContactId;
+          setAuthSession('sst_learner', JSON.stringify(currentLearner));
+        }
       }
     } catch(linkErr) { console.warn('Contact link skipped:', linkErr); }
 

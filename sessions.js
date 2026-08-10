@@ -747,11 +747,17 @@ async function populateTeacherPicker(selectId) {
     }
     const sel = document.getElementById(selectId);
     if (!sel) return;
-    const teachers = contacts.filter(c => c.role && (c.role.includes('Consultant') || c.role.includes('Registrar') || c.role.includes('Fellow') || c.role.includes('ANP')));
+    // Anyone CT1 and above can teach on the programme — only FY1/FY2 (and
+    // the catch-all "Other") are excluded. Keyword substring match so it
+    // still works against free-text admin-entered roles (e.g. "Consultant
+    // Upper GI"), not just the exact grade strings the registration form
+    // writes onto auto-created learner contacts.
+    const TEACHER_ROLE_KEYWORDS = ['Consultant', 'Registrar', 'Fellow', 'ANP', 'ACP', 'CT1', 'CT2', 'ST3', 'ST4', 'ST5', 'ST6', 'ST7', 'ST8', 'JCF', 'SCF'];
+    const teachers = contacts.filter(c => c.role && TEACHER_ROLE_KEYWORDS.some(k => c.role.includes(k)));
     const others = contacts.filter(c => !teachers.includes(c));
     if (teachers.length) {
       const og = document.createElement('optgroup');
-      og.label = 'Consultants / Registrars / Fellows';
+      og.label = 'Consultants / Registrars / Fellows / Trainees (CT1+)';
       teachers.forEach(c => { const o = document.createElement('option'); o.value = JSON.stringify({name:c.name,email:c.email}); o.textContent = `${c.name} (${c.role})`; og.appendChild(o); });
       sel.appendChild(og);
     }
