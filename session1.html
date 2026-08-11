@@ -182,6 +182,10 @@ body.mode-audience #aud{display:flex}
 .mine{margin-top:14px}
 .mine .mi{background:#FFF9E6;border:1px solid #EAD48A;border-radius:10px;padding:9px 12px;font-size:14px;margin:6px 0}
 .aexplain{background:#E7F3EC;border-left:4px solid var(--green);border-radius:8px;padding:10px 12px;font-size:14.5px;margin-top:12px;line-height:1.45}
+.pkrow{padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.5;color:var(--ink)}
+.pkrow:last-child{border-bottom:none}
+.pkrow b{color:var(--navy)}
+.pkhint{text-align:center;background:#FFF3D6;border-radius:8px;padding:8px;font-weight:800;color:#8a6d00;margin-bottom:10px;font-size:14px}
 .abar{height:26px;background:var(--bg);border-radius:6px;margin:5px 0;position:relative;overflow:hidden}
 .abar .f{position:absolute;inset:0;width:0;background:rgba(0,94,184,.25);transition:width .5s}
 .abar.c .f{background:rgba(0,127,59,.3)}
@@ -197,6 +201,48 @@ body.mode-audience #aud{display:flex}
   .take{grid-template-columns:1fr}
   .bcard{max-width:80vw}
   .qrwrap{flex-direction:column;gap:2vh}
+  /* phone-readable type — the deck is projector-first, these caps make browse mode pleasant */
+  .slide{padding:20px 18px 76px}
+  .slide h2{font-size:22px}
+  .kicker{font-size:11.5px;letter-spacing:.08em}
+  .case{font-size:15.5px;padding:12px 14px}
+  .rv{padding:12px 14px}
+  .rv .rv-q{font-size:16px}
+  .rv .rv-a{font-size:14.5px}
+  .opt{font-size:15.5px;padding:13px 2.6em 13px 14px}
+  .explain{font-size:14.5px}
+  .note{font-size:12.5px}
+  .joinhint{font-size:12px;padding:6px 14px}
+  .titleslide h1{font-size:30px}
+  .titleslide .sub{font-size:15px}
+  .titleslide img{height:64px}
+  .badge-live{font-size:13px}
+  .ag{padding:14px 12px}
+  .ag b{font-size:16px}
+  .ag span{font-size:12.5px}
+  .qrsteps{font-size:16px}
+  .qrwrap img{height:min(38vh,300px)}
+  .drug{padding:10px 8px}
+  .drug .dn{font-size:15px}
+  .drug .ds,.drug .dwhy{font-size:11.5px}
+  .drug .dstate{font-size:12px}
+  .calc{padding:14px}
+  .calc label{font-size:14.5px}
+  .calc input{font-size:18px;width:5em}
+  .calc table{font-size:14.5px}
+  .xc h3{font-size:16px}
+  .xc .xb{font-size:14px}
+  .take .tk{font-size:14.5px;padding:13px 14px}
+  .btn{font-size:14px;padding:11px 18px}
+  .answct{font-size:13px}
+  .anatbtns .btn{font-size:12.5px;padding:8px 12px}
+  /* anatomy: keep labels legible, pan sideways instead of shrinking */
+  .anat{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .anat svg{min-width:680px;max-height:none;height:auto}
+  /* hyperkalaemia algorithm: stack the side rail above each box */
+  .algorow{flex-direction:column;gap:4px}
+  .algoside{width:auto !important;padding:4px 8px;font-size:12px;gap:5px}
+  .algorow br{display:none}
 }
 </style>
 </head>
@@ -285,7 +331,8 @@ body.mode-audience #aud{display:flex}
 </section>
 
 <!-- 6 · CONVERSIONS + CALCULATOR -->
-<section class="slide">
+<section class="slide" data-live="card_opi">
+  <div class="joinhint">📸 pocket card on your phone — screenshot it</div>
   <div class="kicker">Opioid prescribing</div>
   <h2>Conversions you'll actually use</h2>
   <div class="cols">
@@ -370,7 +417,8 @@ body.mode-audience #aud{display:flex}
 </section>
 
 <!-- 12 · AKI BUNDLE -->
-<section class="slide">
+<section class="slide" data-live="card_aki">
+  <div class="joinhint">📸 pocket card on your phone — screenshot it</div>
   <div class="kicker">AKI</div>
   <h2>The AKI bundle — do all of it, same day</h2>
   <div class="cols">
@@ -409,10 +457,65 @@ body.mode-audience #aud{display:flex}
   <div class="answct" id="ct-aki2"></div>
   <button class="btn reveal" data-q="aki2">Reveal answer</button>
   <div class="explain" id="explain-aki2"></div>
+  <div class="rv" style="margin-top:1.2vh"><div class="rv-q">The NBT numbers — Hyperkalaemia SOP (Aug 2024, UKKA 2023)</div><div class="rv-a">
+    <ul>
+      <li><b>Bands:</b> mild 5.5–5.9 · moderate 6.0–6.4 · <b>severe ≥6.5 = emergency treatment</b>. ECG + cardiac monitor from K⁺ ≥6.0; exclude pseudohyperkalaemia (repeat in a lithium-heparin tube).</li>
+      <li><b>Protect the heart</b> (if ECG changes or K⁺ ≥6.5): <b>30 ml 10% calcium gluconate IV over 10 min</b> or 10 ml 10% calcium chloride over 5 min (6.8 mmol) — large vein, repeat ECG, further dose after 5 min if changes persist.</li>
+      <li><b>Shift:</b> 10 units soluble insulin in 25 g glucose over 15–30 min (check glucose first; if &lt;7.0 → 10% glucose at 50 ml/h for 5 h) ± salbutamol 10–20 mg nebulised.</li>
+      <li><b>Remove:</b> sodium zirconium cyclosilicate (Lokelma) 10 g TDS up to 72 h (stop when K⁺ ≤5.0) · <b>consider dialysis if K⁺ ≥6.5 despite treatment</b>.</li>
+      <li>ECG changes to name: peaked T waves, flat/absent P waves, broad QRS, sine wave, bradycardia, VT.</li>
+      <li><b>Hyperkalaemic cardiac arrest</b> (same SOP, arrest-only page): ALS + IV calcium <i>bolus</i> (10 ml 10% chloride or 30 ml 10% gluconate, repeat if no ROSC in 5–10 min) + insulin–glucose bolus + <b>sodium bicarbonate 50 ml 8.4%</b> IV — no ROSC → dialysis/ECMO. Contact the renal team early whenever dialysis is even being considered.</li>
+    </ul>
+  </div></div>
   <div class="rv" style="margin-top:1.2vh"><div class="rv-q">When does an AKI need dialysis? — A·E·I·O·U</div><div class="rv-a"><b>A</b>cidosis (refractory, pH &lt;7.15) · <b>E</b>lectrolytes (refractory K⁺ ≥6.5) · <b>I</b>ntoxicants (certain poisonings) · <b>O</b>verload (fluid, refractory) · <b>U</b>raemia (pericarditis, encephalopathy). These are the words that get ICU/renal moving on the phone. (NICE lists the domains without numbers — the pH/K⁺ cut-offs are renal-ICU convention.)</div></div>
 </section>
 
-<!-- 15 · UGI ANATOMY -->
+<!-- 15b · HYPERKALAEMIA ALGORITHM -->
+<section class="slide" data-live="card_hk">
+  <div class="joinhint">📸 pocket card on your phone — screenshot it</div>
+  <div class="kicker">AKI · NBT Hyperkalaemia SOP (Aug 2024) — UKKA 2023 algorithm</div>
+  <h2>Emergency management of hyperkalaemia</h2>
+  <div style="display:flex;flex-direction:column;gap:.9vh;font-size:min(2.2vh,15px);line-height:1.35">
+    <div style="background:#fff;border:2px solid var(--line);border-radius:10px;padding:.9vh 1vw;text-align:center">
+      <b>ABCDE</b> · 12-lead ECG + cardiac monitor if K⁺ ≥6.0 · exclude pseudohyperkalaemia (repeat, lithium-heparin tube) · treat empirically if arrhythmia + suspected hyperK⁺
+    </div>
+    <div style="display:flex;gap:.8vw;text-align:center">
+      <div style="flex:1;background:#E8F1FA;border:2px solid #9DBFDE;border-radius:10px;padding:.8vh .6vw"><b>MILD</b> 5.5–5.9<br><span style="color:var(--grey)">consider cause & need to treat</span></div>
+      <div style="flex:1;background:#FFF3D6;border:2px solid #E3C36A;border-radius:10px;padding:.8vh .6vw"><b>MODERATE</b> 6.0–6.4<br><span style="color:var(--grey)">guided by ECG, rate of rise, clinical state</span></div>
+      <div style="flex:1.2;background:#FBE9E7;border:2px solid var(--red);border-radius:10px;padding:.8vh .6vw"><b>SEVERE ≥6.5</b> — emergency treatment<br><span style="color:var(--grey)">ECG changes? peaked T · flat/absent P · broad QRS · sine wave · bradycardia · VT</span></div>
+    </div>
+    <div class="algorow" style="display:flex;gap:.8vw;align-items:stretch">
+      <div class="algoside" style="width:9em;flex:none;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:8px;font-weight:800;color:var(--grey)">PROTECT<br>the heart</div>
+      <div style="flex:1;background:#fff;border:2px solid var(--red);border-radius:10px;padding:.9vh 1vw">
+        <b>IV calcium (6.8 mmol)</b> — if ECG changes or K⁺ ≥6.5: <b>30 ml 10% calcium gluconate over 10 min</b> OR 10 ml 10% calcium chloride over 5 min · large vein · repeat ECG · further dose after 5 min if changes persist
+      </div>
+    </div>
+    <div class="algorow" style="display:flex;gap:.8vw;align-items:stretch">
+      <div class="algoside" style="width:9em;flex:none;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:8px;font-weight:800;color:var(--grey)">SHIFT<br>K⁺ into cells</div>
+      <div style="flex:1;background:#fff;border:2px solid var(--blue);border-radius:10px;padding:.9vh 1vw">
+        <b>Insulin–glucose:</b> 10 units soluble insulin in 25 g glucose IV over 15–30 min (check BM first; if &lt;7.0 → 10% glucose 50 ml/h for 5 h) &nbsp;·&nbsp; <b>consider salbutamol 10–20 mg nebulised</b>
+      </div>
+    </div>
+    <div class="algorow" style="display:flex;gap:.8vw;align-items:stretch">
+      <div class="algoside" style="width:9em;flex:none;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:8px;font-weight:800;color:var(--grey)">REMOVE<br>K⁺ from body</div>
+      <div style="flex:1;background:#fff;border:2px solid var(--green);border-radius:10px;padding:.9vh 1vw">
+        <b>Sodium zirconium cyclosilicate (Lokelma)</b> 10 g TDS up to 72 h (stop when K⁺ ≤5.0) or patiromer 8.4 g OD &nbsp;·&nbsp; <b>K⁺ ≥6.5 despite treatment → consider dialysis, seek expert help</b>
+      </div>
+    </div>
+    <div class="algorow" style="display:flex;gap:.8vw;align-items:stretch">
+      <div class="algoside" style="width:9em;flex:none;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:8px;font-weight:800;color:var(--grey)">MONITOR</div>
+      <div style="flex:1;background:#fff;border:2px solid var(--line);border-radius:10px;padding:.9vh 1vw">
+        Serum K⁺ + blood glucose (baseline, 30, 60, 90 min… out to 24 h) · find the cause, prevent recurrence · <b>contact the renal team early if dialysis is even being considered</b>
+      </div>
+    </div>
+    <div style="background:#3b2f00;color:#FFE9A8;border-radius:10px;padding:.9vh 1vw;text-align:center">
+      <b>Hyperkalaemic cardiac arrest:</b> ALS + IV calcium <b>bolus</b> + insulin–glucose bolus + <b>sodium bicarbonate 50 ml 8.4%</b> → no ROSC: dialysis / ECMO
+    </div>
+  </div>
+  <p class="note">Redrawn from the NBT Hyperkalaemia SOP (Aug 2024), which adopts the UK Kidney Association 2023 algorithm — the intranet copy is the authoritative version.</p>
+</section>
+
+<!-- 16 · UGI ANATOMY -->
 <section class="slide" data-sec="UGI">
   <div class="kicker">UGI anatomy</div>
   <h2>The coeliac trunk — tap a dot, name the vessel</h2>
@@ -565,7 +668,8 @@ body.mode-audience #aud{display:flex}
 </section>
 
 <!-- 19 · UROLOGY CARDS -->
-<section class="slide" data-sec="Urology">
+<section class="slide" data-sec="Urology" data-live="card_uro">
+  <div class="joinhint">📸 pocket card on your phone — screenshot it</div>
   <div class="kicker">Bonus · Urology on-call</div>
   <h2>Night shift survival — tap a scenario</h2>
   <div class="xgrid">
@@ -691,6 +795,33 @@ var LIVE={
     case:'19-year-old man, 3 hours of sudden severe left testicular pain with vomiting. The testis is high-riding and exquisitely tender. Best next step?',
     options:{a:'Urgent Doppler ultrasound',b:'Urine dip and empirical antibiotics',c:'Immediate urology referral for exploration',d:'Analgesia and review in the morning'},
     explain:'Torsion is a CLINICAL diagnosis — imaging must never delay exploration when suspicion is high. Salvage is ~90% within 6 h of onset and falls sharply after. NBM, analgesia, and call urology the moment you suspect it.'},
+  card_opi:{type:'card',title:'Opioids — pocket card',html:
+    '<div class="pkrow"><b>Start (opioid-naïve):</b> IR morphine 5–10 mg up to 4-hourly — halve if elderly or frail</div>'+
+    '<div class="pkrow"><b>Background:</b> 24-h IR total ÷ 2 → MR twice daily · <b>PRN = 1/10–1/6</b> of the 24-h dose</div>'+
+    '<div class="pkrow"><b>Convert:</b> codeine→morphine ÷10 · oral morphine→oxycodone ÷1.5–2 · →s/c morphine ÷2 · →s/c diamorphine ÷3</div>'+
+    '<div class="pkrow"><b>Renal:</b> eGFR &lt;30 → oxycodone at half dose · eGFR &lt;20 → ask about alfentanil/fentanyl</div>'+
+    '<div class="pkrow"><b>Every time:</b> regular stimulant laxative + PRN antiemetic · no driving on new or changed doses</div>'+
+    '<div class="pkrow"><b>Naloxone (patient on therapeutic opioids):</b> 100–200 micrograms IV, then 100-microgram steps · short-acting — repeat and observe</div>'},
+  card_aki:{type:'card',title:'AKI bundle — pocket card',html:
+    '<div class="pkrow"><b>AKI =</b> creatinine ≥26 in 48 h · ≥1.5× baseline in 7 d · UO &lt;0.5 ml/kg/h ×6 h — stage by the worst (2: ≥2× · 3: ≥3× / ≥354 / RRT)</div>'+
+    '<div class="pkrow"><b>Same day:</b> volume + sepsis? · urine dip (document it) · strict fluid balance</div>'+
+    '<div class="pkrow"><b>Drug chart:</b> stop NSAIDs · hold ACEi/ARB + metformin · gentamicin only by levels · enoxaparin reduce CrCl 15–30, avoid &lt;15 · morphine → oxycodone</div>'+
+    '<div class="pkrow"><b>Obstruction:</b> bladder scan · USS within 24 h if cause unclear · within 6 h if pyonephrosis suspected</div>'+
+    '<div class="pkrow"><b>Escalate:</b> stage 3 · oliguria despite filling · K⁺ ≥6.0 · no clear cause</div>'},
+  card_hk:{type:'card',title:'Hyperkalaemia — NBT SOP (Aug 2024)',html:
+    '<div class="pkrow"><b>Bands:</b> 5.5–5.9 mild · 6.0–6.4 moderate · <b>≥6.5 = emergency</b> · ECG + monitor from 6.0 · exclude pseudohyperkalaemia</div>'+
+    '<div class="pkrow"><b>Protect:</b> 30 ml 10% calcium gluconate IV over 10 min (or 10 ml 10% calcium chloride over 5 min) · repeat after 5 min if ECG changes persist</div>'+
+    '<div class="pkrow"><b>Shift:</b> 10 units soluble insulin in 25 g glucose over 15–30 min · BM &lt;7.0 → 10% glucose 50 ml/h ×5 h · ± salbutamol 10–20 mg neb</div>'+
+    '<div class="pkrow"><b>Remove:</b> Lokelma 10 g TDS up to 72 h (stop at K⁺ ≤5.0) · ≥6.5 despite treatment → dialysis — renal team early</div>'+
+    '<div class="pkrow"><b>Cardiac arrest:</b> ALS + calcium bolus + insulin–glucose bolus + NaHCO₃ 50 ml 8.4% → dialysis/ECMO</div>'+
+    '<div class="pkrow" style="color:var(--grey)">Intranet SOP is the authoritative version — this card is an aide-memoire</div>'},
+  card_uro:{type:'card',title:'Urology on-call — pocket card',html:
+    '<div class="pkrow"><b>Retention:</b> 14–16 Ch · document the residual · CSU · treat the cause · plan TWOC</div>'+
+    '<div class="pkrow"><b>&gt;1 L residual + renal impairment:</b> watch for diuresis &gt;200 ml/h ×2 h → replace ~50% IV, check U&amp;Es</div>'+
+    '<div class="pkrow"><b>Blocked:</b> flush 50 ml saline → still blocked, change it · bypassing = usually spasm (and check constipation)</div>'+
+    '<div class="pkrow"><b>Clot retention:</b> 3-way 20–22 Ch + washout until clear + continuous irrigation</div>'+
+    '<div class="pkrow"><b>Rules:</b> never force · no urine = no balloon · foreskin back afterwards · two failed attempts → urology</div>'+
+    '<div class="pkrow"><b>Never miss:</b> torsion (salvage ~90% &lt;6 h — no imaging delays) · infected obstructed kidney → decompress tonight</div>'},
   win:{type:'text',title:'One win (or surprise) from week 1',ph:'First catheter? A thank-you? Found the good coffee? Post it…'},
   challenge:{type:'text',title:'One challenge you hit this week',ph:'Bleeps, prescribing, escalating, IT, rota…'}
 };
@@ -788,6 +919,9 @@ if(MODE==='audience'){
           el.innerHTML=h3+'</div>';
         });
       }
+    }else if(q.type==='card'){
+      audMain.innerHTML='<div class="acard"><div class="pkhint">📸 Screenshot this — keep it for your on-calls</div>'+
+        '<h3>'+esc(q.title)+'</h3>'+q.html+'</div>';
     }else if(q.type==='text'){
       var sent=mine['posts_'+key]||[];
       var h4='<div class="acard"><h3>'+esc(q.title)+'</h3>'+
@@ -976,7 +1110,7 @@ if(MODE!=='audience'){
     if(e.key==='End')go(slides.length-1);
   });
   var tx=null;
-  document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX},{passive:true});
+  document.addEventListener('touchstart',function(e){tx=(e.target.closest&&e.target.closest('.anat'))?null:e.touches[0].clientX},{passive:true});
   document.addEventListener('touchend',function(e){
     if(tx===null)return;
     var dx=e.changedTouches[0].clientX-tx;tx=null;
@@ -1019,6 +1153,7 @@ if(MODE!=='audience'){
     var s=slides[cur],key=s.dataset.live;
     if(!key)return;
     var q=LIVE[key];
+    if(q.type==='card'){$('livecount').textContent='📸 pocket card on phones';return}
     if(q.type==='mcq'||q.type==='poll'){
       sbSelect('deck=eq.'+DECK+'&question_key=eq.'+key+'&select=answer&limit=1000').then(function(rows){
         var c=counts(rows),tot=rows.length;
