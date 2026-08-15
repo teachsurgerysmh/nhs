@@ -399,7 +399,8 @@ async function sendRequestDeclineEmail(r, note) {
 }
 
 // Where real-time admin alerts go (self-cancellations + new session requests)
-const ADMIN_ALERT_EMAILS = ['work.suketu@gmail.com', 'Ilgin.Kilic@nbt.nhs.uk'];
+// Ilgin's gmail added 2026-08-15 for leave cover (Suketu away to ~5 Sep) — remove after.
+const ADMIN_ALERT_EMAILS = ['work.suketu@gmail.com', 'Ilgin.Kilic@nbt.nhs.uk', 'ilgin.d.kilic@gmail.com'];
 
 // Real-time alert to admins when someone submits a new session request (or reschedule).
 async function sendNewRequestAdminNotice(req) {

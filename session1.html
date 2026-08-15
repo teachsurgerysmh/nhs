@@ -390,6 +390,16 @@ body.mode-audience #aud{display:flex}
   <h2>Staying safe (and keeping your patients safe)</h2>
   <div class="rv"><div class="rv-q">Toxicity — what kills is respiratory depression</div><div class="rv-a">Sedation comes <b>before</b> respiratory depression — a drowsy patient on opioids is a warning, not a comfort. RR &lt;8 or unrousable → ABCDE, stop opioids, give <b>naloxone</b> per trust protocol. In a patient on <i>therapeutic</i> opioids the BNF low-dose regimen is <b>100–200 micrograms IV, then 100-microgram steps</b> — enough to restore breathing without stripping all analgesia; the 400-microgram+ escalating doses are for overdose. Naloxone is short-acting — watch for re-sedation and repeat.</div></div>
   <div class="rv"><div class="rv-q">Renal impairment</div><div class="rv-a">eGFR &lt;30: morphine metabolites accumulate → switch to <b>oxycodone</b> (reduced dose). Severe/dialysis: fentanyl or alfentanil, with senior/palliative advice. This is also why you re-check opioid charts in every AKI — the two topics tonight are the same patient.</div></div>
+  <div class="rv"><div class="rv-q">PCA — what the ward doctor needs to know (NBT APS G.3, 2023)</div><div class="rv-a">
+    <ul>
+      <li><b>Never add opioids</b> to an opioid-naïve patient on PCA without APS/anaesthetist advice (established background opioids continue). No night sedation with PCA unless clinically indicated.</li>
+      <li>Every NBT PCA comes with <b>oxygen, an antiemetic and PRN naloxone</b> prescribed — naloxone should be co-prescribed with <i>any</i> strong opioid.</li>
+      <li>Renal impairment (eGFR &lt;30): <b>fentanyl PCA</b> is the NBT option — same logic as the oxycodone switch.</li>
+      <li><b>Step-down:</b> PCA can stop at any time (APS needn't be informed) — but oral analgesia must be <b>prescribed AND given before the pump comes off</b>; best practice is step-down analgesia written up at initiation. Convert from the last-24-h usage on the PCA chart (IV morphine ×2 ≈ oral), err low. Never disconnect-and-reconnect — a stopped PCA means a fresh syringe.</li>
+      <li><b>Toxicity</b> (RR ≤8 · sedation ≥2 · SBP ≤90): stop PCA + sedating drugs, O₂ 15 L/min, urgent review (F2+), 2222 if peri-arrest. NBT naloxone recipe: 400 micrograms diluted to 4 ml → <b>100 micrograms IV per minute</b> until RR ≥12 and sedation ≤2; repeat doses at 20–30 min may be needed.</li>
+      <li>Advice: <b>APS bleep 1509</b> (Mon–Fri 08:00–17:00, ext 41742) · out of hours 1st on-call anaesthetist <b>bleep 9031</b>.</li>
+    </ul>
+  </div></div>
   <div class="rv"><div class="rv-q">Discharge scripts (controlled drugs)</div><div class="rv-a">CD prescriptions need formulation, strength, dose, and <b>total quantity in words and figures</b>. Send home the smallest sensible supply with a clear weaning plan — post-op opioids are for weeks, not months. Advise not to drive while drowsy or after dose changes.</div></div>
 </section>
 
@@ -801,7 +811,8 @@ var LIVE={
     '<div class="pkrow"><b>Convert:</b> codeine→morphine ÷10 · oral morphine→oxycodone ÷1.5–2 · →s/c morphine ÷2 · →s/c diamorphine ÷3</div>'+
     '<div class="pkrow"><b>Renal:</b> eGFR &lt;30 → oxycodone at half dose · eGFR &lt;20 → ask about alfentanil/fentanyl</div>'+
     '<div class="pkrow"><b>Every time:</b> regular stimulant laxative + PRN antiemetic · no driving on new or changed doses</div>'+
-    '<div class="pkrow"><b>Naloxone (patient on therapeutic opioids):</b> 100–200 micrograms IV, then 100-microgram steps · short-acting — repeat and observe</div>'},
+    '<div class="pkrow"><b>Naloxone (patient on therapeutic opioids):</b> 100–200 micrograms IV, then 100-microgram steps · short-acting — repeat and observe · NBT recipe: 400 mcg diluted to 4 ml = 100 mcg/ml</div>'+
+    '<div class="pkrow"><b>PCA (NBT APS G.3):</b> no added opioids in the naïve without APS · oxygen + antiemetic + PRN naloxone always · eGFR &lt;30 → fentanyl PCA · stop-down: oral written &amp; given BEFORE the pump comes off · APS bleep 1509 / OOH anaesthetist 9031</div>'},
   card_aki:{type:'card',title:'AKI bundle — pocket card',html:
     '<div class="pkrow"><b>AKI =</b> creatinine ≥26 in 48 h · ≥1.5× baseline in 7 d · UO &lt;0.5 ml/kg/h ×6 h — stage by the worst (2: ≥2× · 3: ≥3× / ≥354 / RRT)</div>'+
     '<div class="pkrow"><b>Same day:</b> volume + sepsis? · urine dip (document it) · strict fluid balance</div>'+
