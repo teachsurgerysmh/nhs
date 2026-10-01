@@ -85,6 +85,7 @@ async function sendSessionEmail(id, type) {
     });
     const result = await res.json();
     if (result.success) {
+      if (isConfirm) sendTeachingRequestMadeNotice(ev, [ev.teacher || to], 'A teaching request (please confirm)');
       showToast(`${isConfirm ? 'Confirmation' : 'Reminder'} sent to ${ev.teacher}!`);
       logAction(`Sent ${type} email`, `${ev.topic || 'Session'} → ${ev.teacher}`);
       logQI(isConfirm ? 'invitation_sent' : 'reminder_sent', {
@@ -439,6 +440,32 @@ async function sendNewRequestAdminNotice(req) {
     const result = await res.json().catch(() => ({}));
     return !!result.success;
   } catch(e) { logError('sendNewRequestAdminNotice', e); return false; }
+}
+
+// v3.12.59c — "every time a request is made or accepted, tell Ilgin".
+// Email requests are announced here; texted requests and every acceptance are
+// announced server-side (triggers on sms_outbox + schedule.teacher_confirmed).
+const TEACHING_REQUEST_ALERT_EMAILS = ['ilgin.kilic@nbt.nhs.uk'];
+async function sendTeachingRequestMadeNotice(ev, names, how) {
+  if (!ev || !names || !names.length || isDemoMode) return false;
+  const when = `${ev.day || ''} ${ev.date || ''} ${ev.month || ''} ${ev.year || ''}`.trim();
+  const subject = `Request sent: ${names.length === 1 ? names[0] : names.length + ' teachers'} for ${when}`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <div style="background:#003087;padding:18px;border-radius:8px 8px 0 0;text-align:center;"><h2 style="color:#ffffff;margin:0;font-size:17px;">Teaching request sent</h2></div>
+    <div style="padding:22px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;font-size:14px;line-height:1.6;">
+      <p style="margin:0 0 8px;">${esc(how)} was emailed to: <strong>${names.map(n => esc(n)).join(', ')}</strong></p>
+      <p style="margin:0;color:#4c6272;">${esc(ev.topic || 'Topic TBC')}<br>${esc(when)} &middot; ${esc(ev.time || 'time TBC')} &middot; ${esc(ev.room || 'room TBC')}</p>
+      <p style="margin:12px 0 0;font-size:12px;color:#768692;">You'll get another email when someone accepts. If nobody replies in 3 days, anyone with a mobile on file gets one text chasing it.</p>
+    </div></div>`;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_authToken || SUPABASE_KEY), 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ to: TEACHING_REQUEST_ALERT_EMAILS, subject, html })
+    });
+    const result = await res.json().catch(() => ({}));
+    return !!result.success;
+  } catch(e) { logError('sendTeachingRequestMadeNotice', e); return false; }
 }
 
 // Real-time alert to the admin when a teacher self-cancels from the email link.
@@ -1174,6 +1201,7 @@ async function sendTeacherRequestEmails() {
   btn.disabled = false;
 
   if (sentCount > 0) {
+    sendTeachingRequestMadeNotice(ev, recipients.map(r => r.name || r.email), 'An invitation to teach');
     showToast(`Teacher invitation sent to ${sentCount} contact(s)!`);
     logAction('Sent teacher request', `${topic} (${dateStr}) → ${sentCount} contacts`);
     closeModal('teacherRequestModal');
