@@ -30,10 +30,17 @@ async function markSelfAttendance(sessionId) {
     });
     showToast(autoApprove ? 'Attendance marked!' : 'Attendance submitted for approval');
   } catch(e) {
-    if (e.message && e.message.includes('409')) {
+    const msg = (e && e.message) || '';
+    if (msg.includes('409')) {
       showToast('Already marked as attended');
+    } else if (msg.includes('401') || msg.includes('403')) {
+      // Expired JWT: the identity outlived the token, so the write went out as
+      // anon and RLS refused it. Say so instead of a dead-end "Failed".
+      logError('markSelfAttendance', e, { session_id: sessionId, learner_id: currentLearner && currentLearner.id, reason: 'auth_expired' });
+      showToast('Your session has expired — please log in again, then tap "I Attended" once more', 7000);
     } else {
       console.error('Mark attendance failed:', e);
+      logError('markSelfAttendance', e, { session_id: sessionId, learner_id: currentLearner && currentLearner.id });
       showToast('Failed to mark attendance');
     }
   }

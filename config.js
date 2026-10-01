@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.56';
-const APP_BUILD = '2026-08-15';
+const APP_VERSION = 'v3.12.59';
+const APP_BUILD = '2026-09-30';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
 // ===================== SAFE COLUMN LISTS (exclude pin_code) =====================
@@ -107,6 +107,27 @@ function restoreAuthToken() {
     clearAuthSession('sst_token');
   }
   return false;
+}
+
+// A stored identity (sst_user / sst_learner / sst_teacher) has no expiry, but
+// the JWT dies after 12 h. A tab or bookmark reopened the next day therefore
+// restored the *identity* without a token: the app looked logged in while every
+// write went out as anon. Reads kept working (anon holds SELECT), so the only
+// visible symptom was "Failed to mark attendance" — attendance has no anon
+// INSERT policy. Any session restore must now prove it still holds a live token.
+function _isDemoSession() {
+  if (isDemoMode) return true;
+  try { return sessionStorage.getItem('sst_demo') === 'true'; } catch(e) { return false; }
+}
+function authTokenIsLive() {
+  if (_isDemoSession()) return true;     // demo never mints a JWT
+  return restoreAuthToken();
+}
+let _sessionExpiryNotified = false;
+function noticeSessionExpired() {
+  if (_sessionExpiryNotified) return;
+  _sessionExpiryNotified = true;
+  setTimeout(() => showToast('Your session has expired — please log in again', 6000), 800);
 }
 
 // ===================== INACTIVITY AUTO-LOGOUT (NHS DSPT) =====================

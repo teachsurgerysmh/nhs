@@ -569,6 +569,42 @@ function openBulkEmailModal() {
   openModal('bulkEmailModal');
 }
 
+// ===================== SMS (Twilio, v3.12.59) =====================
+// The server builds the text and the links (sms_teachers_for_session); the
+// client only names the session, the kind and who. Returns null — silently —
+// when SMS is switched off, the caller isn't admin, or nobody has a mobile.
+async function queueTeacherSms(sessionId, kind, emails) {
+  if (!isAdmin || !_authToken || isDemoMode) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/sms_teachers_for_session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken, 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ p_session_id: sessionId, p_kind: kind, p_emails: emails || null })
+    });
+    if (!res.ok) { logError('sms_queue', new Error('HTTP ' + res.status), { sessionId, kind }); return null; }
+    const r = await res.json();
+    if (r && r.queued > 0) {
+      logQI('reminder_sent', { session_id: sessionId, metadata: { channel: 'sms', sms_kind: kind, count: r.queued } });
+    }
+    return r;
+  } catch (e) {
+    logError('sms_queue', e, { sessionId, kind });
+    return null;
+  }
+}
+
+async function sendTeacherSmsReminder(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) { showToast('Session not found'); return; }
+  if (!ev.teacherEmail) { showToast('No teacher email on this session — can\'t match a mobile.'); return; }
+  const r = await queueTeacherSms(id, 'teacher_manual');
+  if (!r) showToast('Text failed — see Error Log.');
+  else if (r.enabled === false) showToast('SMS is switched off.');
+  else if (r.queued) { showToast(`Text sent to ${ev.teacher || 'teacher'}`); logAction('Sent SMS reminder', `${ev.topic || 'Session'} → ${ev.teacher}`); }
+  else if (r.no_phone) showToast(`No mobile on file for ${ev.teacher || 'this teacher'} — add one in Contacts.`);
+  else showToast('Already texted in the last minute.');
+}
+
 // ===================== WHATSAPP =====================
 function getTeacherPhone(ev) {
   // Try to find phone from contacts data

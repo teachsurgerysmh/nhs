@@ -247,8 +247,9 @@ function updateHeaderButtons() {
 }
 
 function checkSession() {
-  restoreAuthToken(); // Restore JWT from sessionStorage
+  const live = authTokenIsLive(); // restores the JWT into headers, or reports it dead
   const stored = getAuthSession('sst_user');
+  if (stored && !live) { clearAuthSession('sst_user'); noticeSessionExpired(); return; }
   if (stored) {
     try {
       currentUser = JSON.parse(stored);
@@ -270,16 +271,39 @@ function checkSession() {
 
 // ── Learner Auth ──
 
+// showSetupPinForm() and the setup-success screen both replace
+// #learnerLoginForm's innerHTML wholesale, which destroys #learnerEmail and
+// #learnerPin. Any later openLearnerLoginModal() in the same page load then
+// threw on line 1 of the body and never reached openModal() — the Learner
+// Login button was simply dead until the page was reloaded, with no message
+// and nothing on screen. Seen twice in the room on 19 Aug 2026 (error_log,
+// openLearnerLoginModal@auth.js:275). Keep a pristine copy of the markup and
+// put it back whenever the login form is asked for and the inputs are gone.
+let _learnerLoginFormHTML = null;
+function restoreLearnerLoginForm() {
+  const body = document.getElementById('learnerLoginForm');
+  if (!body) return;
+  if (document.getElementById('learnerEmail')) {
+    // Form is intact — take the snapshot the first time we see it.
+    if (_learnerLoginFormHTML === null) _learnerLoginFormHTML = body.innerHTML;
+  } else if (_learnerLoginFormHTML !== null) {
+    body.innerHTML = _learnerLoginFormHTML;
+  }
+}
+
 function openLearnerLoginModal() {
   showLearnerLoginForm();
-  document.getElementById('learnerEmail').value = '';
-  document.getElementById('learnerPin').value = '';
+  const emailEl = document.getElementById('learnerEmail');
+  const pinEl = document.getElementById('learnerPin');
+  if (emailEl) emailEl.value = '';
+  if (pinEl) pinEl.value = '';
   openModal('learnerLoginModal');
-  setTimeout(() => document.getElementById('learnerEmail').focus(), 100);
+  setTimeout(() => document.getElementById('learnerEmail')?.focus(), 100);
   initPasskeyUI();
 }
 
 function showLearnerLoginForm() {
+  restoreLearnerLoginForm();
   document.getElementById('learnerLoginForm').style.display = '';
   document.getElementById('learnerRegisterForm').style.display = 'none';
   document.getElementById('learnerPinDisplay').style.display = 'none';
@@ -1021,6 +1045,7 @@ function setLearnerUI(loggedIn) {
 
 function checkLearnerSession() {
   const stored = getAuthSession('sst_learner');
+  if (stored && !authTokenIsLive()) { clearAuthSession('sst_learner'); noticeSessionExpired(); return; }
   if (stored) {
     try {
       currentLearner = JSON.parse(stored);
@@ -1150,6 +1175,7 @@ function doTeacherLogout() {
 
 function checkTeacherSession() {
   const stored = getAuthSession('sst_teacher');
+  if (stored && !authTokenIsLive()) { clearAuthSession('sst_teacher'); noticeSessionExpired(); return; }
   if (stored) {
     try {
       currentTeacher = JSON.parse(stored);

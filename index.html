@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://rufihxjquwrluaenmbaa.supabase.co https://www.gov.uk; img-src 'self' data: https:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';">
 <link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
-<link rel="stylesheet" href="styles.css?v=3.12.56">
+<link rel="stylesheet" href="styles.css?v=3.12.59">
 </head>
 <body>
 
@@ -460,6 +460,7 @@
         <div style="font-size:11px;color:var(--nhs-grey);margin:-4px 0 8px;">Required if you registered with an NHS address — so we can still reach you if NHS mail bounces.</div>
         <label>Mobile Number *</label>
         <input type="tel" id="regPhone" placeholder="07700 900123" autocomplete="tel" inputmode="tel">
+        <div style="font-size:11px;color:var(--nhs-grey);margin:-4px 0 8px;">We may text you a one-tap feedback link a few days after a session you attend. Reply STOP any time to opt out.</div>
         <label>Grade *</label>
         <select id="regGrade">
           <option value="">-- Select grade --</option>
@@ -643,6 +644,7 @@
       <div style="margin-top:12px;font-size:12px;color:var(--nhs-grey);">
         <span id="trSelectedCount">0</span> recipients selected
       </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--nhs-grey);">Anyone with a mobile on file who hasn't replied after 3 days gets one text chasing it.</div>
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;gap:8px;">
       <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('teacherRequestModal')">Cancel</button>
@@ -768,16 +770,16 @@
   </div>
 </div>
 
-<script src="demodata.js?v=3.12.56"></script>
-<script src="config.js?v=3.12.56"></script>
-<script src="auth.js?v=3.12.56"></script>
-<script src="sessions.js?v=3.12.56"></script>
-<script src="messaging.js?v=3.12.56"></script>
-<script src="learner.js?v=3.12.56"></script>
-<script src="actions.js?v=3.12.56"></script>
-<script src="surveys.js?v=3.12.56"></script>
-<script src="analytics.js?v=3.12.56"></script>
-<script src="errorlog.js?v=3.12.56"></script>
-<script src="app.js?v=3.12.56"></script>
+<script src="demodata.js?v=3.12.59"></script>
+<script src="config.js?v=3.12.59"></script>
+<script src="auth.js?v=3.12.59"></script>
+<script src="sessions.js?v=3.12.59"></script>
+<script src="messaging.js?v=3.12.59"></script>
+<script src="learner.js?v=3.12.59"></script>
+<script src="actions.js?v=3.12.59"></script>
+<script src="surveys.js?v=3.12.59"></script>
+<script src="analytics.js?v=3.12.59"></script>
+<script src="errorlog.js?v=3.12.59"></script>
+<script src="app.js?v=3.12.59"></script>
 </body>
 </html>

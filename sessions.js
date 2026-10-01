@@ -703,6 +703,7 @@ function showDetail(id) {
       footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-blue);color:var(--nhs-blue);" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'confirmation')">Send Confirmation</button>`;
       footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-orange);color:var(--nhs-orange);" onclick="closeModal('detailModal');sendSessionEmail(${ev.id},'reminder')">Send Reminder</button>`;
       footerHtml += `<button class="btn btn-white" style="border:1px solid #25D366;color:#25D366;" onclick="closeModal('detailModal');openWhatsAppModal(${ev.id})">WhatsApp</button>`;
+      footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-dark-blue, #003087);color:var(--nhs-dark-blue, #003087);" onclick="closeModal('detailModal');sendTeacherSmsReminder(${ev.id})">Chase by text</button>`;
     }
     if (!ev.teacher || ev.status === 'tbd') {
       footerHtml += `<button class="btn btn-white" style="border:1px solid var(--nhs-aqua);color:var(--nhs-aqua);" onclick="closeModal('detailModal');requestTeacherForSession(${ev.id})">Request Teacher</button>`;
