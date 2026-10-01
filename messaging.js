@@ -442,10 +442,10 @@ async function sendNewRequestAdminNotice(req) {
   } catch(e) { logError('sendNewRequestAdminNotice', e); return false; }
 }
 
-// v3.12.59c — "every time a request is made or accepted, tell Ilgin".
+// v3.12.59c — "every time a request is made or accepted, tell Ilgin" (+ Suketu from v3.12.61).
 // Email requests are announced here; texted requests and every acceptance are
 // announced server-side (triggers on sms_outbox + schedule.teacher_confirmed).
-const TEACHING_REQUEST_ALERT_EMAILS = ['ilgin.kilic@nbt.nhs.uk'];
+const TEACHING_REQUEST_ALERT_EMAILS = ['ilgin.kilic@nbt.nhs.uk', 'work.suketu@gmail.com'];
 async function sendTeachingRequestMadeNotice(ev, names, how) {
   if (!ev || !names || !names.length || isDemoMode) return false;
   const when = `${ev.day || ''} ${ev.date || ''} ${ev.month || ''} ${ev.year || ''}`.trim();
