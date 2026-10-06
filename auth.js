@@ -121,7 +121,6 @@ async function linkAdminToLearner() {
   const adminEmails = {
     suketu: 'Suketu.Batra@nbt.nhs.uk',
     ilgin: 'Ilgin.Kilic@nbt.nhs.uk',
-    rob: 'rob@nbt.nhs.uk',
     nitin: 'Nitin.Arvind@nbt.nhs.uk'
   };
   const email = (adminEmails[currentUser.username] || (currentUser.username + '@nbt.nhs.uk')).toLowerCase();
@@ -401,6 +400,69 @@ function onSetupRotationChange() {
   if (d) { document.getElementById('setupStart').value = d.start; document.getElementById('setupEnd').value = d.end; }
 }
 
+// ── Email ownership check before a first password is set (v3.12.63) ──
+// authenticate v12 refuses `setup` without a verification_token from a
+// purpose='setup' email code — before that, anyone who typed the email of a
+// password-less account could claim it. Sends the code, asks for it in its
+// own small modal (stacked above whatever is open), and resolves to the
+// token, or null if the person cancels or the code can't be sent.
+function askEmailCode(email, type) {
+  return new Promise(async (resolve) => {
+    try {
+      const r = await callAuth({ action: 'request_email_code', type, email, purpose: 'setup' });
+      if (r && r.sent === false) { showToast('We could not send the code just now. Please try again in a minute.', 5000); resolve(null); return; }
+    } catch (e) {
+      logError('setup_code_request', e, { type });
+      showToast(e.message || 'Could not send a code. Please try again.', 5000);
+      resolve(null); return;
+    }
+    let ov = document.getElementById('emailCodeModal');
+    if (ov) ov.remove();
+    ov = document.createElement('div');
+    ov.id = 'emailCodeModal';
+    ov.className = 'modal-overlay show';
+    ov.style.zIndex = '400';
+    ov.setAttribute('role', 'dialog');
+    ov.setAttribute('aria-modal', 'true');
+    ov.setAttribute('aria-label', 'Confirm your email');
+    ov.innerHTML = `
+      <div class="modal" style="max-width:400px;">
+        <div class="modal-header"><h3>Confirm your email</h3><button class="modal-close" id="ecClose" aria-label="Close">&times;</button></div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:6px;">We've sent a 6-digit code to <strong>${esc(email)}</strong>. It expires in 15 minutes — check your junk folder too.</p>
+          <label for="ecCode">6-digit code</label>
+          <input type="text" id="ecCode" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+          <div style="margin-top:6px;font-size:12px;"><a href="#" id="ecResend">Send a new code</a></div>
+          <div style="margin-top:14px;"><button class="btn btn-green" id="ecVerify" style="width:100%;">Confirm</button></div>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const done = (val) => { ov.remove(); resolve(val); };
+    ov.querySelector('#ecClose').onclick = () => done(null);
+    ov.querySelector('#ecResend').onclick = async (ev) => {
+      ev.preventDefault();
+      try { await callAuth({ action: 'request_email_code', type, email, purpose: 'setup' }); showToast('New code sent.'); }
+      catch (e) { showToast(e.message || 'Could not resend — please wait a minute and try again.'); }
+    };
+    const verify = async () => {
+      const code = ov.querySelector('#ecCode').value.trim();
+      if (!/^\d{6}$/.test(code)) { showToast('Enter the 6-digit code from the email'); return; }
+      const btn = ov.querySelector('#ecVerify');
+      btn.disabled = true;
+      try {
+        const res = await callAuth({ action: 'verify_email_code', type, email, code, purpose: 'setup' });
+        done(res.verification_token || null);
+      } catch (e) {
+        showToast(e.message || 'Incorrect or expired code.');
+        btn.disabled = false;
+      }
+    };
+    ov.querySelector('#ecVerify').onclick = verify;
+    ov.querySelector('#ecCode').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') verify(); });
+    setTimeout(() => { const i = ov.querySelector('#ecCode'); if (i) i.focus(); }, 50);
+  });
+}
+
 async function completeAccountSetup(learnerId) {
   const pin1 = document.getElementById('setupPin1').value.trim();
   const pin2 = document.getElementById('setupPin2').value.trim();
@@ -425,7 +487,9 @@ async function completeAccountSetup(learnerId) {
   const setupEmail = document.getElementById('setupEmail')?.value?.trim()?.toLowerCase() || '';
   try {
     // Set password via server-side Edge Function
-    const authResult = await callAuth({ action: 'setup', type: 'learner', email: setupEmail, password: pin1 });
+    const vt = await askEmailCode(setupEmail, 'learner');
+    if (!vt) return;
+    const authResult = await callAuth({ action: 'setup', type: 'learner', email: setupEmail, password: pin1, verification_token: vt });
     if (authResult.access_token) setAuthToken(authResult.access_token);
     // Update profile fields directly (non-sensitive data)
     const updates = { verified: true, grade, placement, rotation_block: rotation || null };
@@ -949,9 +1013,18 @@ async function doLearnerRegister() {
       throw new Error(msg || `Registration failed: ${regRes.status}${errBody ? ' — ' + errBody : ''}`);
     }
     const result = await regRes.json();
-    // Set password server-side
-    await callAuth({ action: 'setup', type: 'learner', email, password: pin });
-    currentLearner = result[0];
+    // Prove the mailbox, then set the password server-side. The code is
+    // also what verifies an NHS address now (register_learner no longer
+    // trusts the domain on its own). If they back out here the account
+    // exists without a password — signing in later offers setup again.
+    const vt = await askEmailCode(email, 'learner');
+    if (!vt) {
+      showToast('Almost done — sign in with this email any time to confirm it and finish setting up.', 6000);
+      return;
+    }
+    const setupRes = await callAuth({ action: 'setup', type: 'learner', email, password: pin, verification_token: vt });
+    if (setupRes.access_token) setAuthToken(setupRes.access_token);
+    currentLearner = { ...result[0], ...(setupRes.user || {}) };
     setAuthSession('sst_learner', JSON.stringify(currentLearner));
     setLearnerUI(true);
     // Contactability is a QI outcome in its own right: an unreachable learner
@@ -1122,7 +1195,9 @@ async function doTeacherSetup() {
   if (pin !== pinConfirm) { showToast('Passwords do not match'); return; }
   if (pin.length < 4) { showToast('Password must be at least 4 characters'); return; }
   try {
-    const result = await callAuth({ action: 'setup', type: 'teacher', email, password: pin });
+    const vt = await askEmailCode(email, 'teacher');
+    if (!vt) return;
+    const result = await callAuth({ action: 'setup', type: 'teacher', email, password: pin, verification_token: vt });
     if (result.access_token) setAuthToken(result.access_token);
     const teacher = result.user;
     try { teacher.phone = await rpcSetMyMobile(mobile); }

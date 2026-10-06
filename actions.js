@@ -346,14 +346,24 @@ async function submitRescheduleRequest(sessionId, teacher, topic, teacherEmail, 
   if (!selectedRescheduleSlot) { showToast('Please select a new slot'); return; }
   const message = document.getElementById('rescheduleMessage')?.value?.trim() || '';
   try {
-    await sbInsert('requests', {
-      name: teacher,
-      email: teacherEmail,
-      topic: topic,
-      preferred_date: selectedRescheduleSlot,
-      message: `Reschedule request from ${teacher} for session "${topic}". Preferred new date: ${selectedRescheduleSlot}. ${message}`.trim(),
-      status: 'pending'
+    // return=minimal, not sbInsert: whoever follows the email link may be
+    // signed out or signed in as a learner, and neither can read requests
+    // back (staff-only SELECT since v3.12.63), so asking for the row back
+    // would fail an insert that is itself allowed.
+    if (isDemoMode) { showDemoToast('Add to requests'); return; }
+    const reqRes = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+      method: 'POST',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        name: teacher,
+        email: teacherEmail,
+        topic: topic,
+        preferred_date: selectedRescheduleSlot,
+        message: `Reschedule request from ${teacher} for session "${topic}". Preferred new date: ${selectedRescheduleSlot}. ${message}`.trim(),
+        status: 'pending'
+      })
     });
+    if (!reqRes.ok) throw new Error('INSERT requests failed: ' + reqRes.status);
     // Flag the session as reschedule_requested (server-side; anon cannot UPDATE schedule)
     try {
       if (token) await callSessionRpc('set_teacher_confirmed', { p_session_id: Number(sessionId), p_token: token, p_value: 'reschedule_requested' });
