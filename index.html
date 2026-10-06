@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://rufihxjquwrluaenmbaa.supabase.co https://www.gov.uk; img-src 'self' data: https:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';">
 <link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
-<link rel="stylesheet" href="styles.css?v=3.12.61">
+<link rel="stylesheet" href="styles.css?v=3.12.62">
 </head>
 <body>
 
@@ -721,6 +721,9 @@
         <p style="font-size:13px;color:var(--nhs-grey);margin:0 0 12px;">Enter your email to find your account. You'll set a password to access your dashboard.</p>
         <label>Email</label>
         <input type="email" id="teacherSetupEmail" placeholder="name@nhs.net" autocomplete="username" autocapitalize="none" spellcheck="false">
+        <label>Mobile</label>
+        <input type="tel" id="teacherSetupMobile" placeholder="07…" autocomplete="tel" inputmode="tel">
+        <p style="font-size:12px;color:var(--nhs-grey);margin:4px 0 0;">Only used to chase teaching requests you haven't replied to. Never shared.</p>
         <label>New Password</label>
         <input type="password" id="teacherSetupPin" placeholder="Choose a password" autocomplete="new-password">
         <label>Confirm Password</label>
@@ -731,6 +734,23 @@
         <div style="margin-top:8px;text-align:center;font-size:13px;color:var(--nhs-grey);">
           Already set up? <a href="#" onclick="showTeacherLoginForm();return false;">Login here</a>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Teacher Mobile Required Modal (v3.12.62) — no close button by design -->
+<div class="modal-overlay" id="teacherMobileModal" role="dialog" aria-modal="true" aria-label="Add your mobile">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header" style="background:linear-gradient(135deg,#ed8b00,#da6900);color:white;border-radius:12px 12px 0 0;padding:18px 24px;">
+      <h3 style="margin:0;">Add your mobile</h3>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;margin:0 0 12px;">We need a mobile number for every teacher. It's only used to text you if a teaching request goes unanswered. No reminders, and it's never shared.</p>
+      <label>Mobile</label>
+      <input type="tel" id="teacherMobileInput" placeholder="07…" autocomplete="tel" inputmode="tel" onkeydown="if(event.key==='Enter')saveTeacherMobile()">
+      <div style="margin-top:14px;">
+        <button class="btn" style="width:100%;background:#ed8b00;color:white;border:none;" onclick="saveTeacherMobile()">Save</button>
       </div>
     </div>
   </div>
@@ -770,16 +790,16 @@
   </div>
 </div>
 
-<script src="demodata.js?v=3.12.61"></script>
-<script src="config.js?v=3.12.61"></script>
-<script src="auth.js?v=3.12.61"></script>
-<script src="sessions.js?v=3.12.61"></script>
-<script src="messaging.js?v=3.12.61"></script>
-<script src="learner.js?v=3.12.61"></script>
-<script src="actions.js?v=3.12.61"></script>
-<script src="surveys.js?v=3.12.61"></script>
-<script src="analytics.js?v=3.12.61"></script>
-<script src="errorlog.js?v=3.12.61"></script>
-<script src="app.js?v=3.12.61"></script>
+<script src="demodata.js?v=3.12.62"></script>
+<script src="config.js?v=3.12.62"></script>
+<script src="auth.js?v=3.12.62"></script>
+<script src="sessions.js?v=3.12.62"></script>
+<script src="messaging.js?v=3.12.62"></script>
+<script src="learner.js?v=3.12.62"></script>
+<script src="actions.js?v=3.12.62"></script>
+<script src="surveys.js?v=3.12.62"></script>
+<script src="analytics.js?v=3.12.62"></script>
+<script src="errorlog.js?v=3.12.62"></script>
+<script src="app.js?v=3.12.62"></script>
 </body>
 </html>

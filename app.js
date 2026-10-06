@@ -248,7 +248,7 @@ function endDemoTour(completed) {
 
 // ===================== KEYBOARD =====================
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.show:not(#teacherMobileModal)').forEach(m => m.classList.remove('show'));
   if (e.key === 'Enter' && document.getElementById('loginModal').classList.contains('show')) doLogin();
 });
 

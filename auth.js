@@ -1108,7 +1108,7 @@ async function doTeacherLogin() {
     updateHeaderButtons();
     showToast(`Welcome, ${teacher.name}!`);
     switchView('teacherDash');
-    setTimeout(maybeOfferPasskey, 1200);
+    if (!ensureTeacherMobile()) setTimeout(maybeOfferPasskey, 1200);
   } catch(e) { console.error('Teacher login failed:', e); showToast(e.message || 'Login failed'); }
 }
 
@@ -1116,13 +1116,17 @@ async function doTeacherSetup() {
   const email = document.getElementById('teacherSetupEmail').value.trim().toLowerCase();
   const pin = document.getElementById('teacherSetupPin').value.trim();
   const pinConfirm = document.getElementById('teacherSetupPinConfirm').value.trim();
-  if (!email || !pin) { showToast('Please fill all fields'); return; }
+  const mobile = document.getElementById('teacherSetupMobile').value.trim();
+  if (!email || !pin || !mobile) { showToast('Please fill all fields'); return; }
+  if (!isUkMobile(mobile)) { showToast('Please enter a valid UK mobile number'); return; }
   if (pin !== pinConfirm) { showToast('Passwords do not match'); return; }
   if (pin.length < 4) { showToast('Password must be at least 4 characters'); return; }
   try {
     const result = await callAuth({ action: 'setup', type: 'teacher', email, password: pin });
     if (result.access_token) setAuthToken(result.access_token);
     const teacher = result.user;
+    try { teacher.phone = await rpcSetMyMobile(mobile); }
+    catch(e) { logError('teacher_mobile_save', e); }  // login prompt catches it next time
     currentTeacher = teacher;
     setAuthSession('sst_teacher', JSON.stringify(teacher));
     closeModal('teacherLoginModal');
@@ -1132,7 +1136,49 @@ async function doTeacherSetup() {
     updateHeaderButtons();
     showToast(`Account set up! Welcome, ${teacher.name}!`);
     switchView('teacherDash');
+    ensureTeacherMobile();
   } catch(e) { console.error('Teacher setup failed:', e); showToast(e.message || 'Setup failed'); }
+}
+
+// ── Teacher mobile (v3.12.62) — mandatory, used for SMS chasing only ──
+function isUkMobile(v) {
+  const d = (v || '').replace(/\D/g, '');
+  return /^(?:07\d{9}|447\d{9}|00447\d{9}|4407\d{9}|7\d{9})$/.test(d);
+}
+
+async function rpcSetMyMobile(phone) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_my_mobile`, {
+    method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_phone: phone })
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error((data && data.message) || 'Could not save mobile');
+  return data;
+}
+
+// Teacher logins only (admins/learners use other tables). Returns true if it
+// had to ask, so callers can hold back other pop-ups.
+function ensureTeacherMobile() {
+  if (isDemoMode || !currentTeacher || isAdmin) return false;
+  if ((currentTeacher.phone || '').replace(/\D/g, '').length >= 10) return false;
+  document.getElementById('teacherMobileInput').value = '';
+  openModal('teacherMobileModal');
+  return true;
+}
+
+async function saveTeacherMobile() {
+  const v = document.getElementById('teacherMobileInput').value.trim();
+  if (!isUkMobile(v)) { showToast('Please enter a valid UK mobile number'); return; }
+  try {
+    currentTeacher.phone = await rpcSetMyMobile(v);
+    setAuthSession('sst_teacher', JSON.stringify(currentTeacher));
+    closeModal('teacherMobileModal');
+    showToast('Mobile saved, thank you');
+    logInteraction('teacher_mobile_added');
+  } catch(e) {
+    logError('teacher_mobile_save', e);
+    showToast(e.message || 'Could not save mobile');
+  }
 }
 
 async function linkTeacherToLearner() {
@@ -1180,6 +1226,7 @@ function checkTeacherSession() {
     try {
       currentTeacher = JSON.parse(stored);
       updateHeaderButtons();
+      setTimeout(ensureTeacherMobile, 800);
     } catch(e) { clearAuthSession('sst_teacher'); }
   }
 }
