@@ -660,6 +660,10 @@ function showDetail(id) {
   if (isMgrView && ev.teacher) {
     const respBadge = teacherResponseBadge(ev, { big: true });
     if (respBadge) html += `<div class="detail-field"><div class="detail-label">Teacher Response</div><div class="detail-value">${respBadge}</div></div>`;
+    if (ev.coTeacher) {
+      const coBadge = teacherResponseBadge({ ...ev, teacherConfirmed: ev.coTeacherConfirmed }, { big: true });
+      if (coBadge) html += `<div class="detail-field"><div class="detail-label">Co-teacher Response</div><div class="detail-value">${coBadge}</div></div>`;
+    }
     const sentBadge = reminderSentBadge(ev, { big: true });
     if (sentBadge) html += `<div class="detail-field"><div class="detail-label">Last Emailed</div><div class="detail-value">${sentBadge}</div></div>`;
   }

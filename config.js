@@ -4,7 +4,7 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.64';
+const APP_VERSION = 'v3.12.65';
 const APP_BUILD = '2026-10-07';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
@@ -327,7 +327,7 @@ async function loadEvents() {
     const SCHEDULE_PUBLIC = 'id,event_id,day,date,month,year,time,room,topic,teacher,backup_teacher,co_teacher,status,published';
     // Managers (non-admin, e.g. teacher with is_manager) also get teacher_confirmed so the
     // request/response badges work for them too — still no teacher emails/notes/edit history.
-    const SCHEDULE_MANAGER = SCHEDULE_PUBLIC + ',teacher_confirmed';
+    const SCHEDULE_MANAGER = SCHEDULE_PUBLIC + ',teacher_confirmed,co_teacher_confirmed';
     const mgr = (typeof isManager === 'function' && isManager());
     if (isAdmin) {
       // Admin sees everything
@@ -361,6 +361,7 @@ async function loadEvents() {
       backupTeacherEmail: row.backup_teacher_email || '',
       coTeacher: row.co_teacher || '',
       coTeacherEmail: row.co_teacher_email || '',
+      coTeacherConfirmed: row.co_teacher_confirmed || '',
     }));
     document.getElementById('offlineBanner').classList.remove('show');
     if (isAdmin || (typeof isManager === 'function' && isManager())) { try { await loadReminderSends(); } catch(_) {} }

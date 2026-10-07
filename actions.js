@@ -41,7 +41,7 @@ async function handleActionParams() {
   // which may not include unpublished sessions for non-admin users)
   let evData;
   try {
-    const ACTION_SCHEDULE_COLS = 'id,day,date,month,year,time,room,topic,teacher,backup_teacher,status,published';
+    const ACTION_SCHEDULE_COLS = 'id,day,date,month,year,time,room,topic,teacher,backup_teacher,co_teacher,status,published';
     const response = await fetch(`${SUPABASE_URL}/rest/v1/schedule?id=eq.${sessionId}&select=${ACTION_SCHEDULE_COLS}`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
     });
@@ -54,7 +54,12 @@ async function handleActionParams() {
         topic: row.topic || '', teacher: row.teacher || '',
         status: row.status || 'tbd', published: row.published !== false,
         backupTeacher: row.backup_teacher || '',
+        coTeacher: row.co_teacher || '',
       };
+      // Co-teacher links carry &name= (v3.12.65): thank/attribute the person who clicked,
+      // not the lead. Cosmetic only — the server keys everything off the token's email.
+      const carried = (params.get('name') || '').trim();
+      if (carried && action !== 'claim') evData.teacher = carried;
     }
   } catch(e) { console.error('Failed to fetch session:', e); }
 

@@ -7,14 +7,14 @@
 function openEmailModal(id) {
   const ev = events.find(e => e.id === id);
   if (!ev) return;
-  const to = ev.teacherEmail || '';
+  const to = [ev.teacherEmail, ev.coTeacherEmail].filter(Boolean).join(',');
   const subject = encodeURIComponent('Teaching Reminder: ' + (ev.topic || 'Session') + ' - ' + ev.day + ' ' + ev.date + ' ' + ev.month);
   const body = encodeURIComponent(
-    'Dear ' + (ev.teacher || 'Colleague') + ',\n\nThis is a reminder about your upcoming teaching session:\n\nTopic: ' + (ev.topic || 'TBD') + '\nDate: ' + ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year + '\nTime: ' + (ev.time || 'TBC') + '\nRoom: ' + (ev.room || 'TBC') + '\n\nPlease confirm your availability.\n\nBest regards,\nSouthmead Surgical Teaching Team'
+    'Dear ' + (teacherLabel(ev) || 'Colleague') + ',\n\nThis is a reminder about your upcoming teaching session:\n\nTopic: ' + (ev.topic || 'TBD') + '\nDate: ' + ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year + '\nTime: ' + (ev.time || 'TBC') + '\nRoom: ' + (ev.room || 'TBC') + '\n\nPlease confirm your availability.\n\nBest regards,\nSouthmead Surgical Teaching Team'
   );
   document.getElementById('emailBody').innerHTML = `
     <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:10px;">Click the button below to open your email client with a pre-filled reminder.</p>
-    <div class="email-preview">To: ${esc(to || '(no email on file)')}\nSubject: Teaching Reminder: ${esc(ev.topic || 'Session')}\n\nDear ${esc(ev.teacher || 'Colleague')},\n\nThis is a reminder about your upcoming teaching session:\n\nTopic: ${esc(ev.topic || 'TBD')}\nDate: ${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}\nTime: ${esc(ev.time || 'TBC')}\nRoom: ${esc(ev.room || 'TBC')}\n\nPlease confirm your availability.\n\nBest regards,\nSouthmead Surgical Teaching Team</div>
+    <div class="email-preview">To: ${esc(to || '(no email on file)')}\nSubject: Teaching Reminder: ${esc(ev.topic || 'Session')}\n\nDear ${esc(teacherLabel(ev) || 'Colleague')},\n\nThis is a reminder about your upcoming teaching session:\n\nTopic: ${esc(ev.topic || 'TBD')}\nDate: ${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}\nTime: ${esc(ev.time || 'TBC')}\nRoom: ${esc(ev.room || 'TBC')}\n\nPlease confirm your availability.\n\nBest regards,\nSouthmead Surgical Teaching Team</div>
     <div style="margin-top:14px;text-align:center;">
       <a href="mailto:${to}?subject=${subject}&body=${body}" class="btn btn-green" style="display:inline-flex;text-decoration:none;color:white;padding:10px 24px;">Open Email Client</a>
     </div>
@@ -22,11 +22,16 @@ function openEmailModal(id) {
   openModal('emailModal');
 }
 
-async function sendSessionEmail(id, type) {
+// who = { name, email } sends to the co-teacher instead of the lead; the lead
+// send then fans out to the co-teacher automatically (v3.12.65).
+async function sendSessionEmail(id, type, who) {
   const ev = events.find(e => e.id === id);
   if (!ev) { showToast('Session not found'); return; }
-  const to = ev.teacherEmail;
+  const to = who ? who.email : ev.teacherEmail;
+  const name = who ? who.name : ev.teacher;
   if (!to) { showToast('No email on file for teacher. Opening email preview instead.'); openEmailModal(id); return; }
+  // Co-teacher links carry their name so the landing page thanks the right person
+  const nameParam = who ? '&name=' + encodeURIComponent(name || '') : '';
 
   const isConfirm = type === 'confirmation';
   const subject = isConfirm
@@ -36,9 +41,9 @@ async function sendSessionEmail(id, type) {
   // Generate action token and links
   const actionToken = btoa(ev.id + ':' + (to || ''));
   const siteUrl = SITE_URL;
-  const confirmLink = `${siteUrl}?action=confirm&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
-  const declineLink = `${siteUrl}?action=decline&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
-  const rescheduleLink = `${siteUrl}?action=reschedule&session=${ev.id}&token=${encodeURIComponent(actionToken)}`;
+  const confirmLink = `${siteUrl}?action=confirm&session=${ev.id}&token=${encodeURIComponent(actionToken)}${nameParam}`;
+  const declineLink = `${siteUrl}?action=decline&session=${ev.id}&token=${encodeURIComponent(actionToken)}${nameParam}`;
+  const rescheduleLink = `${siteUrl}?action=reschedule&session=${ev.id}&token=${encodeURIComponent(actionToken)}${nameParam}`;
 
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
     <div style="background:#003087;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
@@ -46,10 +51,11 @@ async function sendSessionEmail(id, type) {
       <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
     </div>
     <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;">
-      <p>Dear ${ev.teacher || 'Colleague'},</p>
+      <p>Dear ${esc(name || 'Colleague')},</p>
       <p>${isConfirm ? 'Thank you for agreeing to teach. Please find the details of your session below:' : 'This is a friendly reminder about your upcoming teaching session:'}</p>
       <table style="margin:16px 0;font-size:14px;border-collapse:collapse;">
         <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Topic:</td><td>${ev.topic || 'TBD'}</td></tr>
+        ${ev.coTeacher ? `<tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Teaching:</td><td>${esc(teacherLabel(ev))}</td></tr>` : ''}
         <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Date:</td><td>${ev.day} ${ev.date} ${ev.month} ${ev.year}</td></tr>
         <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Time:</td><td>${ev.time || 'TBC'}</td></tr>
         <tr><td style="padding:6px 16px 6px 0;font-weight:bold;">Room:</td><td>${ev.room || 'TBC'}</td></tr>
@@ -85,24 +91,27 @@ async function sendSessionEmail(id, type) {
     });
     const result = await res.json();
     if (result.success) {
-      if (isConfirm) sendTeachingRequestMadeNotice(ev, [ev.teacher || to], 'A teaching request (please confirm)');
-      showToast(`${isConfirm ? 'Confirmation' : 'Reminder'} sent to ${ev.teacher}!`);
-      logAction(`Sent ${type} email`, `${ev.topic || 'Session'} → ${ev.teacher}`);
+      if (isConfirm && !who) sendTeachingRequestMadeNotice(ev, [teacherLabel(ev) || to], 'A teaching request (please confirm)');
+      showToast(`${isConfirm ? 'Confirmation' : 'Reminder'} sent to ${name}!`);
+      logAction(`Sent ${type} email`, `${ev.topic || 'Session'} → ${name}`);
       logQI(isConfirm ? 'invitation_sent' : 'reminder_sent', {
         session_id: ev.id,
-        metadata: { teacher_email: to, teacher_name: ev.teacher, topic: ev.topic, channel: 'email', email_type: type }
+        metadata: { teacher_email: to, teacher_name: name, topic: ev.topic, channel: 'email', email_type: type, co_teacher: !!who }
       });
       // Track email in local storage for inbox view
-      trackSentEmail(ev.id, to, subject, type, ev.topic, ev.teacher, ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year);
+      trackSentEmail(ev.id, to, subject, type, ev.topic, name, ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year);
+      if (!who && ev.coTeacherEmail && ev.coTeacherEmail.toLowerCase() !== to.toLowerCase()) {
+        await sendSessionEmail(id, type, { name: ev.coTeacher, email: ev.coTeacherEmail });
+      }
     } else {
       console.warn('Send failed:', result);
-      showToast(`Send failed: ${result.error || 'Unknown error'}. Try email client instead.`);
-      openEmailModal(id);
+      showToast(`Send to ${name} failed: ${result.error || 'Unknown error'}. Try email client instead.`);
+      if (!who) openEmailModal(id);
     }
   } catch(e) {
     console.warn('Send error:', e);
-    showToast('Send failed. Opening email client...');
-    openEmailModal(id);
+    showToast(`Send to ${name} failed. Opening email client...`);
+    if (!who) openEmailModal(id);
   }
 }
 
@@ -151,6 +160,9 @@ async function confirmCancelSession(id) {
     if (ev.teacherEmail) {
       await sendCancellationEmail(id, reason);
     }
+    if (ev.coTeacherEmail) {
+      await sendCancellationEmail(id, reason, { name: ev.coTeacher, email: ev.coTeacherEmail });
+    }
     closeModal('cancelSessionModal');
     await loadEvents();
     showToast(ev.teacherEmail ? 'Session cancelled and teacher notified.' : 'Session cancelled.');
@@ -160,10 +172,11 @@ async function confirmCancelSession(id) {
   }
 }
 
-async function sendCancellationEmail(id, reason) {
+async function sendCancellationEmail(id, reason, who) {
   const ev = events.find(e => e.id === id);
   if (!ev) return;
-  const to = ev.teacherEmail;
+  const to = who ? who.email : ev.teacherEmail;
+  const name = who ? who.name : ev.teacher;
   if (!to) return;
 
   // Find the next 5 open future slots (no teacher assigned, not cancelled)
@@ -183,7 +196,7 @@ async function sendCancellationEmail(id, reason) {
     slotsHtml = `<div style="border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">`;
     openSlots.forEach((s, i) => {
       const tok = (typeof generateActionToken === 'function') ? generateActionToken(s.id, to) : btoa(s.id + ':' + to);
-      const claimLink = `${SITE_URL}?action=claim&session=${s.id}&token=${encodeURIComponent(tok)}&topic=${encodeURIComponent(ev.topic || '')}&name=${encodeURIComponent(ev.teacher || '')}`;
+      const claimLink = `${SITE_URL}?action=claim&session=${s.id}&token=${encodeURIComponent(tok)}&topic=${encodeURIComponent(ev.topic || '')}&name=${encodeURIComponent(name || '')}`;
       const dateLabel = `${s.day} ${s.date} ${s.month}${s.year ? ' ' + s.year : ''}`;
       const meta = `${s.room || 'Room TBC'} · slot open`;
       const border = i < openSlots.length - 1 ? 'border-bottom:1px solid #eee;' : '';
@@ -213,7 +226,7 @@ async function sendCancellationEmail(id, reason) {
       <h2 style="color:white;margin:0;font-size:18px;">Southmead Surgical Teaching</h2>
     </div>
     <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;background:#ffffff;color:#231f20;font-size:14px;line-height:1.6;">
-      <p style="margin:0 0 12px;">Dear ${esc(ev.teacher || 'Colleague')},</p>
+      <p style="margin:0 0 12px;">Dear ${esc(name || 'Colleague')},</p>
       <p style="margin:0 0 12px;">We're very sorry, but we've had to <strong>cancel</strong> the teaching session below. We sincerely apologise for the short notice and any inconvenience caused.</p>
       <table style="margin:0 0 16px;font-size:14px;border-collapse:collapse;width:100%;background:#fbeaf0;border-radius:8px;">
         <tr><td style="padding:10px 16px 4px 16px;font-weight:bold;">Topic:</td><td style="padding:10px 16px 4px 0;text-decoration:line-through;color:#72243e;">${esc(ev.topic || 'TBD')}</td></tr>
@@ -238,9 +251,9 @@ async function sendCancellationEmail(id, reason) {
     });
     const result = await res.json();
     if (result.success) {
-      logAction('Sent cancellation email', `${ev.topic || 'Session'} → ${ev.teacher}`);
-      logQI('cancellation_sent', { session_id: id, metadata: { teacher_email: to, teacher_name: ev.teacher, topic: ev.topic, reason: reason || null, open_slots_offered: openSlots.length, channel: 'email' } });
-      trackSentEmail(id, to, subject, 'cancellation', ev.topic, ev.teacher, ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year);
+      logAction('Sent cancellation email', `${ev.topic || 'Session'} → ${name}`);
+      logQI('cancellation_sent', { session_id: id, metadata: { teacher_email: to, teacher_name: name, topic: ev.topic, reason: reason || null, open_slots_offered: openSlots.length, channel: 'email' } });
+      trackSentEmail(id, to, subject, 'cancellation', ev.topic, name, ev.day + ' ' + ev.date + ' ' + ev.month + ' ' + ev.year);
     } else {
       console.warn('Cancellation email send failed:', result);
       showToast('Session cancelled, but the email failed to send.');
@@ -627,7 +640,7 @@ async function sendTeacherSmsReminder(id) {
   const r = await queueTeacherSms(id, 'teacher_manual');
   if (!r) showToast('Text failed — see Error Log.');
   else if (r.enabled === false) showToast('SMS is switched off.');
-  else if (r.queued) { showToast(`Text sent to ${ev.teacher || 'teacher'}`); logAction('Sent SMS reminder', `${ev.topic || 'Session'} → ${ev.teacher}`); }
+  else if (r.queued) { showToast(`Text sent to ${r.queued > 1 ? teacherLabel(ev) : (ev.teacher || 'teacher')}`); logAction('Sent SMS reminder', `${ev.topic || 'Session'} → ${ev.teacher}`); }
   else if (r.no_phone) showToast(`No mobile on file for ${ev.teacher || 'this teacher'} — add one in Contacts.`);
   else showToast('Already texted in the last minute.');
 }
