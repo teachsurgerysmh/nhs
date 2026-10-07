@@ -367,6 +367,32 @@ const SURVEY_FORMS = {
         { id: 'E3', text: 'Any other comments?', type: 'text', placeholder: 'Optional', long: true, optional: true },
       ]},
     ]
+  },
+
+  // One-off resource feedback (v3.12.66) — NOT part of the QI pre/post arms.
+  // Sent to residents who didn't attend the 7 Oct 2026 lap-instruments session.
+  // The session feedback link can't be used for them: it marks attendance + CPD.
+  lap_guide: {
+    title: 'Laparoscopic Instruments: A Quick Guide',
+    icon: '🔧',
+    timeEstimate: '30 seconds',
+    headerTitle: 'Rate this guide',
+    headerBadge: '30 seconds · tells us what to teach next',
+    intro: 'Thanks for having a look at the laparoscopic instruments quick guide. Three quick questions.',
+    completeText: 'Thanks. Your feedback helps us plan the next laparoscopic teaching sessions.',
+    qiEvent: 'guide_survey_started',
+    respondentFields: [
+      { id: 'grade', label: 'Your grade', type: 'single', options: ['FY1','FY2','CT1','CT2','Other'] },
+    ],
+    sections: [
+      { id: 'G', title: 'The guide', questions: [
+        { id: 'G1', text: 'How useful was the guide?', type: 'scale', scaleMin: 1, scaleMax: 10, minLabel: 'Not useful', maxLabel: 'Very useful' },
+        { id: 'G2', text: 'Would you come to a hands-on laparoscopic instruments session in theatre?', type: 'single',
+          options: ['Yes','Maybe','No'] },
+        { id: 'G3', text: 'What would you add or change? (optional)', type: 'text', long: true, optional: true,
+          placeholder: 'e.g. more on staplers, port placement, camera driving…' },
+      ]},
+    ],
   }
 };
 
@@ -472,7 +498,7 @@ function openSurvey(formType, token) {
     answers: {},
     saving: false,
   };
-  logQI(isPostForm(formType) ? 'post_survey_started' : 'baseline_survey_started',
+  logQI(form.qiEvent || (isPostForm(formType) ? 'post_survey_started' : 'baseline_survey_started'),
         { metadata: { form: formType, token: surveyState.token } });
   renderSurvey();
   switchView('survey');
@@ -492,10 +518,10 @@ function renderSurvey() {
   // pre-platform wording, so a post survey collected the right answers under a
   // header that said the opposite.
   const isPost = isPostForm(surveyState.formType);
-  const armTitle = isPost ? 'Post-Platform Follow-Up Survey' : 'Pre-Platform Baseline Survey';
-  const armBadge = isPost
+  const armTitle = form.headerTitle || (isPost ? 'Post-Platform Follow-Up Survey' : 'Pre-Platform Baseline Survey');
+  const armBadge = form.headerBadge || (isPost
     ? '⏩ About your experience SINCE the teaching website'
-    : '⏪ About your experience BEFORE the teaching website';
+    : '⏪ About your experience BEFORE the teaching website');
 
   let html = `
     <div class="survey-container">
@@ -530,10 +556,10 @@ function renderRespondentSection(form) {
   let html = `
     <div class="survey-section">
       <div class="survey-section-header">Your Details</div>
-      <div style="font-size:13px;color:var(--nhs-dark-blue);margin-bottom:12px;padding:10px 14px;background:#e0f5fa;border-radius:var(--radius);border-left:3px solid var(--nhs-blue);">
+      ${form.intro ? `<p style="font-size:14px;color:var(--nhs-dark-blue);margin-bottom:16px;">${form.intro}</p>` : `<div style="font-size:13px;color:var(--nhs-dark-blue);margin-bottom:12px;padding:10px 14px;background:#e0f5fa;border-radius:var(--radius);border-left:3px solid var(--nhs-blue);">
         <strong>Important:</strong> This survey asks about your experience <strong>before</strong> the Southmead Surgical Teaching website was introduced in May 2026. Please answer based on how things worked before the platform.
       </div>
-      <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">All responses are anonymised. This data will be used in a QI project report.</p>`;
+      <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">All responses are anonymised. This data will be used in a QI project report.</p>`}`;
 
   form.respondentFields.forEach(field => {
     const req = !field.optional ? ' <span class="survey-required">*</span>' : '';
@@ -662,7 +688,7 @@ function renderSurveyComplete(form) {
     <div class="survey-complete">
       <div style="font-size:48px;margin-bottom:12px;">✅</div>
       <h3>Thank You!</h3>
-      <p>Your responses have been recorded. All data will be anonymised in any publications or presentations.</p>
+      <p>${form.completeText || 'Your responses have been recorded. All data will be anonymised in any publications or presentations.'}</p>
       <p style="font-size:13px;color:var(--nhs-grey);margin-top:12px;">Project Lead: Dr Suketu Batra — supervised by Mr Nitin Arvind, Surgical Tutor</p>
       <button class="btn btn-green" style="margin-top:20px;padding:12px 32px;" onclick="closeSurvey()">Close</button>
     </div>`;
