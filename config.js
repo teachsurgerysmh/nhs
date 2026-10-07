@@ -4,7 +4,7 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.63';
+const APP_VERSION = 'v3.12.64';
 const APP_BUILD = '2026-10-07';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
@@ -13,6 +13,17 @@ const LEARNER_FIELDS = 'id,name,email,personal_email,phone,grade,specialty,place
 const CONTACT_FIELDS = 'id,name,role,email,phone,specialty,notes,added_by,created_at,is_manager';
 const LOGO_URL = SITE_URL + 'logo_transparent.png';
 document.getElementById('versionTag').textContent = APP_VERSION;
+
+// Co-teaching (v3.12.64): schedule.co_teacher/co_teacher_email = a second
+// teacher who actually delivers the session (distinct from backup_teacher,
+// who only stands by). Use this for every learner-facing teacher name.
+function teacherLabel(ev) {
+  if (!ev) return '';
+  const a = String(ev.teacher || '').trim();
+  const b = String(ev.coTeacher || ev.co_teacher || '').trim();
+  if (!b || b.toLowerCase() === a.toLowerCase()) return a;
+  return a ? a + ' & ' + b : b;
+}
 
 // ===================== AUTO-UPDATE CHECK =====================
 // There is no service worker, so phones (esp. Home-Screen/standalone or iOS Safari)
@@ -313,7 +324,7 @@ async function loadEvents() {
   try {
     let data;
     // Safe column list for public — excludes teacher_email, backup_teacher_email, last_edit_by, last_edit_at, notes
-    const SCHEDULE_PUBLIC = 'id,event_id,day,date,month,year,time,room,topic,teacher,backup_teacher,status,published';
+    const SCHEDULE_PUBLIC = 'id,event_id,day,date,month,year,time,room,topic,teacher,backup_teacher,co_teacher,status,published';
     // Managers (non-admin, e.g. teacher with is_manager) also get teacher_confirmed so the
     // request/response badges work for them too — still no teacher emails/notes/edit history.
     const SCHEDULE_MANAGER = SCHEDULE_PUBLIC + ',teacher_confirmed';
@@ -348,6 +359,8 @@ async function loadEvents() {
       lastEditAt: row.last_edit_at || '',
       backupTeacher: row.backup_teacher || '',
       backupTeacherEmail: row.backup_teacher_email || '',
+      coTeacher: row.co_teacher || '',
+      coTeacherEmail: row.co_teacher_email || '',
     }));
     document.getElementById('offlineBanner').classList.remove('show');
     if (isAdmin || (typeof isManager === 'function' && isManager())) { try { await loadReminderSends(); } catch(_) {} }

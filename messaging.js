@@ -118,7 +118,7 @@ function openCancelSessionModal(id) {
       <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Topic:</td><td>${esc(ev.topic || 'TBD')}</td></tr>
       <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Date:</td><td>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year}</td></tr>
       <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Time:</td><td>${esc(ev.time || 'TBC')}</td></tr>
-      <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Teacher:</td><td>${esc(ev.teacher || '—')}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Teacher:</td><td>${esc(teacherLabel(ev) || '—')}</td></tr>
     </table>
     <label style="font-size:13px;font-weight:600;color:var(--nhs-dark-blue);">Reason for cancellation</label>
     <textarea id="cancelReasonInput" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--nhs-pale-grey);border-radius:var(--radius);font-size:13px;font-family:inherit;margin-top:4px;" placeholder="e.g. Room double-booked by the fracture clinic — no alternative space available."></textarea>
@@ -816,7 +816,7 @@ async function openFeedbackRequestModal(sessionId) {
   // Generate feedback link — always use SITE_URL so links work from email
   const feedbackUrl = `${SITE_URL}?feedback=${sessionId}`;
   document.getElementById('fbReqLink').value = feedbackUrl;
-  document.getElementById('fbReqSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year} | ${esc(ev.teacher || 'TBD')}`;
+  document.getElementById('fbReqSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year} | ${esc(teacherLabel(ev) || 'TBD')}`;
 
   // Load contacts and attendance for this session
   let contacts = window._contactsData || [];
@@ -959,7 +959,7 @@ async function sendFeedbackEmails() {
   const ev = events.find(e => e.id === fbReqSessionId);
   const topic = ev?.topic || 'Teaching Session';
   const date = ev ? `${ev.day} ${ev.date} ${ev.month} ${ev.year}` : '';
-  const teacher = ev?.teacher || 'the teacher';
+  const teacher = teacherLabel(ev) || 'the teacher';
   const sessionTime = ev?.time || 'TBC';
   const fallbackLink = document.getElementById('fbReqLink').value;
   const subject = `Feedback Request: ${topic} with ${teacher} - ${ev?.day || ''} ${ev?.date || ''} ${ev?.month || ''}`.trim();
@@ -1056,7 +1056,7 @@ function sendFeedbackMailto(emailsArg, subjectArg, topicArg, dateArg, evArg, lin
   const ev = evArg || events.find(e => e.id === fbReqSessionId);
   const topic = topicArg || ev?.topic || 'Teaching Session';
   const date = dateArg || (ev ? `${ev.day} ${ev.date} ${ev.month} ${ev.year}` : '');
-  const teacher = ev?.teacher || 'the teacher';
+  const teacher = teacherLabel(ev) || 'the teacher';
   const sessionTime = ev?.time || 'TBC';
   const link = linkArg || document.getElementById('fbReqLink').value;
   const subject = subjectArg || `Feedback Request: ${topic} with ${teacher} - ${ev?.day || ''} ${ev?.date || ''} ${ev?.month || ''}`.trim();

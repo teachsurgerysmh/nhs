@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://rufihxjquwrluaenmbaa.supabase.co https://www.gov.uk; img-src 'self' data: https:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';">
 <link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
-<link rel="stylesheet" href="styles.css?v=3.12.63">
+<link rel="stylesheet" href="styles.css?v=3.12.64">
 </head>
 <body>
 
@@ -209,6 +209,10 @@
       <input type="text" id="evTeacher" placeholder="Start typing or pick from contacts..." list="evTeacherList" oninput="onTeacherPick(this,'evTeacherEmail')" autocomplete="off">
       <datalist id="evTeacherList"></datalist>
       <label>Teacher Email</label><input type="email" id="evTeacherEmail" placeholder="Auto-filled from contacts or type manually">
+      <label>Co-teacher (optional — second person teaching)</label>
+      <input type="text" id="evCoTeacher" placeholder="Start typing or pick from contacts..." list="evCoList" oninput="onTeacherPick(this,'evCoEmail')" autocomplete="off">
+      <datalist id="evCoList"></datalist>
+      <label>Co-teacher Email</label><input type="email" id="evCoEmail" placeholder="Auto-filled from contacts or type manually">
       <div style="background:var(--nhs-bg);border-radius:var(--radius);padding:12px;margin-top:12px;">
         <label style="margin-top:0;color:var(--nhs-grey);font-size:12px;">Backup Teacher (optional)</label>
         <input type="text" id="evBackupTeacher" placeholder="Start typing or pick from contacts..." list="evBackupList" oninput="onTeacherPick(this,'evBackupEmail')" autocomplete="off">
@@ -790,16 +794,16 @@
   </div>
 </div>
 
-<script src="demodata.js?v=3.12.63"></script>
-<script src="config.js?v=3.12.63"></script>
-<script src="auth.js?v=3.12.63"></script>
-<script src="sessions.js?v=3.12.63"></script>
-<script src="messaging.js?v=3.12.63"></script>
-<script src="learner.js?v=3.12.63"></script>
-<script src="actions.js?v=3.12.63"></script>
-<script src="surveys.js?v=3.12.63"></script>
-<script src="analytics.js?v=3.12.63"></script>
-<script src="errorlog.js?v=3.12.63"></script>
-<script src="app.js?v=3.12.63"></script>
+<script src="demodata.js?v=3.12.64"></script>
+<script src="config.js?v=3.12.64"></script>
+<script src="auth.js?v=3.12.64"></script>
+<script src="sessions.js?v=3.12.64"></script>
+<script src="messaging.js?v=3.12.64"></script>
+<script src="learner.js?v=3.12.64"></script>
+<script src="actions.js?v=3.12.64"></script>
+<script src="surveys.js?v=3.12.64"></script>
+<script src="analytics.js?v=3.12.64"></script>
+<script src="errorlog.js?v=3.12.64"></script>
+<script src="app.js?v=3.12.64"></script>
 </body>
 </html>

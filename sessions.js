@@ -219,7 +219,7 @@ function getFilteredEvents() {
   if (search) {
     filtered = filtered.filter(e =>
       (e.topic || '').toLowerCase().includes(search) ||
-      (e.teacher || '').toLowerCase().includes(search) ||
+      teacherLabel(e).toLowerCase().includes(search) ||
       (e.room || '').toLowerCase().includes(search) ||
       (e.notes || '').toLowerCase().includes(search)
     );
@@ -288,14 +288,14 @@ function renderEvents() {
     html += `<div class="month-group"><h3>${monthLabel}</h3>`;
     evts.forEach(e => {
       const isDraft = !e.published;
-      const topicDisplay = e.topic || (e.teacher ? e.teacher : 'TBD');
+      const topicDisplay = e.topic || teacherLabel(e) || 'TBD';
       html += `<div class="event-card status-${e.status}${isDraft ? ' draft' : ''}" onclick="showDetail(${e.id})">
         <div class="card-top">
           <div>
             <div class="card-date">${e.day} ${e.date} ${e.month} ${e.year}${e.time ? ' | ' + e.time : ''}</div>
             <div class="card-topic">${esc(topicDisplay)}${isDraft ? '<span class="card-draft-badge">DRAFT</span>' : ''}</div>
             <div class="card-details">
-              ${e.teacher ? '<span>&#128100; ' + esc(e.teacher) + '</span>' : ''}
+              ${teacherLabel(e) ? '<span>&#128100; ' + esc(teacherLabel(e)) + '</span>' : ''}
               ${e.backupTeacher ? '<span style="color:var(--nhs-orange);font-size:12px;">&#128260; ' + esc(e.backupTeacher) + '</span>' : ''}
               ${e.room ? '<span>&#128205; ' + esc(e.room) + '</span>' : ''}
             </div>
@@ -431,7 +431,7 @@ function renderCalendar() {
         }
         if (e.status === 'tbd') return; // tbd without a real session → don't show
       }
-      const label = e.topic || e.teacher || e.status;
+      const label = e.topic || teacherLabel(e) || e.status;
       const g = calTeacherGlyph(e);
       const titleTxt = g.note ? (label + ' — ' + g.note) : label;
       html += `<div class="cal-event status-${e.status}" onclick="event.stopPropagation();showDetail(${e.id})" title="${esc(titleTxt)}">${g.glyph ? g.glyph + ' ' : ''}${esc(label)}</div>`;
@@ -473,7 +473,7 @@ async function openAddModalPrefilled(day, date, month, year) {
   document.getElementById('evDate').value = date;
   document.getElementById('evMonth').value = month;
   document.getElementById('evYear').value = year;
-  ['evTime','evRoom','evTopic','evTeacher','evTeacherEmail','evBackupTeacher','evBackupEmail','evNotes'].forEach(id => { document.getElementById(id).value = ''; });
+  ['evTime','evRoom','evTopic','evTeacher','evTeacherEmail','evCoTeacher','evCoEmail','evBackupTeacher','evBackupEmail','evNotes'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('evStatus').value = 'upcoming';
   document.getElementById('evPublished').checked = true;
   openModal('eventModal');
@@ -606,7 +606,7 @@ function showDetail(id) {
   if (!ev) return;
   const body = document.getElementById('detailBody');
   const footer = document.getElementById('detailFooter');
-  const topicDisplay = ev.topic || ev.teacher || 'TBD';
+  const topicDisplay = ev.topic || teacherLabel(ev) || 'TBD';
   const isAdminView = isAdmin && !adminViewAsLearner;
   // Managers (incl. admin) may see read-only request/response info even without full admin controls
   const isMgrView = (typeof isManager === 'function' ? isManager() : isAdmin) && !adminViewAsLearner;
@@ -646,6 +646,9 @@ function showDetail(id) {
   `;
   if (ev.teacher) {
     html += `<div class="detail-field"><div class="detail-label">Teacher</div><div class="detail-value">${esc(ev.teacher)}${isAdminView && ev.teacherEmail ? ' <span style="color:var(--nhs-grey);font-size:12px;">(' + esc(ev.teacherEmail) + ')</span>' : ''}</div></div>`;
+  }
+  if (ev.coTeacher) {
+    html += `<div class="detail-field"><div class="detail-label">Co-teacher</div><div class="detail-value">${esc(ev.coTeacher)}${isAdminView && ev.coTeacherEmail ? ' <span style="color:var(--nhs-grey);font-size:12px;">(' + esc(ev.coTeacherEmail) + ')</span>' : ''}</div></div>`;
   }
   if (ev.backupTeacher) {
     html += `<div class="detail-field"><div class="detail-label">Backup Teacher</div><div class="detail-value" style="color:var(--nhs-orange);">${esc(ev.backupTeacher)}${isAdminView && ev.backupTeacherEmail ? ' <span style="color:var(--nhs-grey);font-size:12px;">(' + esc(ev.backupTeacherEmail) + ')</span>' : ''}</div></div>`;
@@ -1043,7 +1046,7 @@ async function loadDetailAttendance(sessionId) {
 // ===================== ADD/EDIT =====================
 function populateTeacherDatalist() {
   const contacts = window._contactsData || [];
-  ['evTeacherList','evBackupList'].forEach(dlId => {
+  ['evTeacherList','evCoList','evBackupList'].forEach(dlId => {
     const dl = document.getElementById(dlId);
     if (!dl) return;
     dl.innerHTML = '';
@@ -1072,7 +1075,7 @@ async function openAddModal() {
   editingEventId = null;
   document.getElementById('eventModalTitle').textContent = 'Add Session';
   document.getElementById('evDeleteBtn').style.display = 'none';
-  ['evDay','evDate','evTime','evRoom','evTopic','evTeacher','evTeacherEmail','evBackupTeacher','evBackupEmail','evNotes'].forEach(id => { document.getElementById(id).value = ''; });
+  ['evDay','evDate','evTime','evRoom','evTopic','evTeacher','evTeacherEmail','evCoTeacher','evCoEmail','evBackupTeacher','evBackupEmail','evNotes'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('evMonth').value = MONTHS[new Date().getMonth()];
   document.getElementById('evYear').value = new Date().getFullYear();
   document.getElementById('evStatus').value = 'upcoming';
@@ -1097,6 +1100,8 @@ async function openEditModal(id) {
   document.getElementById('evTopic').value = ev.topic || '';
   document.getElementById('evTeacher').value = ev.teacher || '';
   document.getElementById('evTeacherEmail').value = ev.teacherEmail || '';
+  document.getElementById('evCoTeacher').value = ev.coTeacher || '';
+  document.getElementById('evCoEmail').value = ev.coTeacherEmail || '';
   document.getElementById('evBackupTeacher').value = ev.backupTeacher || '';
   document.getElementById('evBackupEmail').value = ev.backupTeacherEmail || '';
   document.getElementById('evStatus').value = ev.status || 'upcoming';
@@ -1118,6 +1123,8 @@ async function saveEvent() {
     topic: document.getElementById('evTopic').value.trim(),
     teacher: document.getElementById('evTeacher').value.trim(),
     teacher_email: document.getElementById('evTeacherEmail').value.trim(),
+    co_teacher: document.getElementById('evCoTeacher').value.trim(),
+    co_teacher_email: document.getElementById('evCoEmail').value.trim(),
     backup_teacher: document.getElementById('evBackupTeacher').value.trim(),
     backup_teacher_email: document.getElementById('evBackupEmail').value.trim(),
     status: document.getElementById('evStatus').value,
@@ -1164,14 +1171,15 @@ async function saveEvent() {
         } catch(e) { logError('acceptRequestOnSave', e); }
       }
     }
-    // Auto-create contact if teacher_email provided and not already in contacts
-    if (evData.teacher_email) {
+    // Auto-create contact for teacher / co-teacher if not already in contacts
+    for (const [tName, tEmail] of [[evData.teacher, evData.teacher_email], [evData.co_teacher, evData.co_teacher_email]]) {
+      if (!tEmail) continue;
       try {
-        const emailEnc = encodeURIComponent(evData.teacher_email);
+        const emailEnc = encodeURIComponent(tEmail);
         const existing = await sbGet('contacts', `email=eq.${emailEnc}&select=id`);
         if (existing.length === 0) {
-          await sbInsert('contacts', { name: evData.teacher || evData.teacher_email, email: evData.teacher_email, role: 'Volunteer Teacher', added_by: currentUser?.name || 'System' });
-          logInteraction('auto_contact_created', { name: evData.teacher, email: evData.teacher_email, source: 'session_save' });
+          await sbInsert('contacts', { name: tName || tEmail, email: tEmail, role: 'Volunteer Teacher', added_by: currentUser?.name || 'System' });
+          logInteraction('auto_contact_created', { name: tName, email: tEmail, source: 'session_save' });
         }
       } catch(e) { logError('autoCreateContactOnSave', e); }
     }
@@ -1360,9 +1368,9 @@ async function updateFeedbackStatus(id, status) {
 
 // ===================== EXPORT =====================
 function exportCSV() {
-  const headers = ['Day','Date','Month','Year','Time','Room','Topic','Teacher','Email','Backup Teacher','Backup Email','Status','Published','Notes'];
+  const headers = ['Day','Date','Month','Year','Time','Room','Topic','Teacher','Email','Co-teacher','Co-teacher Email','Backup Teacher','Backup Email','Status','Published','Notes'];
   const rows = events.map(e => [
-    e.day, e.date, e.month, e.year, e.time, e.room, e.topic, e.teacher, e.teacherEmail, e.backupTeacher, e.backupTeacherEmail, e.status, e.published ? 'Yes' : 'No', e.notes
+    e.day, e.date, e.month, e.year, e.time, e.room, e.topic, e.teacher, e.teacherEmail, e.coTeacher, e.coTeacherEmail, e.backupTeacher, e.backupTeacherEmail, e.status, e.published ? 'Yes' : 'No', e.notes
   ].map(v => '"' + String(v || '').replace(/"/g, '""') + '"').join(','));
   const csv = [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });

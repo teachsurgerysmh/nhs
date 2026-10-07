@@ -212,7 +212,7 @@ async function autoSendFeedbackRequests(sessionId, learnerIds) {
       if (alreadySentEmails.size > 0) showToast('All attendees already received feedback requests today');
       return;
     }
-    const teacherName = ev.teacher || 'the teacher';
+    const teacherName = teacherLabel(ev) || 'the teacher';
     const sessionDate = `${ev.day || ''} ${ev.date || ''} ${ev.month || ''} ${ev.year || ''}`.trim();
     const sessionTime = ev.time || 'TBC';
     const topicLabel = ev.topic || 'Surgery';
@@ -369,7 +369,7 @@ function openQuickFeedbackModal(sessionId) {
   window._pendingQuickFeedback = sessionId;
   const ev = events.find(e => String(e.id) === String(sessionId));
   const info = ev
-    ? `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day || '')} ${esc(ev.date || '')} ${esc(ev.month || '')} ${ev.year || ''}${ev.teacher ? ' · ' + esc(ev.teacher) : ''}`
+    ? `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day || '')} ${esc(ev.date || '')} ${esc(ev.month || '')} ${ev.year || ''}${teacherLabel(ev) ? ' · ' + esc(teacherLabel(ev)) : ''}`
     : 'Teaching session';
   document.getElementById('quickFbSessionInfo').innerHTML = info;
   document.getElementById('quickFbEmail').value = currentLearner?.email || '';
@@ -413,7 +413,7 @@ function openFeedbackModal(sessionId) {
   const ev = events.find(e => e.id === sessionId);
   if (!ev) { showToast('Session not found'); return; }
   document.getElementById('feedbackSessionId').value = sessionId;
-  document.getElementById('feedbackSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year} | ${esc(ev.teacher || 'TBD')}`;
+  document.getElementById('feedbackSessionInfo').innerHTML = `<strong>${esc(ev.topic || 'Session')}</strong><br>${esc(ev.day)} ${esc(ev.date)} ${esc(ev.month)} ${ev.year} | ${esc(teacherLabel(ev) || 'TBD')}`;
   feedbackRatings = {};
   FEEDBACK_FIELDS.forEach(f => feedbackRatings[f] = 0);
   initScaleRatings();
@@ -577,7 +577,7 @@ async function fetchTeacherSessions(teacherEmail) {
   if (!teacherEmail) return [];
   try {
     const eEnc = encodeURIComponent(teacherEmail);
-    const rows = await sbGet('schedule', `or=(teacher_email.ilike.${eEnc},backup_teacher_email.ilike.${eEnc})&select=*&order=year.asc,id.asc`) || [];
+    const rows = await sbGet('schedule', `or=(teacher_email.ilike.${eEnc},co_teacher_email.ilike.${eEnc},backup_teacher_email.ilike.${eEnc})&select=*&order=year.asc,id.asc`) || [];
     return rows.map(r => ({
       id: r.id, topic: r.topic || '', day: r.day || '', date: r.date || '', month: r.month || '',
       year: r.year || 2026, time: r.time || '', room: r.room || '', status: r.status || 'tbd',
@@ -856,7 +856,7 @@ async function loadAdminDashboard() {
           </div>
           <div class="ws-info">
             <div class="ws-topic">${esc(s.topic || 'TBD')}</div>
-            <div class="ws-meta">${esc(s.teacher || 'No teacher')} · ${esc(s.time || '')} · ${esc(s.room || '')}</div>
+            <div class="ws-meta">${esc(teacherLabel(s) || 'No teacher')} · ${esc(s.time || '')} · ${esc(s.room || '')}</div>
           </div>
           <span class="card-status" style="background:${statusColor}20;color:${statusColor};padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;text-transform:uppercase;">${esc(s.status || 'tbd')}</span>
         </div>`;
@@ -982,7 +982,7 @@ async function loadDashboard() {
       myFeedbackIds = new Set(fb.map(f => f.session_id));
     } catch (e) { /* non-fatal — buttons still work, just no ✓ state */ }
     const myEmail = (currentLearner.email || '').toLowerCase();
-    const iTaught = s => !!(s.teacherEmail && s.teacherEmail.toLowerCase() === myEmail);
+    const iTaught = s => [s.teacherEmail, s.coTeacherEmail].some(e => e && e.toLowerCase() === myEmail);
     const pendingFeedback = attendedSessions.filter(s => !iTaught(s) && !myFeedbackIds.has(s.id));
 
     // Placement progress
@@ -1042,7 +1042,7 @@ async function loadDashboard() {
         if (iTaught(s)) fb = '<span style="color:var(--nhs-grey);font-size:12px;">You taught this</span>';
         else if (myFeedbackIds.has(s.id)) fb = '<span style="color:var(--nhs-green);font-weight:700;font-size:13px;">✓ Done</span>';
         else fb = `<button class="btn btn-green" style="padding:5px 13px;font-size:12px;" onclick="openFeedbackModal(${s.id})">Give feedback</button>`;
-        html += `<tr><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td><td style="text-align:center;">${fb}</td></tr>`;
+        html += `<tr><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(teacherLabel(s) || '-')}</td><td style="text-align:center;">${fb}</td></tr>`;
       });
       html += '</tbody></table>';
     }
@@ -1436,7 +1436,7 @@ async function generateCertificate() {
     <div style="text-align:center;font-size:11px;color:#768692;margin:8px 0;">has attended the following surgical teaching sessions and is awarded <strong>${fmtCpdHours(totalHours)} CPD hour${totalHours!==1?'s':''}</strong>:</div>
     <table class="cert-table">
       <thead><tr><th>#</th><th>Date</th><th>Topic</th><th>Teacher</th><th>CPD</th></tr></thead>
-      <tbody>${attendedSessions.map((s, i) => `<tr><td>${i+1}</td><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(s.teacher || '-')}</td><td style="text-align:center;">${fmtCpdHours(cpdHoursFromTime(s.time))}h</td></tr>`).join('')}</tbody>
+      <tbody>${attendedSessions.map((s, i) => `<tr><td>${i+1}</td><td>${esc(s.day)} ${esc(s.date)} ${esc(s.month)} ${s.year}</td><td>${esc(s.topic || 'TBD')}</td><td>${esc(teacherLabel(s) || '-')}</td><td style="text-align:center;">${fmtCpdHours(cpdHoursFromTime(s.time))}h</td></tr>`).join('')}</tbody>
     </table>
     <div class="cert-total">Total CPD Hours Awarded: ${fmtCpdHours(totalHours)}</div>
   </div>
@@ -1587,7 +1587,7 @@ async function loadTeacherDashboard() {
     const eEnc = encodeURIComponent(teacherEmail);
     let teacherRows = [];
     try {
-      teacherRows = await sbGet('schedule', `or=(teacher_email.ilike.${eEnc},backup_teacher_email.ilike.${eEnc})&select=*&order=year.asc,id.asc`) || [];
+      teacherRows = await sbGet('schedule', `or=(teacher_email.ilike.${eEnc},co_teacher_email.ilike.${eEnc},backup_teacher_email.ilike.${eEnc})&select=*&order=year.asc,id.asc`) || [];
     } catch(e) { console.error('Teacher session load failed:', e); }
     const teacherSessions = teacherRows.map(r => ({
       id: r.id, topic: r.topic || '', day: r.day || '', date: r.date || '', month: r.month || '',
