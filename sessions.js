@@ -467,6 +467,7 @@ function getOrdinal(n) {
 
 async function openAddModalPrefilled(day, date, month, year) {
   editingEventId = null;
+  _acceptingRequest = null;
   document.getElementById('eventModalTitle').textContent = 'Add Session';
   document.getElementById('evDeleteBtn').style.display = 'none';
   document.getElementById('evDay').value = day;
@@ -1077,6 +1078,7 @@ async function ensureContactsLoaded() {
 
 async function openAddModal() {
   editingEventId = null;
+  _acceptingRequest = null;
   document.getElementById('eventModalTitle').textContent = 'Add Session';
   document.getElementById('evDeleteBtn').style.display = 'none';
   ['evDay','evDate','evTime','evRoom','evTopic','evTeacher','evTeacherEmail','evCoTeacher','evCoEmail','evBackupTeacher','evBackupEmail','evNotes'].forEach(id => { document.getElementById(id).value = ''; });
@@ -1090,6 +1092,7 @@ async function openAddModal() {
 }
 
 async function openEditModal(id) {
+  _acceptingRequest = null;
   const ev = events.find(e => e.id === id);
   if (!ev) return;
   editingEventId = id;
@@ -1141,12 +1144,15 @@ async function saveEvent() {
 
   try {
     if (editingEventId) {
+      if (_acceptingRequest) evData.teacher_confirmed = 'confirmed';
       await sbUpdate('schedule', editingEventId, evData);
       showToast('Session updated');
       logAction('Updated session', evData.topic || evData.date);
       logQI('session_edited', { session_id: editingEventId, metadata: { topic: evData.topic, status: evData.status, teacher: evData.teacher } });
       if (evData.status === 'cancelled') logQI('session_cancelled', { session_id: editingEventId, metadata: { topic: evData.topic, reason: evData.notes || null } });
       if (evData.status === 'completed') logQI('session_completed', { session_id: editingEventId, metadata: { topic: evData.topic } });
+      // Accepted request filled an existing open slot
+      if (_acceptingRequest) await finishAcceptedRequest(editingEventId, evData);
     } else {
       evData.event_id = 'EVT' + Date.now();
       if (_acceptingRequest) evData.teacher_confirmed = 'confirmed';
@@ -1157,23 +1163,7 @@ async function saveEvent() {
       logQI('session_created', { session_id: newId || null, metadata: { topic: evData.topic, teacher: evData.teacher, status: evData.status, published: evData.published } });
 
       // Came from accepting a session request: mark it accepted + email the requester
-      if (_acceptingRequest) {
-        const req = _acceptingRequest;
-        _acceptingRequest = null;
-        try {
-          await sbUpdate('requests', req.id, {
-            status: 'accepted',
-            responded_by: currentUser?.name || 'Unknown',
-            response_note: req.note,
-            responded_at: new Date().toISOString()
-          });
-          logAction('Accepted session request', '#' + req.id);
-          if (newId && !isDemoMode && typeof sendRequestConfirmationEmail === 'function') {
-            const ok = await sendRequestConfirmationEmail(newId, { ...evData, id: newId }, req.note);
-            showToast(ok ? ('Confirmation emailed to ' + (req.name || 'requester')) : 'Session saved, but confirmation email FAILED - email ' + (req.email || 'requester') + ' manually');
-          }
-        } catch(e) { logError('acceptRequestOnSave', e); }
-      }
+      if (_acceptingRequest) await finishAcceptedRequest(newId, evData);
     }
     // Auto-create contact for teacher / co-teacher if not already in contacts
     for (const [tName, tEmail] of [[evData.teacher, evData.teacher_email], [evData.co_teacher, evData.co_teacher_email]]) {
@@ -1194,6 +1184,25 @@ async function saveEvent() {
     logError('saveEvent', e);
     showToast('Failed to save - check connection');
   }
+}
+
+// Mark the request being accepted as accepted + email the requester the confirmation.
+async function finishAcceptedRequest(sessionId, evData) {
+  const req = _acceptingRequest;
+  _acceptingRequest = null;
+  try {
+    await sbUpdate('requests', req.id, {
+      status: 'accepted',
+      responded_by: currentUser?.name || 'Unknown',
+      response_note: req.note,
+      responded_at: new Date().toISOString()
+    });
+    logAction('Accepted session request', '#' + req.id);
+    if (sessionId && !isDemoMode && typeof sendRequestConfirmationEmail === 'function') {
+      const ok = await sendRequestConfirmationEmail(sessionId, { ...evData, id: sessionId }, req.note);
+      showToast(ok ? ('Confirmation emailed to ' + (req.name || 'requester')) : 'Session saved, but confirmation email FAILED - email ' + (req.email || 'requester') + ' manually');
+    }
+  } catch(e) { logError('acceptRequestOnSave', e); }
 }
 
 async function deleteEvent() {
@@ -1546,22 +1555,58 @@ async function showRespondModal(id) {
 // saveEvent() reads this to mark the request accepted + send the confirmation email.
 let _acceptingRequest = null;
 
-// Best-effort parse of a free-text preferred date into the schedule fields.
-function prefillDateFromPreferred(pref) {
-  if (!pref) return;
-  const d = new Date(pref);
-  if (!isNaN(d.getTime()) && /\d/.test(pref)) {
-    try {
-      document.getElementById('evDate').value = d.getDate();
-      document.getElementById('evMonth').value = MONTHS[d.getMonth()];
-      document.getElementById('evYear').value = d.getFullYear();
-      const days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat'];
-      document.getElementById('evDay').value = days[d.getDay()];
-    } catch(e) { /* field may not accept value — leave for admin */ }
-  } else {
+// Parse the slot label written by showRequestSessionModal(), e.g.
+// "Wed 18th November 2026 (1300-1400) - Avon L5 [Topic: X]".
+// new Date() can't read this (ordinal + brackets), which is why accepted
+// requests used to land with an empty date.
+function parsePreferredSlot(pref) {
+  const m = String(pref || '').match(/^\s*([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)\s+(\d{4})(?:\s*\(([^)]*)\))?(?:\s*-\s*(.*?))?(?:\s*\[Topic:.*\])?\s*$/);
+  if (!m) return null;
+  const month = MONTHS.find(x => x.toLowerCase().startsWith(m[3].toLowerCase().slice(0, 3)));
+  if (!month) return null;
+  return { day: m[1], date: parseInt(m[2], 10), month, year: parseInt(m[4], 10), time: (m[5] || '').trim(), room: (m[6] || '').trim() };
+}
+
+// The open schedule row (no teacher, not cancelled) the requester picked, if it still exists.
+async function findOpenSlotRow(slot) {
+  const rows = await sbGet('schedule', `select=*&month=eq.${encodeURIComponent(slot.month)}&year=eq.${slot.year}`);
+  const open = rows.filter(e => parseInt(e.date, 10) === slot.date && e.status !== 'cancelled' && !(e.teacher && String(e.teacher).trim()));
+  return open.find(e => (!slot.time || e.time === slot.time) && (!slot.room || (e.room || '').trim() === slot.room))
+      || open.find(e => !slot.time || e.time === slot.time)
+      || null;
+}
+
+// Fill the session form from the requested slot. Returns the open row it
+// claimed (form is then in edit mode on that row) or null.
+async function prefillFromPreferred(pref) {
+  const slot = parsePreferredSlot(pref);
+  if (slot) {
+    let row = null;
+    try { row = await findOpenSlotRow(slot); } catch(e) { logError('findOpenSlotRow', e); }
+    if (row) {
+      editingEventId = row.id;
+      document.getElementById('evDay').value = row.day || slot.day;
+      document.getElementById('evDate').value = row.date || '';
+      document.getElementById('evMonth').value = row.month;
+      document.getElementById('evYear').value = row.year;
+      document.getElementById('evTime').value = row.time || '';
+      document.getElementById('evRoom').value = row.room || '';
+      document.getElementById('evNotes').value = row.notes || '';
+      document.getElementById('evPublished').checked = true;
+      return row;
+    }
+    document.getElementById('evDay').value = slot.day;
+    document.getElementById('evDate').value = slot.date;
+    document.getElementById('evMonth').value = slot.month;
+    document.getElementById('evYear').value = slot.year;
+    document.getElementById('evTime').value = slot.time;
+    document.getElementById('evRoom').value = slot.room;
+  }
+  if (pref) {
     const notes = document.getElementById('evNotes');
     if (notes) notes.value = (notes.value ? notes.value + '\n' : '') + 'Requested preferred date: ' + pref;
   }
+  return null;
 }
 
 async function respondToRequest(response) {
@@ -1573,6 +1618,8 @@ async function respondToRequest(response) {
   // ACCEPT → hand off to the Add Session form. The schedule row, the request
   // status update and the confirmation email are all completed on Save.
   if (response === 'accepted') {
+    closeModal('respondModal');
+    await openAddModal();   // clears any stale _acceptingRequest
     _acceptingRequest = {
       id: requestId,
       note: responseNote,
@@ -1581,14 +1628,15 @@ async function respondToRequest(response) {
       phone: r?.phone || '',
       topic: r?.topic || ''
     };
-    closeModal('respondModal');
-    await openAddModal();
-    document.getElementById('eventModalTitle').textContent = 'Confirm Request - Add Session';
+    const slotRow = await prefillFromPreferred(r?.preferred_date);
+    document.getElementById('eventModalTitle').textContent = slotRow ? 'Confirm Request - Fill Slot' : 'Confirm Request - Add Session';
     document.getElementById('evTopic').value = r?.topic || '';
     document.getElementById('evTeacher').value = r?.name || '';
     document.getElementById('evTeacherEmail').value = r?.email || '';
-    prefillDateFromPreferred(r?.preferred_date);
-    showToast('Set the date, time & room, then Save to confirm and email ' + (r?.name || 'the requester'));
+    document.getElementById('evStatus').value = 'upcoming';
+    showToast(slotRow
+      ? 'Requested slot filled in - check it, then Save to confirm and email ' + (r?.name || 'the requester')
+      : 'Requested slot no longer open - set the date, time & room, then Save to confirm and email ' + (r?.name || 'the requester'));
     return;
   }
 
