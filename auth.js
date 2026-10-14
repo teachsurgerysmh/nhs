@@ -1233,8 +1233,20 @@ async function rpcSetMyMobile(phone) {
 
 // Teacher logins only (admins/learners use other tables). Returns true if it
 // had to ask, so callers can hold back other pop-ups.
+// Only a real TEACHER login. Every learner also has an auto-created contacts
+// row (address book), and linkLearnerToTeacher() puts it in currentTeacher —
+// so on reload a learner-only login used to get this un-closable modal, whose
+// save then failed (set_my_mobile needs a teacher JWT). Arabella, 14 Oct 2026.
+function _jwtLoginType() {
+  try {
+    const t = getAuthSession('sst_token');
+    return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).login_type || null;
+  } catch(e) { return null; }
+}
+
 function ensureTeacherMobile() {
   if (isDemoMode || !currentTeacher || isAdmin) return false;
+  if (_jwtLoginType() !== 'teacher') return false;
   if ((currentTeacher.phone || '').replace(/\D/g, '').length >= 10) return false;
   document.getElementById('teacherMobileInput').value = '';
   openModal('teacherMobileModal');
