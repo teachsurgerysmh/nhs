@@ -390,6 +390,9 @@ async function init() {
   // Handle absence reason URL params (one-click from email)
   const hasAbsence = await handleAbsenceURLParams();
   if (hasAbsence) return;
+  // "I didn't attend" from the feedback digest email (two-step confirm)
+  const hasNotAttended = await handleNotAttendedURLParams();
+  if (hasNotAttended) return;
   // Direct link to the "Request a Teaching Session" modal (e.g. from cancellation email)
   if (params.get('request') === '1') {
     window.history.replaceState({}, document.title, window.location.pathname);

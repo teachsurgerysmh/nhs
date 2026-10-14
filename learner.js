@@ -2418,6 +2418,82 @@ async function handleAbsenceURLParams() {
   return true;
 }
 
+// ===================== "I DIDN'T ATTEND" (feedback digest link) =====================
+// ?na_token=<feedback token> from the twice-weekly feedback digest. Same
+// TWO-STEP rule as above: Mimecast pre-fetches the link, so landing only shows
+// a confirm button; mark_not_attended() runs on the click.
+let _naToken = null;
+
+async function handleNotAttendedURLParams() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('na_token');
+  if (!token) return false;
+
+  window.history.replaceState({}, '', window.location.pathname);
+  _naToken = token;
+
+  const container = document.getElementById('absenceLandingView');
+  container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div>';
+  switchView('absenceLanding');
+
+  try {
+    const info = await absenceRpc('lookup_not_attended_token', { p_token: token });
+    logQI('not_attended_link_opened', { metadata: { state: info && info.state }, session_id: info && info.session_id, source: 'email' });
+    if (!info || !info.found) {
+      container.innerHTML = renderNotAttendedResult('error', 'This link has expired or is invalid.');
+    } else if (info.state === 'feedback_given') {
+      container.innerHTML = renderNotAttendedResult('already', "You've already given feedback for this session, so it stays on your record.");
+    } else if (info.state === 'already_marked') {
+      container.innerHTML = renderNotAttendedResult('already', "Already done — this session isn't on your record and we won't ask about it again.");
+    } else {
+      const fbUrl = `${SITE_URL}?feedback=${info.session_id}&token=${encodeURIComponent(token)}&src=email`;
+      container.innerHTML = `<div style="max-width:500px;margin:60px auto;text-align:center;padding:30px;">
+        ${absenceHeader({ learner_first_name: info.learner_first_name, session_topic: info.session_topic, session_date: info.session_date })}
+        <p style="font-size:14px;color:var(--nhs-grey);margin:12px 0 18px;">You're down as attending this session. If you weren't there, we'll take it off your record and stop sending feedback reminders for it.</p>
+        <button class="btn btn-green" style="padding:12px 36px;font-size:15px;width:100%;max-width:400px;" onclick="submitNotAttended()">I didn't attend this session</button>
+        <div style="margin-top:14px;font-size:13px;">
+          <a href="${fbUrl}" style="color:var(--nhs-blue);">Actually I was there — give feedback</a>
+        </div>
+      </div>`;
+    }
+  } catch(e) {
+    console.error('Not-attended lookup error:', e);
+    logError('not_attended_lookup', e, {});
+    container.innerHTML = renderNotAttendedResult('error', 'Something went wrong. Please try again later.');
+  }
+  return true;
+}
+
+async function submitNotAttended() {
+  if (!_naToken) { showToast('This link is no longer valid'); return; }
+  const container = document.getElementById('absenceLandingView');
+  const btn = container.querySelector('button.btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const r = await absenceRpc('mark_not_attended', { p_token: _naToken });
+    if (r && r.ok) {
+      logQI('not_attended_marked', { metadata: {}, source: 'email' });
+      container.innerHTML = renderNotAttendedResult('success', "Thanks — that session has been taken off your record and you won't get reminders for it.");
+    } else if (r && r.status === 'feedback_given') {
+      container.innerHTML = renderNotAttendedResult('already', "You've already given feedback for this session, so it stays on your record.");
+    } else if (r && r.status === 'already_marked') {
+      container.innerHTML = renderNotAttendedResult('already', "Already done — this session isn't on your record.");
+    } else {
+      container.innerHTML = renderNotAttendedResult('error', 'This link has expired or is invalid.');
+    }
+  } catch(e) {
+    console.error('Not-attended submit error:', e);
+    logError('not_attended_submit', e, {});
+    if (btn) { btn.disabled = false; btn.textContent = 'Try again'; }
+    showToast('Could not save. Please try again.');
+  }
+}
+
+function renderNotAttendedResult(type, message) {
+  // Same card as the absence page, without its "helps us improve" footer
+  return renderAbsenceLanding(type, message).replace(/<p style="font-size:12px;color:var\(--nhs-grey\);margin-top:20px;">[^<]*<\/p>/, '');
+}
+
 function absenceHeader(info) {
   const who = info && info.learner_first_name ? `Hi ${info.learner_first_name},` : '';
   const what = info && info.session_topic
