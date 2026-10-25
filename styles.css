@@ -1055,9 +1055,6 @@ body.is-learner .learner-only-block { display: block !important; }
 .btn-orange:hover { background: #8a4b00; }
 .cal-cell.bank-holiday .cal-date { color: var(--text-red); }
 
-/* --- Status never by colour alone: the calendar chips get a glyph too. --- */
-.cal-event.status-completed::before { content: '\2713\00a0'; }
-.cal-event.status-tbd::before { content: '?\00a0'; }
 
 /* --- Keyboard focus: NHS focus style (yellow + dark ring), keyboard only. --- */
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 0; box-shadow: 0 0 0 6px var(--focus-ink); }
@@ -1120,9 +1117,14 @@ body.is-learner .learner-only-block { display: block !important; }
   .event-card .card-status, .admin-badge, .learner-badge, .teacher-badge { font-size: 11px; }
   .stat-card .stat-label { font-size: 11px; letter-spacing: .02em; }
   .cal-day-header { font-size: 11px; }
-  .cal-event, .cal-empty-slot {
-    font-size: 11px; line-height: 1.2; white-space: normal; word-break: break-word;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  /* Session chips may take two lines; the clamp needs overflow hidden or text spills out. */
+  .cal-event {
+    font-size: 11px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  /* Open-slot chips carry "+ Available · time · room": one line, ellipsis. */
+  .cal-empty-slot {
+    font-size: 11px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
   /* 44pt controls. */
