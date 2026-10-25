@@ -621,7 +621,7 @@ function renderQIInductionSection(d) {
   const zeroHits = (ind.searches || []).filter(s => num(s.zero_hit_count) > 0);
   html += `<div class="qi-section-title">Search — what people looked for</div>
     <div class="qi-card" style="overflow-x:auto;max-height:340px;overflow-y:auto;">
-      ${zeroHits.length ? `<div style="background:#fff8e6;border-left:4px solid var(--nhs-warm-yellow,#ffb81c);padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--nhs-dark-blue);line-height:1.5;">
+      ${zeroHits.length ? `<div style="background:#fff8e6;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--nhs-dark-blue);line-height:1.5;">
         <strong>${zeroHits.length} ${zeroHits.length === 1 ? 'query' : 'queries'} returned nothing.</strong>
         These are the handbook's content gaps, written by the readers themselves.
       </div>` : ''}

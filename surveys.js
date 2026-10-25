@@ -556,7 +556,7 @@ function renderRespondentSection(form) {
   let html = `
     <div class="survey-section">
       <div class="survey-section-header">Your Details</div>
-      ${form.intro ? `<p style="font-size:14px;color:var(--nhs-dark-blue);margin-bottom:16px;">${form.intro}</p>` : `<div style="font-size:13px;color:var(--nhs-dark-blue);margin-bottom:12px;padding:10px 14px;background:#e0f5fa;border-radius:var(--radius);border-left:3px solid var(--nhs-blue);">
+      ${form.intro ? `<p style="font-size:14px;color:var(--nhs-dark-blue);margin-bottom:16px;">${form.intro}</p>` : `<div style="font-size:13px;color:var(--nhs-dark-blue);margin-bottom:12px;padding:10px 14px;background:#e0f5fa;border-radius:var(--radius);">
         <strong>Important:</strong> This survey asks about your experience <strong>before</strong> the Southmead Surgical Teaching website was introduced in May 2026. Please answer based on how things worked before the platform.
       </div>
       <p style="font-size:13px;color:var(--nhs-grey);margin-bottom:16px;">All responses are anonymised. This data will be used in a QI project report.</p>`}`;

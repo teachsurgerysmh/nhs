@@ -779,3 +779,34 @@ init();
     e.preventDefault(); t.click();
   });
 })();
+
+// ===================== GLIDE: TILT + SHEEN TOWARD THE POINTER (v3.12.72) =====================
+// Mouse/trackpad only. The hovered card leans a few degrees toward the pointer and a
+// soft highlight follows it (CSS vars read by styles.css). Springs live in the CSS easing.
+(function installGlide() {
+  const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const CARDS = '.event-card, .action-card, .qa-tile';
+  const BASE = 3; // degrees, for a ~360px tile
+  let current = null, raf = 0, px = 0, py = 0;
+  const paint = () => {
+    raf = 0; if (!current) return;
+    const r = current.getBoundingClientRect();
+    const MAX = BASE * Math.min(1, 360 / r.width);       // wide cards tilt less
+    const nx = Math.min(1, Math.max(0, (px - r.left) / r.width)), ny = Math.min(1, Math.max(0, (py - r.top) / r.height));
+    current.style.setProperty('--ry', ((nx - 0.5) * 2 * MAX).toFixed(2) + 'deg');
+    current.style.setProperty('--rx', ((0.5 - ny) * 2 * MAX).toFixed(2) + 'deg');
+    current.style.setProperty('--mx', (nx * 100).toFixed(1) + '%');
+    current.style.setProperty('--my', (ny * 100).toFixed(1) + '%');
+  };
+  const release = el => { ['--rx', '--ry'].forEach(p => el.style.removeProperty(p)); };
+  document.addEventListener('pointermove', e => {
+    if (!fine.matches || still.matches || e.pointerType !== 'mouse') return;
+    const el = e.target.closest ? e.target.closest(CARDS) : null;
+    if (el !== current) { if (current) release(current); current = el; }
+    if (!current) return;
+    px = e.clientX; py = e.clientY;
+    if (!raf) raf = requestAnimationFrame(paint);
+  }, { passive: true });
+  document.addEventListener('pointerleave', () => { if (current) release(current); current = null; });
+})();

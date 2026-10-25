@@ -41,7 +41,7 @@ async function loadErrorLog() {
           <button class="btn btn-outline" onclick="_elExportCsv()" style="padding:6px 14px;font-size:13px;">Export CSV</button>
         </div>
       </div>
-      <div style="background:#e0f5fa;border-left:3px solid var(--nhs-aqua);padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:14px;font-size:12px;color:#231f20;">
+      <div style="background:#e0f5fa;padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:12px;color:#231f20;">
         Captures JS errors, unhandled rejections, network/DB failures, auth failures, and tagged user actions. Used for QI write-up and feature iteration.
       </div>
       <div id="elStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;"></div>

@@ -1167,3 +1167,117 @@ body.is-learner .learner-only-block { display: block !important; }
 @media (prefers-contrast: more) {
   .event-card, .modal, .action-card { border: 1px solid var(--focus-ink); }
 }
+
+/* ============================================================
+   v3.12.72 — No side stripes; status lives in the date tile;
+   Apple TV-style glide (lift + tilt + sheen on pointer, sink + spring on touch)
+   ============================================================ */
+:root {
+  /* Spring easings sampled from damping/response (CSS linear()); cubic-bezier fallback first. */
+  --ease-glide: cubic-bezier(.2, .9, .3, 1.15);
+  --ease-settle: cubic-bezier(.2, .8, .2, 1);
+  --hairline: #dfe5e8;
+  --lift-shadow: 0 14px 34px rgba(33, 43, 50, .16), 0 3px 8px rgba(33, 43, 50, .08);
+  --rest-shadow: 0 1px 2px rgba(33, 43, 50, .05);
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --ease-glide: linear(0, 0.04, 0.135, 0.259, 0.394, 0.525, 0.644, 0.748, 0.833, 0.9, 0.951, 0.988, 1.012, 1.028, 1.035, 1.038, 1.037, 1.033, 1.029, 1.024, 1.019, 1.014, 1.01, 1.007, 1.004, 1.002, 1.001, 1, 0.999, 0.999, 1);
+    --ease-settle: linear(0, 0.075, 0.224, 0.385, 0.53, 0.649, 0.743, 0.815, 0.868, 0.907, 0.934, 0.954, 0.968, 0.978, 0.985, 0.99, 0.993, 0.995, 0.997, 0.998, 1);
+  }
+}
+
+/* --- Stripes out. Every one of these already says its status in words. --- */
+.log-entry, .feedback-card, .survey-home-card, .dashboard-card, .stat-card, .qi-card,
+.inbox-message, .inbox-message.sent, .inbox-message.received { border-left: 0 !important; }
+.qi-section-title { border-left: 0; padding-left: 0; }
+.inbox-message { border-radius: 12px; }
+.feedback-card, .log-entry { border: 1px solid var(--hairline); box-shadow: var(--rest-shadow); border-radius: 12px; }
+
+/* --- Session card: hairline card, the tile carries status. --- */
+.event-card, .event-card.status-completed, .event-card.status-cancelled, .event-card.status-tbd, .event-card.status-upcoming {
+  border: 1px solid var(--hairline); border-left: 1px solid var(--hairline);
+  border-radius: 14px; box-shadow: var(--rest-shadow); padding: 14px;
+}
+.event-card.draft { border: 1.5px dashed var(--nhs-grey); }
+.card-when { border-radius: 10px; transition: background-color .2s, color .2s; }
+.event-card.status-upcoming .card-when { background: #e8f1fa; color: var(--nhs-dark-blue); }
+.event-card.status-upcoming .card-when .cw-day,
+.event-card.status-upcoming .card-when .cw-mon { color: var(--nhs-blue); }               /* 5.6:1 on #e8f1fa */
+.event-card.is-next .card-when { background: var(--nhs-blue); color: #fff; }               /* the one bold thing */
+.event-card.is-next .card-when .cw-day, .event-card.is-next .card-when .cw-mon { color: #fff; }
+.event-card.status-completed .card-when { background: var(--nhs-bg); color: var(--nhs-grey); }
+.event-card.status-tbd .card-when { background: #fff; color: var(--text-orange); box-shadow: inset 0 0 0 1.5px var(--fill-orange); }
+.event-card.status-tbd .card-when .cw-day, .event-card.status-tbd .card-when .cw-mon { color: var(--text-orange); }
+.event-card.status-cancelled .card-topic { text-decoration: line-through; color: var(--nhs-grey); }
+.card-next {
+  display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 6px;
+  background: var(--nhs-blue); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  vertical-align: 1px;
+}
+/* The tile already says "upcoming"; keep the word for screen readers only. */
+.event-card .card-status.status-pill-upcoming {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; padding: 0;
+}
+
+/* --- Admin counters: colour moves into the number; needing action = tinted card. --- */
+.action-card, .action-card.ac-urgent, .action-card.ac-warning, .action-card.ac-info, .action-card.ac-good {
+  border: 1px solid var(--hairline); border-left: 1px solid var(--hairline);
+  border-radius: 14px; box-shadow: var(--rest-shadow);
+}
+.action-card.ac-urgent .ac-count { color: var(--text-red); }
+.action-card.ac-warning .ac-count { color: var(--text-orange); }
+.action-card.ac-info .ac-count { color: var(--nhs-blue); }
+.action-card.ac-good .ac-count { color: var(--text-green); }
+.action-card.ac-urgent { background: #fdf3f2; border-color: #f3cfcb; }
+.action-card.ac-warning { background: #fff8ee; border-color: #f2dcb8; }
+.qa-tile { border: 1px solid var(--hairline); border-radius: 14px; box-shadow: var(--rest-shadow); }
+
+/* --- The glide. ---
+   Touch: sink fast on press, spring back with a little give on release.
+   Pointer: lift, scale, deepen the shadow, tilt toward the pointer, sheen follows it. */
+.event-card, .action-card, .qa-tile, .handbook-card, .btn {
+  --s: 1; --rx: 0deg; --ry: 0deg; --ty: 0px;
+  transform: perspective(900px) translateY(var(--ty)) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--s));
+  transition: transform .6s var(--ease-glide), box-shadow .45s var(--ease-settle),
+              background-color .15s, color .15s, border-color .2s;
+  will-change: transform;
+}
+.event-card:active, .action-card:active, .qa-tile:active, .btn:active {
+  --s: .965; --ty: 0px;
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--s));
+  transition: transform .12s var(--ease-settle), box-shadow .12s;
+}
+.event-card::after, .action-card::after, .qa-tile::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(255,255,255,.55), transparent 45%);
+  opacity: 0; transition: opacity .35s var(--ease-settle);
+}
+.action-card, .qa-tile { position: relative; }
+@media (hover: hover) and (pointer: fine) {
+  .event-card:hover, .action-card:hover, .qa-tile:hover {
+    --s: 1.025; --ty: -3px; box-shadow: var(--lift-shadow); border-color: transparent;
+    transform: perspective(900px) translateY(var(--ty)) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--s));
+  }
+  .event-card:hover::after, .action-card:hover::after, .qa-tile:hover::after { opacity: 1; }
+  /* Wide list cards: the same feel in fewer pixels (2.5% of 1100px is a lurch). */
+  .event-card:hover { --s: 1.008; --ty: -2px; }
+  .btn:hover { --s: 1.04; --ty: -1px; box-shadow: 0 8px 20px rgba(33, 43, 50, .18);
+    transform: perspective(900px) translateY(var(--ty)) scale(var(--s)); }
+  .event-card:active, .action-card:active, .qa-tile:active { --s: .985; --ty: -1px; }
+}
+/* Touch devices: no sticky hover lift. */
+@media (hover: none) {
+  .event-card:hover, .action-card:hover, .qa-tile:hover, .btn:hover { --s: 1; --ty: 0px; }
+}
+/* Keyboard focus gets the same lift as hover, plus the NHS focus ring. */
+.event-card:focus-visible, .action-card:focus-visible, .qa-tile:focus-visible {
+  --s: 1.02; --ty: -2px;
+  transform: perspective(900px) translateY(var(--ty)) scale(var(--s));
+}
+@media (prefers-reduced-motion: reduce) {
+  .event-card, .action-card, .qa-tile, .handbook-card, .btn,
+  .event-card:hover, .action-card:hover, .qa-tile:hover, .btn:hover,
+  .event-card:active, .action-card:active, .qa-tile:active, .btn:active { transform: none !important; }
+  .event-card::after, .action-card::after, .qa-tile::after { display: none; }
+}

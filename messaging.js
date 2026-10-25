@@ -890,7 +890,7 @@ async function openFeedbackRequestModal(sessionId) {
       }).join('');
       const isToday = new Date(sends[0].sent_at).toDateString() === new Date().toDateString();
       const borderColor = isToday ? '#ed8b00' : '#005eb8';
-      lastSendHtml = `<div id="fbReqLastSend" style="background:#fff8e8;border-left:4px solid ${borderColor};padding:10px 14px;margin-bottom:12px;border-radius:0 6px 6px 0;">
+      lastSendHtml = `<div id="fbReqLastSend" style="background:${isToday ? '#fff4e0' : '#eef4fb'};padding:10px 14px;margin-bottom:12px;border-radius:8px;">
         <div style="font-size:12px;font-weight:600;color:#231f20;margin-bottom:4px;">${isToday ? '⚠️ Reminder already sent today' : 'Recent reminders'}</div>
         ${items}
       </div>`;
@@ -1023,7 +1023,7 @@ async function sendFeedbackEmails() {
           <img src="${qrUrl}" alt="Feedback QR" style="width:140px;height:140px;">
           <p style="font-size:11px;color:#768692;margin:4px 0 0;">Or scan this QR code</p>
         </div>
-        <div style="background:#e6f4ea;border-left:4px solid #009639;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0;">
+        <div style="background:#e6f4ea;padding:12px 16px;margin:16px 0;border-radius:8px;">
           <p style="font-size:13px;color:#231f20;margin:0;"><strong>One click, no login needed.</strong> Submitting feedback also marks your attendance.</p>
         </div>
         <p style="font-size:13px;color:#666;margin-top:12px;">It only takes 2 minutes.</p>

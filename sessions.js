@@ -289,17 +289,22 @@ function renderEvents() {
   }
   const groups = {};
   filtered.forEach(e => { const key = e.month + ' ' + e.year; if (!groups[key]) groups[key] = []; groups[key].push(e); });
+  // The one session that gets the solid tile: the next upcoming one from today.
+  const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+  const nextEv = filtered.filter(e => e.status === 'upcoming' && e.published !== false && eventToDate(e) && eventToDate(e) >= today0)
+    .sort((a, b) => eventToDate(a) - eventToDate(b))[0];
   let html = '';
   for (const [monthLabel, evts] of Object.entries(groups)) {
     html += `<div class="month-group"><h3>${monthLabel}</h3>`;
     evts.forEach(e => {
       const isDraft = !e.published;
       const topicDisplay = e.topic || teacherLabel(e) || 'TBD';
-      html += `<div class="event-card status-${e.status}${isDraft ? ' draft' : ''}" onclick="showDetail(${e.id})">
+      const isNext = nextEv && e.id === nextEv.id;
+      html += `<div class="event-card status-${e.status}${isDraft ? ' draft' : ''}${isNext ? ' is-next' : ''}" onclick="showDetail(${e.id})">
         <div class="card-top">
           <div class="card-when" aria-hidden="true"><span class="cw-day">${esc(String(e.day || '').slice(0, 3))}</span><span class="cw-num">${parseInt(e.date) || esc(e.date)}</span><span class="cw-mon">${esc(String(e.month || '').slice(0, 3))}</span></div>
           <div class="card-main">
-            <div class="card-date"><span class="sr-only">${e.day} ${e.date} ${e.month} ${e.year}${e.time ? ', ' : ''}</span>${e.time ? esc(e.time) : ''}</div>
+            <div class="card-date">${isNext ? '<span class="card-next">Next</span>' : ''}<span class="sr-only">${e.day} ${e.date} ${e.month} ${e.year}${e.time ? ', ' : ''}</span>${e.time ? esc(e.time) : ''}</div>
             <div class="card-topic">${esc(topicDisplay)}${isDraft ? '<span class="card-draft-badge">DRAFT</span>' : ''}</div>
             <div class="card-details">
               ${teacherLabel(e) ? '<span>' + ICON_PERSON + esc(teacherLabel(e)) + '</span>' : ''}
@@ -1519,7 +1524,7 @@ async function loadRequests() {
 function renderRequestCard(r) {
   const statusColors = { pending: '#ed8b00', accepted: '#009639', rejected: '#d5281b' };
   const statusColor = statusColors[r.status] || '#768692';
-  return `<div style="background:white;border-radius:8px;padding:18px 20px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-left:4px solid ${statusColor};">
+  return `<div style="background:white;border-radius:8px;padding:18px 20px;margin-bottom:10px;border:1px solid #dfe5e8;box-shadow:0 1px 2px rgba(33,43,50,0.04);">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
       <div style="flex:1;min-width:200px;">
         <div style="font-weight:700;color:var(--nhs-dark-blue);font-size:1rem;">${esc(r.name)}</div>
