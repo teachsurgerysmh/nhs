@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://rufihxjquwrluaenmbaa.supabase.co https://www.gov.uk; img-src 'self' data: https:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self';">
 <link rel="manifest" href="manifest.json">
 <title>Southmead Surgical Teaching | NBT</title>
-<link rel="stylesheet" href="styles.css?v=3.12.69">
+<link rel="stylesheet" href="styles.css?v=3.12.70">
 </head>
 <body>
 
@@ -39,9 +39,9 @@
   <button class="btn btn-outline admin-only" onclick="exportCSV();toggleMobileMenu(false);">Export CSV</button>
   <button class="btn btn-outline admin-only" onclick="openBulkEmailModal();toggleMobileMenu(false);">Bulk Remind</button>
   <button class="btn btn-outline admin-only" onclick="openBulkWhatsAppModal();toggleMobileMenu(false);" style="border-color:#25D366;color:#25D366;">WhatsApp</button>
-  <button class="btn btn-outline" id="learnerLoginBtn" onclick="openLearnerLoginModal();toggleMobileMenu(false);">Learner Login</button>
+  <button class="btn btn-white" id="learnerLoginBtn" onclick="openLearnerLoginModal();toggleMobileMenu(false);">Learner Login</button>
   <button class="btn btn-outline" id="teacherLoginBtn" onclick="openTeacherLoginModal();toggleMobileMenu(false);" style="border-color:#ed8b00;color:#ed8b00;">Teacher Login</button>
-  <button class="btn btn-white" id="loginBtn" onclick="openLoginModal();toggleMobileMenu(false);">Admin Login</button>
+  <button class="btn btn-outline" id="loginBtn" onclick="openLoginModal();toggleMobileMenu(false);">Admin Login</button>
   <button class="btn btn-outline" id="logoutBtn" style="display:none;" onclick="doLogout();toggleMobileMenu(false);">Logout</button>
   <button class="btn btn-outline" id="learnerLogoutBtn" style="display:none;" onclick="doLearnerLogout();toggleMobileMenu(false);">Learner Logout</button>
   <button class="btn btn-outline" id="teacherLogoutBtn" style="display:none;border-color:#ed8b00;color:#ed8b00;" onclick="doTeacherLogout();toggleMobileMenu(false);">Teacher Logout</button>
@@ -184,7 +184,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" style="color:var(--nhs-grey);border-color:var(--nhs-pale-grey);" onclick="closeModal('loginModal')">Cancel</button>
-      <button class="btn btn-green" onclick="doLogin()">Login</button>
+      <button class="btn btn-green" onclick="doLogin()">Sign In</button>
     </div>
   </div>
 </div>
@@ -443,7 +443,7 @@
           <input type="password" id="learnerPin" name="password" placeholder="Enter password" autocomplete="current-password">
           <div id="learnerPasskeyRow" style="display:none;margin-top:12px;"></div>
           <div style="margin-top:14px;text-align:center;">
-            <button class="btn btn-green" type="submit" style="width:100%;">Login</button>
+            <button class="btn btn-green" type="submit" style="width:100%;">Sign In</button>
           </div>
         </form>
         <div style="margin-top:8px;text-align:center;font-size:13px;color:var(--nhs-grey);">
@@ -714,7 +714,7 @@
           <input type="password" id="teacherPin" name="password" placeholder="Enter password" autocomplete="current-password">
           <div id="teacherPasskeyRow" style="display:none;margin-top:12px;"></div>
           <div style="margin-top:14px;text-align:center;">
-            <button class="btn" type="submit" style="width:100%;background:#ed8b00;color:white;border:none;">Login</button>
+            <button class="btn" type="submit" style="width:100%;background:#b35f00;color:white;border:none;">Sign In</button>
           </div>
         </form>
         <div style="margin-top:8px;text-align:center;font-size:13px;color:var(--nhs-grey);">
@@ -794,16 +794,16 @@
   </div>
 </div>
 
-<script src="demodata.js?v=3.12.69"></script>
-<script src="config.js?v=3.12.69"></script>
-<script src="auth.js?v=3.12.69"></script>
-<script src="sessions.js?v=3.12.69"></script>
-<script src="messaging.js?v=3.12.69"></script>
-<script src="learner.js?v=3.12.69"></script>
-<script src="actions.js?v=3.12.69"></script>
-<script src="surveys.js?v=3.12.69"></script>
-<script src="analytics.js?v=3.12.69"></script>
-<script src="errorlog.js?v=3.12.69"></script>
-<script src="app.js?v=3.12.69"></script>
+<script src="demodata.js?v=3.12.70"></script>
+<script src="config.js?v=3.12.70"></script>
+<script src="auth.js?v=3.12.70"></script>
+<script src="sessions.js?v=3.12.70"></script>
+<script src="messaging.js?v=3.12.70"></script>
+<script src="learner.js?v=3.12.70"></script>
+<script src="actions.js?v=3.12.70"></script>
+<script src="surveys.js?v=3.12.70"></script>
+<script src="analytics.js?v=3.12.70"></script>
+<script src="errorlog.js?v=3.12.70"></script>
+<script src="app.js?v=3.12.70"></script>
 </body>
 </html>

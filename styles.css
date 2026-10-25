@@ -1023,3 +1023,145 @@ body.is-learner .learner-only-block { display: block !important; }
   .survey-pill { padding: 6px 12px; font-size: 12px; gap: 5px; }
   .survey-pill .survey-pill-icon { font-size: 12px; }
 }
+
+/* ============================================================
+   v3.12.70 — HIG + motion polish (apple-look / apple-motion review)
+   Additive: everything above is unchanged; this block only overrides.
+   ============================================================ */
+
+/* --- Contrast. Text-carrying colours darkened to >= 4.5:1. ---
+   --nhs-grey #768692 was 3.75:1 on white; #4c6272 (NHS secondary text) is 6.37:1.
+   Bright NHS orange/aqua/green stay as borders and fills; text gets the dark shade. */
+:root {
+  --nhs-grey: #4c6272;
+  --text-orange: #8a4b00;   /* 6.24:1 on #fff4e0, 6.80:1 on white */
+  --text-aqua: #00607a;     /* 6.30:1 on #e0f5fa */
+  --text-green: #006b2b;    /* 5.89:1 on #e6f4ea */
+  --text-red: #b8221a;      /* 5.45:1 on #fde8e8 */
+  --fill-green: #007f3b;    /* NHS dark green: white text 5.12:1 (was 3.87:1) */
+  --fill-orange: #b35f00;   /* white text 4.61:1 (was 2.53:1) */
+  --focus: #ffeb3b;
+  --focus-ink: #212b32;
+}
+.status-pill-upcoming, .cal-event.status-upcoming { color: var(--text-aqua); }
+.status-pill-tbd, .cal-event.status-tbd { color: var(--text-orange); }
+.status-pill-completed, .cal-event.status-completed { color: var(--text-green); }
+.status-pill-cancelled, .cal-event.status-cancelled { color: var(--text-red); }
+.event-card .card-notes, .idea-pending, .event-card .card-backup { color: var(--text-orange); }
+.event-card .last-edit-info { color: var(--nhs-grey); }
+.btn-green { background: var(--fill-green); }
+.btn-green:hover { background: #006530; }
+.btn-orange { background: var(--fill-orange); }
+.btn-orange:hover { background: #8a4b00; }
+.cal-cell.bank-holiday .cal-date { color: var(--text-red); }
+
+/* --- Status never by colour alone: the calendar chips get a glyph too. --- */
+.cal-event.status-completed::before { content: '\2713\00a0'; }
+.cal-event.status-tbd::before { content: '?\00a0'; }
+
+/* --- Keyboard focus: NHS focus style (yellow + dark ring), keyboard only. --- */
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 0; box-shadow: 0 0 0 6px var(--focus-ink); }
+.modal-body input:focus-visible, .modal-body select:focus-visible, .modal-body textarea:focus-visible,
+.search-box:focus-visible { box-shadow: 0 0 0 3px var(--focus), 0 0 0 5px var(--focus-ink); outline: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* --- Press feedback on pointer-down, not on release. ---
+   Only paint-cheap properties transition (was `transition: all`, which also
+   animated padding/width and lagged the press). */
+.btn, .nav-tab, .filter-chip, .qa-tile, .survey-opt-btn, .pace-radio label, .nav-dropdown-item, .action-landing .slot-list li {
+  transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s, transform .1s ease-out;
+  touch-action: manipulation;
+}
+.event-card, .action-card, .week-session { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.btn:active, .filter-chip:active, .qa-tile:active, .survey-opt-btn:active, .scale-btn:active,
+.event-card:active, .action-card:active, .nav-dropdown-item:active, .action-landing .slot-list li:active {
+  transform: scale(.97); transition-duration: 60ms;
+}
+/* Hover lifts are a pointer affordance; on touch they stick after the tap. */
+@media (hover: none) {
+  .event-card:hover, .action-card:hover, .qa-tile:hover, .fab:hover { transform: none; }
+  .event-card:active, .action-card:active, .qa-tile:active { transform: scale(.97); }
+}
+
+/* --- Session card: the date tile (signature element). ---
+   Reads like a theatre-list slot: day, big date, month. The month heading
+   already says the month, so the text line now carries only the time. */
+.event-card .card-top { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: start; gap: 12px; }
+.event-card .card-top > .card-when { align-self: stretch; }
+@media (max-width: 400px) {
+  /* Narrow phones: status badges drop under the text, the tile stays put. */
+  .event-card .card-top { grid-template-columns: 52px minmax(0, 1fr); gap: 4px 12px; }
+  .event-card .card-top > div:last-child { grid-column: 2; flex-direction: row !important; flex-wrap: wrap; align-items: center !important; }
+}
+.card-when {
+  flex: 0 0 52px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 8px; background: var(--nhs-bg); color: var(--nhs-dark-blue); padding: 6px 0; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.card-when .cw-day { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--nhs-grey); }
+.card-when .cw-num { font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin: 3px 0 2px; }
+.card-when .cw-mon { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--nhs-grey); }
+.event-card.status-cancelled .card-when { opacity: .6; }
+.event-card .card-main { flex: 1; min-width: 0; }
+.event-card .card-date { font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.event-card .card-topic { letter-spacing: -.005em; line-height: 1.3; }
+.event-card .card-details span { display: inline-flex; align-items: center; gap: 4px; }
+.ico { flex-shrink: 0; vertical-align: -2px; }
+
+/* Flat brand colour instead of the generic gradient hero. */
+.welcome-banner, .action-landing-header, .survey-header { background: var(--nhs-dark-blue); }
+
+/* --- Phone: legibility, hit targets, no zoom-on-focus. --- */
+@media (max-width: 768px) {
+  /* iOS Safari zooms the page when an input under 16px gets focus. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; }
+
+  /* 11pt floor (was 8.5–10px in places). */
+  .event-card .card-status, .admin-badge, .learner-badge, .teacher-badge { font-size: 11px; }
+  .stat-card .stat-label { font-size: 11px; letter-spacing: .02em; }
+  .cal-day-header { font-size: 11px; }
+  .cal-event, .cal-empty-slot {
+    font-size: 11px; line-height: 1.2; white-space: normal; word-break: break-word;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+
+  /* 44pt controls. */
+  .modal-close { min-width: 44px; min-height: 44px; margin: -10px -12px -10px 0; display: inline-flex; align-items: center; justify-content: center; }
+  .mobile-menu-btn { width: 44px !important; height: 44px !important; }
+  .filter-chip { min-height: 44px; display: inline-flex; align-items: center; }
+  .modal-body .btn, .scale-btn { min-height: 44px; }
+  .scale-btn { min-width: 44px; }
+
+  /* Bottom sheet: grabber says "drag me"; app.js drives the spring. */
+  .modal { animation: none; will-change: transform; }
+  .modal-header { position: relative; touch-action: none; cursor: grab; }
+  .modal-header::before {
+    content: ''; position: absolute; top: 6px; left: 50%; width: 36px; height: 5px;
+    margin-left: -18px; border-radius: 3px; background: rgba(255,255,255,.55);
+  }
+  .header-actions::after {
+    content: ''; position: absolute; bottom: 8px; left: 50%; width: 36px; height: 5px;
+    margin-left: -18px; border-radius: 3px; background: var(--nhs-pale-grey);
+  }
+  .header-actions { touch-action: pan-x; }
+
+  /* Clear the chat button so it never sits on the last card. */
+  #listView { padding-bottom: 88px; }
+}
+
+/* --- Reduced motion: cross-fade or nothing; no slides, lifts or shakes. --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  .btn, .nav-tab, .filter-chip, .qa-tile, .event-card, .action-card, .survey-opt-btn { transition: background-color .15s, color .15s, border-color .15s !important; }
+  .btn:active, .filter-chip:active, .qa-tile:active, .event-card:active, .action-card:active,
+  .event-card:hover, .action-card:hover, .qa-tile:hover { transform: none !important; }
+  .header-actions { transition: opacity .2s ease !important; }
+  .header-actions:not(.drawer-open) { opacity: 0; }
+  .loading-spinner { animation-duration: 1.6s !important; animation-iteration-count: infinite !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .modal-overlay { backdrop-filter: none; background: rgba(0,0,0,.6); }
+}
+@media (prefers-contrast: more) {
+  .event-card, .modal, .action-card { border: 1px solid var(--focus-ink); }
+}

@@ -273,6 +273,12 @@ function populateMonthSelect() {
   sorted.forEach(m => { const [mn, yr] = m.split('|'); sel.innerHTML += `<option value="${m}">${mn} ${yr}</option>`; });
 }
 
+// Line icons for session cards: one visual language in place of platform-dependent emoji.
+const _ico = d => `<svg class="ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICON_PERSON = _ico('<circle cx="8" cy="5" r="2.75"/><path d="M2.75 14c.6-2.9 2.7-4.5 5.25-4.5s4.65 1.6 5.25 4.5"/>');
+const ICON_PIN = _ico('<path d="M8 14.5s4.5-4.2 4.5-8a4.5 4.5 0 0 0-9 0c0 3.8 4.5 8 4.5 8z"/><circle cx="8" cy="6.5" r="1.6"/>');
+const ICON_SWAP = _ico('<path d="M3 5.5h9.5L10 3M13 10.5H3.5L6 13"/>');
+
 function renderEvents() {
   const container = document.getElementById('listView');
   const filtered = getFilteredEvents();
@@ -291,13 +297,14 @@ function renderEvents() {
       const topicDisplay = e.topic || teacherLabel(e) || 'TBD';
       html += `<div class="event-card status-${e.status}${isDraft ? ' draft' : ''}" onclick="showDetail(${e.id})">
         <div class="card-top">
-          <div>
-            <div class="card-date">${e.day} ${e.date} ${e.month} ${e.year}${e.time ? ' | ' + e.time : ''}</div>
+          <div class="card-when" aria-hidden="true"><span class="cw-day">${esc(String(e.day || '').slice(0, 3))}</span><span class="cw-num">${parseInt(e.date) || esc(e.date)}</span><span class="cw-mon">${esc(String(e.month || '').slice(0, 3))}</span></div>
+          <div class="card-main">
+            <div class="card-date"><span class="sr-only">${e.day} ${e.date} ${e.month} ${e.year}${e.time ? ', ' : ''}</span>${e.time ? esc(e.time) : ''}</div>
             <div class="card-topic">${esc(topicDisplay)}${isDraft ? '<span class="card-draft-badge">DRAFT</span>' : ''}</div>
             <div class="card-details">
-              ${teacherLabel(e) ? '<span>&#128100; ' + esc(teacherLabel(e)) + '</span>' : ''}
-              ${e.backupTeacher ? '<span style="color:var(--nhs-orange);font-size:12px;">&#128260; ' + esc(e.backupTeacher) + '</span>' : ''}
-              ${e.room ? '<span>&#128205; ' + esc(e.room) + '</span>' : ''}
+              ${teacherLabel(e) ? '<span>' + ICON_PERSON + esc(teacherLabel(e)) + '</span>' : ''}
+              ${e.backupTeacher ? '<span class="card-backup">' + ICON_SWAP + esc(e.backupTeacher) + '</span>' : ''}
+              ${e.room ? '<span>' + ICON_PIN + esc(e.room) + '</span>' : ''}
             </div>
             ${e.notes ? '<div class="card-notes">' + esc(e.notes) + '</div>' : ''}
           </div>

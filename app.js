@@ -582,3 +582,200 @@ async function checkTodayReminder() {
 }
 
 init();
+
+// ===================== SHEETS: SPRINGS + DRAG TO DISMISS (v3.12.70) =====================
+// Phone only. Bottom-sheet modals and the top menu panel open on a spring, follow
+// the finger 1:1 when dragged, and on release project the flick's momentum to
+// decide dismiss vs. snap back, handing the finger's velocity to the spring.
+// A sheet still moving can be grabbed again: motion restarts from where it is.
+(function installSheetPhysics() {
+  const phone = window.matchMedia('(max-width: 768px)');
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const live = () => phone.matches && !still.matches;
+
+  // Critically damped by default; damping < 1 only after a gesture carried momentum.
+  function spring(from, to, v0, opts, onUpdate, onDone) {
+    const response = opts.response || 0.35, damping = opts.damping == null ? 1 : opts.damping;
+    const k = Math.pow(2 * Math.PI / response, 2), c = 4 * Math.PI * damping / response;
+    let x = from, v = v0 || 0, last = performance.now(), id = 0, done = false;
+    // rAF doesn't run in a hidden tab; never leave a sheet parked off-screen.
+    const finish = () => { if (done) return; cancelAnimationFrame(id); x = to; done = true; onUpdate(x); if (onDone) onDone(); };
+    if (document.hidden) { setTimeout(finish, 0); return { stop() { done = true; }, get value() { return x; }, get done() { return done; } }; }
+    const watchdog = setTimeout(finish, 1500);
+    const step = now => {
+      const dt = Math.min(0.064, (now - last) / 1000); last = now;
+      const n = Math.max(1, Math.ceil(dt / 0.004)), h = dt / n;
+      for (let i = 0; i < n; i++) { v += (-k * (x - to) - c * v) * h; x += v * h; }
+      if (Math.abs(v) < 20 && Math.abs(x - to) < 0.5) { clearTimeout(watchdog); x = to; onUpdate(x); done = true; if (onDone) onDone(); return; }
+      onUpdate(x); id = requestAnimationFrame(step);
+    };
+    id = requestAnimationFrame(step);
+    return { stop() { done = true; clearTimeout(watchdog); cancelAnimationFrame(id); }, get value() { return x; }, get done() { return done; } };
+  }
+  // Where a flick would come to rest (Apple's deceleration projection).
+  const project = (v, d = 0.998) => (v / 1000) * d / (1 - d);
+  // Past the edge the sheet resists progressively instead of hard-stopping.
+  const rubber = (over, dim, c = 0.55) => (over * dim * c) / (dim + c * Math.abs(over));
+  // Release velocity from the last ~100ms of samples (px/s).
+  function velocity(samples) {
+    const now = samples[samples.length - 1]; if (!now) return 0;
+    let i = samples.length - 1; while (i > 0 && now.t - samples[i - 1].t < 100) i--;
+    const old = samples[i], dt = (now.t - old.t) / 1000;
+    return dt > 0 ? (now.y - old.y) / dt : 0;
+  }
+
+  // ---- Bottom-sheet modals ----
+  const sheets = new WeakMap(); // overlay -> { y, anim }
+  function sheetState(ov) { let s = sheets.get(ov); if (!s) { s = { y: 0, anim: null }; sheets.set(ov, s); } return s; }
+  function paintSheet(ov, y) {
+    const m = ov.querySelector('.modal'); if (!m) return;
+    const h = m.offsetHeight || 1;
+    m.style.transform = `translateY(${y}px)`;
+    ov.style.backgroundColor = `rgba(0,0,0,${(0.5 * (1 - Math.min(1, Math.max(0, y / h)))).toFixed(3)})`;
+    sheetState(ov).y = y;
+  }
+  function clearSheet(ov) {
+    const s = sheetState(ov); if (s.anim) s.anim.stop(); s.anim = null; s.y = 0;
+    const m = ov.querySelector('.modal'); if (m) m.style.transform = '';
+    ov.style.backgroundColor = '';
+  }
+  const dismissable = ov => ov.id !== 'teacherMobileModal' && !!ov.querySelector('.modal-close');
+
+  // Open on a spring; reset when closed by any route (×, Escape, back-swipe, code).
+  const watch = new MutationObserver(muts => muts.forEach(mu => {
+    const ov = mu.target, open = ov.classList.contains('show'), was = (mu.oldValue || '').split(' ').includes('show');
+    if (open === was) return;
+    if (!open || !live()) { clearSheet(ov); return; }
+    const m = ov.querySelector('.modal'); if (!m) return;
+    const s = sheetState(ov), h = m.offsetHeight;
+    paintSheet(ov, h);
+    s.anim = spring(h, 0, 0, { damping: 1, response: 0.35 }, y => paintSheet(ov, y), () => clearSheet(ov));
+  }));
+  document.querySelectorAll('.modal-overlay').forEach(ov => watch.observe(ov, { attributes: true, attributeFilter: ['class'], attributeOldValue: true }));
+
+  document.addEventListener('pointerdown', e => {
+    if (!live() || e.button > 0) return;
+    const header = e.target.closest('.modal-overlay.show .modal-header');
+    if (!header || e.target.closest('button, a, input, select, textarea')) return;
+    const ov = header.closest('.modal-overlay'), m = header.closest('.modal');
+    if (!dismissable(ov)) return;
+    const s = sheetState(ov);
+    if (s.anim) { s.anim.stop(); s.anim = null; }           // grab it mid-flight
+    const h = m.offsetHeight, startY = e.clientY, base = s.y;
+    const samples = [{ t: e.timeStamp, y: base }];
+    header.setPointerCapture(e.pointerId);
+    const move = ev => {
+      const raw = base + ev.clientY - startY;
+      const y = raw >= 0 ? raw : -rubber(-raw, h);
+      paintSheet(ov, y);
+      samples.push({ t: ev.timeStamp, y }); if (samples.length > 12) samples.shift();
+    };
+    const up = () => {
+      header.removeEventListener('pointermove', move);
+      header.removeEventListener('pointerup', up);
+      header.removeEventListener('pointercancel', up);
+      const v = velocity(samples), y = s.y, rest = y + project(v);
+      const dismiss = v > 300 || (v > -100 && rest > h * 0.4);   // direction of travel wins
+      if (dismiss) {
+        s.anim = spring(y, h, v, { damping: 1, response: 0.3 }, yy => paintSheet(ov, yy), () => {
+          const close = ov.querySelector('.modal-close'); if (close) close.click();
+          clearSheet(ov);
+        });
+      } else {
+        s.anim = spring(y, 0, v, { damping: 0.8, response: 0.3 }, yy => paintSheet(ov, yy), () => clearSheet(ov));
+      }
+    };
+    header.addEventListener('pointermove', move);
+    header.addEventListener('pointerup', up);
+    header.addEventListener('pointercancel', up);
+  });
+
+  // ---- Top menu panel (#headerActions) ----
+  const panel = document.getElementById('headerActions');
+  if (!panel) return;
+  let pAnim = null, pY = 0, pVel = 0;
+  const paintPanel = y => { pY = y; panel.style.transition = 'none'; panel.style.transform = `translateY(${y}px)`; };
+  const clearPanel = () => {
+    if (pAnim) pAnim.stop(); pAnim = null;
+    panel.style.transform = '';
+    requestAnimationFrame(() => { panel.style.transition = ''; });
+  };
+  const isOpen = () => panel.classList.contains('drawer-open');
+
+  const _toggle = window.toggleMobileMenu;
+  if (typeof _toggle === 'function') {
+    window.toggleMobileMenu = function (open) {
+      const was = isOpen();
+      _toggle(open);
+      const now = isOpen();
+      if (was === now || !live()) { pVel = 0; return; }
+      const h = panel.offsetHeight;
+      const from = pAnim ? pY : (now ? -h : pY);           // start from where it is on screen
+      if (pAnim) pAnim.stop();
+      paintPanel(from);
+      pAnim = spring(from, now ? 0 : -h, pVel, { damping: 1, response: 0.35 }, paintPanel, clearPanel);
+      pVel = 0;
+    };
+  }
+
+  panel.addEventListener('pointerdown', e => {
+    if (!live() || !isOpen() || e.button > 0) return;
+    if (e.target.closest('.drawer-close-btn')) return;
+    if (pAnim) { pAnim.stop(); pAnim = null; }
+    const h = panel.offsetHeight, startY = e.clientY, base = pY;
+    const samples = [{ t: e.timeStamp, y: base }];
+    let dragging = false;
+    const move = ev => {
+      const dy = ev.clientY - startY;
+      if (!dragging) {
+        if (Math.abs(dy) < 10) return;                    // hysteresis: tap vs drag
+        dragging = true; panel.setPointerCapture(ev.pointerId);
+        // the button under the finger must not fire once this became a drag
+        panel.addEventListener('click', ce => { ce.preventDefault(); ce.stopPropagation(); }, { capture: true, once: true });
+      }
+      const raw = base + dy;
+      const y = raw <= 0 ? raw : rubber(raw, h);
+      paintPanel(y);
+      samples.push({ t: ev.timeStamp, y }); if (samples.length > 12) samples.shift();
+    };
+    const up = () => {
+      panel.removeEventListener('pointermove', move);
+      panel.removeEventListener('pointerup', up);
+      panel.removeEventListener('pointercancel', up);
+      if (!dragging) return;
+      const v = velocity(samples), rest = pY + project(v);
+      const dismiss = v < -300 || (v < 100 && rest < -h * 0.4);
+      if (dismiss) { pVel = v; pAnim = { stop() {} }; toggleMobileMenu(false); }
+      else pAnim = spring(pY, 0, v, { damping: 0.8, response: 0.3 }, paintPanel, clearPanel);
+    };
+    panel.addEventListener('pointermove', move);
+    panel.addEventListener('pointerup', up);
+    panel.addEventListener('pointercancel', up);
+  });
+})();
+
+// ===================== KEYBOARD ACCESS FOR CLICKABLE CARDS (v3.12.70) =====================
+// Cards, tabs and tiles are <div onclick>, which a keyboard can't reach.
+// Give them a tab stop and button role, and let Enter / Space activate them.
+(function installKeyboardActivation() {
+  const CLICKABLE = '.event-card, .action-card, .qa-tile, .week-session, .nav-tab, .nav-dropdown-item, .cal-event, .cal-empty-slot, .inbox-thread-item';
+  const enhanceEl = el => {
+    if (el.matches('button, a, input, select, textarea') || el.hasAttribute('tabindex')) return;
+    el.tabIndex = 0;
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+  };
+  const enhance = root => {
+    if (root.nodeType !== 1) return;
+    if (root.matches(CLICKABLE)) enhanceEl(root);
+    root.querySelectorAll(CLICKABLE).forEach(enhanceEl);
+  };
+  enhance(document.body);
+  new MutationObserver(muts => muts.forEach(m => m.addedNodes.forEach(enhance)))
+    .observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const t = e.target;
+    if (!t.matches || !t.matches(CLICKABLE) || t.matches('button, a')) return;
+    e.preventDefault(); t.click();
+  });
+})();
