@@ -4,7 +4,7 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.75';
+const APP_VERSION = 'v3.12.76';
 const APP_BUILD = '2026-11-24';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
@@ -17,6 +17,73 @@ const XMAS_ON = !!window.SST_XMAS;
 const LOGO_URL = XMAS_ON ? SITE_URL + 'logo_xmas.png' : LOGO_URL_STANDARD;
 // Christmas magic: gentle snowfall + a reindeer fly-by over the welcome banner. Decorative only;
 // CSS (styles.css, "Christmas magic") hides both under prefers-reduced-motion.
+// The sleigh. Cruises along the bottom of the welcome banner; with a mouse it chases the pointer;
+// it can be grabbed and flung (spring physics, so it overshoots and settles); a tap drops a present.
+// Leaves a trail of sparks when moving fast. Pauses when the banner is off screen or the tab is hidden.
+function initXmasSleigh(banner) {
+  if (!banner || banner.querySelector('.xmas-flyby')) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const el = document.createElement('div');
+  el.className = 'xmas-flyby'; el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = '<span>🦌🦌🦌🛷</span>';
+  banner.appendChild(el);
+  const inner = el.firstChild;
+  let W = banner.clientWidth, H = banner.clientHeight, w = el.offsetWidth || 150, h = el.offsetHeight || 46;
+  let x = W + 40, y = H - h - 6, vx = -120, vy = 0, facing = -1;      // facing -1 = heading left (the emoji's natural way)
+  let held = false, moved = 0, follow = null, followUntil = 0, cruiseDir = -1, cruiseX = x, last = 0, sparkAt = 0, visible = true, raf = 0;
+  const local = (e) => { const r = banner.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  const spawn = (cls, text, vars) => {
+    if (banner.querySelectorAll('.' + cls).length > 26) return;
+    const s = document.createElement('i'); s.className = cls; s.textContent = text; s.style.fontStyle = 'normal';
+    for (const k in vars) s.style.setProperty(k, vars[k]);
+    banner.appendChild(s); s.addEventListener('animationend', () => s.remove());
+  };
+  const dropGift = () => {
+    const gifts = ['🎁', '🎁', '🍬', '⭐', '🧦'];
+    spawn('xmas-gift', gifts[Math.floor(Math.random() * gifts.length)], {
+      '--x': (x + w / 2).toFixed(0) + 'px', '--y': (y + h / 2).toFixed(0) + 'px',
+      '--dx': (vx * 0.25 + (Math.random() * 40 - 20)).toFixed(0) + 'px', '--fall': Math.max(60, H - y).toFixed(0) + 'px',
+      '--rot': (Math.random() * 300 - 150).toFixed(0) + 'deg' });
+    for (let i = 0; i < 6; i++) spawn('xmas-spark', '✦', { '--x': (x + w / 2).toFixed(0) + 'px', '--y': (y + h / 2).toFixed(0) + 'px', '--dx': (Math.random() * 80 - 40).toFixed(0) + 'px' });
+  };
+  el.addEventListener('pointerdown', (e) => { held = true; moved = 0; follow = local(e); el.classList.add('is-held'); try { el.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault(); });
+  el.addEventListener('pointermove', (e) => { if (!held) return; const p = local(e); moved += Math.abs(p.x - follow.x) + Math.abs(p.y - follow.y); follow = p; });
+  const release = () => { if (!held) return; held = false; el.classList.remove('is-held'); if (moved < 8) dropGift(); follow = null; followUntil = 0; cruiseDir = vx > 0 ? 1 : -1; cruiseX = x; };
+  el.addEventListener('pointerup', release); el.addEventListener('pointercancel', release);
+  banner.addEventListener('pointermove', (e) => { if (held || e.pointerType !== 'mouse') return; follow = local(e); followUntil = performance.now() + 1600; });
+  banner.addEventListener('pointerleave', () => { if (!held) { followUntil = 0; } });
+  window.addEventListener('resize', () => { W = banner.clientWidth; H = banner.clientHeight; });
+  if ('IntersectionObserver' in window) new IntersectionObserver((en) => { visible = en[0].isIntersecting; if (visible && !raf) { last = 0; raf = requestAnimationFrame(tick); } }).observe(banner);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && visible && !raf) { last = 0; raf = requestAnimationFrame(tick); } });
+  function tick(now) {
+    raf = 0;
+    if (!visible || document.hidden) return;
+    const dt = Math.min(0.033, last ? (now - last) / 1000 : 0.016); last = now;
+    let tx, ty, k, c;
+    if (held || now < followUntil) {                        // chase the pointer, sleigh centred on it
+      tx = follow.x - w / 2; ty = follow.y - h / 2; k = held ? 90 : 26; c = held ? 14 : 7;
+    } else {                                                // cruise: a lazy pass along the bottom, bobbing, turning round at the edges
+      cruiseX += cruiseDir * 95 * dt;
+      if (cruiseX < -w - 220) cruiseDir = 1; else if (cruiseX > W + 220) cruiseDir = -1;
+      tx = cruiseX; ty = H - h - 10 + Math.sin(now / 900) * 9; k = 9; c = 5;
+      if (Math.abs(x - cruiseX) > 260) cruiseX += (x - cruiseX) * dt * 0.8;   // after a fling, pick the route up from where it ended
+    }
+    vx += (k * (tx - x) - c * vx) * dt; vy += (k * (ty - y) - c * vy) * dt;
+    x += vx * dt; y += vy * dt;
+    if (y < 2) { y = 2; vy = Math.abs(vy) * 0.5; } else if (y > H - h) { y = H - h; vy = -Math.abs(vy) * 0.5; }
+    if (Math.abs(vx) > 25) facing = vx > 0 ? 1 : -1;
+    const tilt = Math.max(-22, Math.min(22, -vy * 0.06));   // nose up when climbing (the flip mirrors it for us)
+    el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
+    inner.style.transform = `${held ? 'scale(1.18) ' : ''}scaleX(${facing === 1 ? -1 : 1}) rotate(${tilt.toFixed(1)}deg)`;
+    const speed = Math.hypot(vx, vy);
+    if (speed > 170 && now - sparkAt > 55) {
+      sparkAt = now;
+      spawn('xmas-spark', Math.random() < 0.5 ? '✦' : '•', { '--x': (x + (facing === 1 ? 6 : w - 12)).toFixed(0) + 'px', '--y': (y + h * 0.55 + Math.random() * 8).toFixed(0) + 'px', '--dx': (-facing * (10 + Math.random() * 24)).toFixed(0) + 'px' });
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  raf = requestAnimationFrame(tick);
+}
 function initXmasMagic() {
   if (!XMAS_ON || document.querySelector('.xmas-snow')) return;
   try {
@@ -30,13 +97,7 @@ function initXmasMagic() {
     }
     snow.innerHTML = html;
     document.body.appendChild(snow);
-    const banner = document.querySelector('.welcome-banner');
-    if (banner && !banner.querySelector('.xmas-flyby')) {
-      const fly = document.createElement('div');
-      fly.className = 'xmas-flyby'; fly.setAttribute('aria-hidden', 'true');
-      fly.textContent = '🦌🦌🦌🛷';
-      banner.appendChild(fly);
-    }
+    initXmasSleigh(document.querySelector('.welcome-banner'));
   } catch (e) { /* decoration must never break the app */ }
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initXmasMagic); else initXmasMagic();
