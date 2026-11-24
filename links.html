@@ -12,6 +12,12 @@
   served as links_bg.png. Glassmorphism cards over the artwork's gradient middle.
   Public contact is ALWAYS teachsurgerysmh@gmail.com — never a personal address.
 -->
+<script>
+/* Christmas theme: 24 Nov to 5 Jan (same gate as index.html). ?xmas=1 / ?xmas=0 previews it. */
+(function(){try{var q=new URLSearchParams(location.search).get('xmas');if(q==='1'||q==='0')sessionStorage.setItem('sst_xmas',q);
+var f=sessionStorage.getItem('sst_xmas'),d=new Date(),m=d.getMonth(),on=f==='1'||(f!=='0'&&((m===10&&d.getDate()>=24)||m===11||(m===0&&d.getDate()<=5)));
+window.SST_XMAS=on;if(on){document.documentElement.classList.add('xmas');var t=document.querySelector('meta[name="theme-color"]');if(t)t.setAttribute('content','#a3262b');}}catch(e){}})();
+</script>
 <style>
   :root{
     --navy:#003087; --aqua:#00a9ce; --ice:#cadcfc;
@@ -78,9 +84,37 @@
   footer{margin-top:14px; text-align:center; font-size:12.5px; color:var(--ice); line-height:1.7}
   footer a{color:#fff; font-weight:700; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.35)}
   @media (prefers-reduced-motion: reduce){ a.btn{transition:none} }
+
+  /* ── Christmas theme (html.xmas): the skyline art under a warm red wash, Fair Isle band, snow ── */
+  html.xmas{ --aqua:#f5c45c; --ice:#ffe9df; }
+  html.xmas body{ background-color:#6d151a; }
+  html.xmas body::before{
+    background:linear-gradient(180deg,rgba(163,38,43,.9) 0%,rgba(143,31,36,.72) 34%,rgba(109,21,26,.7) 68%,rgba(18,60,38,.82) 100%);
+  }
+  html.xmas .wrap{ padding-top:calc(max(28px,env(safe-area-inset-top)) + 58px); }
+  html.xmas .wrap::before{
+    content:""; position:fixed; left:0; right:0; top:0; height:58px; z-index:2; pointer-events:none;
+    background:#a3262b url(xmas_band.png) repeat-x center top / 458px 58px;
+    box-shadow:0 6px 18px rgba(0,0,0,.25);
+  }
+  html.xmas header img.logo{ content:url(logo_xmas.png); }
+  html.xmas a.btn{ box-shadow:0 8px 28px rgba(40,5,8,.4), inset 0 1px 0 rgba(255,255,255,.25); }
+  html.xmas a.btn.primary{ background:linear-gradient(135deg, rgba(245,196,92,.5), rgba(29,90,58,.6)); }
+  .xmas-snow{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:1; }
+  .xmas-snow i{ position:absolute; top:-6vh; left:var(--x); font-style:normal; color:#fff; line-height:1; font-size:var(--s); opacity:var(--o);
+    animation:xmasFall var(--d) linear var(--delay) infinite; }
+  .xmas-snow i b{ display:block; font-weight:400; animation:xmasSway var(--w) ease-in-out infinite alternate; }
+  @keyframes xmasFall{ to{ transform:translateY(112vh); } }
+  @keyframes xmasSway{ from{ transform:translateX(-14px) rotate(-25deg); } to{ transform:translateX(14px) rotate(25deg); } }
+  @media (prefers-reduced-motion: reduce){ .xmas-snow{ display:none; } }
 </style>
 </head>
 <body>
+<script>
+if (window.SST_XMAS) (function(){ var h='',r=Math.random; for (var i=0;i<18;i++){ var big=r()<0.3;
+  h+='<i style="--x:'+(r()*100).toFixed(1)+'vw;--s:'+(big?13+r()*8:6+r()*6).toFixed(0)+'px;--o:'+(0.45+r()*0.5).toFixed(2)+';--d:'+(11+r()*14).toFixed(1)+'s;--delay:-'+(r()*25).toFixed(1)+'s;--w:'+(2.5+r()*3).toFixed(1)+'s"><b>'+(big?'\u2744':'\u2022')+'</b></i>'; }
+  var d=document.createElement('div'); d.className='xmas-snow'; d.setAttribute('aria-hidden','true'); d.innerHTML=h; document.body.appendChild(d); })();
+</script>
   <main class="wrap">
     <header>
       <img class="logo" src="logo_transparent.png" alt="Southmead Surgical Teaching">
