@@ -4,14 +4,42 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.73';
-const APP_BUILD = '2026-10-25';
+const APP_VERSION = 'v3.12.74';
+const APP_BUILD = '2026-11-24';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
 // ===================== SAFE COLUMN LISTS (exclude pin_code) =====================
 const LEARNER_FIELDS = 'id,name,email,personal_email,phone,grade,specialty,placement,placement_start,placement_end,verified,nhs_verified,approved_at,approved_by,created_at,rotation_block,role,contact_id,followup_eligible';
 const CONTACT_FIELDS = 'id,name,role,email,phone,specialty,notes,added_by,created_at,is_manager';
-const LOGO_URL = SITE_URL + 'logo_transparent.png';
+const LOGO_URL_STANDARD = SITE_URL + 'logo_transparent.png';
+// Christmas theme (1 Dec – 5 Jan; flag set by the inline script in index.html). Emails built in the client pick the festive logo up from here.
+const XMAS_ON = !!window.SST_XMAS;
+const LOGO_URL = XMAS_ON ? SITE_URL + 'logo_xmas.png' : LOGO_URL_STANDARD;
+// Christmas magic: gentle snowfall + a reindeer fly-by over the welcome banner. Decorative only;
+// CSS (styles.css, "Christmas magic") hides both under prefers-reduced-motion.
+function initXmasMagic() {
+  if (!XMAS_ON || document.querySelector('.xmas-snow')) return;
+  try {
+    const snow = document.createElement('div');
+    snow.className = 'xmas-snow'; snow.setAttribute('aria-hidden', 'true');
+    const n = window.innerWidth < 700 ? 14 : 30;
+    let html = '';
+    for (let i = 0; i < n; i++) {
+      const r = Math.random, big = r() < 0.3;
+      html += `<i style="--x:${(r() * 100).toFixed(1)}vw;--s:${(big ? 13 + r() * 9 : 6 + r() * 6).toFixed(0)}px;--o:${(0.45 + r() * 0.5).toFixed(2)};--d:${(11 + r() * 14).toFixed(1)}s;--delay:-${(r() * 25).toFixed(1)}s;--w:${(2.5 + r() * 3).toFixed(1)}s"><b>${big ? '❄' : '•'}</b></i>`;
+    }
+    snow.innerHTML = html;
+    document.body.appendChild(snow);
+    const banner = document.querySelector('.welcome-banner');
+    if (banner && !banner.querySelector('.xmas-flyby')) {
+      const fly = document.createElement('div');
+      fly.className = 'xmas-flyby'; fly.setAttribute('aria-hidden', 'true');
+      fly.textContent = '🦌🦌🦌🛷';
+      banner.appendChild(fly);
+    }
+  } catch (e) { /* decoration must never break the app */ }
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initXmasMagic); else initXmasMagic();
 document.getElementById('versionTag').textContent = APP_VERSION;
 
 // Co-teaching (v3.12.64): schedule.co_teacher/co_teacher_email = a second
@@ -172,7 +200,7 @@ let isAdmin = false;
 let currentUser = null;
 let currentLearner = null;
 let currentTeacher = null;
-const MANAGERS = ['suketu.batra@nbt.nhs.uk','ilgin.kilic@nbt.nhs.uk','nitin.arvind@nbt.nhs.uk'];
+const MANAGERS = ['suketu.batra@nbt.nhs.uk','ilgin.kilic@nbt.nhs.uk','nitin.arvind@nbt.nhs.uk','adam.chambers@nbt.nhs.uk'];
 const SIGNING_CONSULTANT = 'Mr Nitin Arvind';
 const SIGNING_TITLE = 'Surgical Tutor & Supervisor for Southmead Surgical Teaching Programme\nConsultant UGI Surgeon, Bristol NHS Foundation Trust';
 let currentView = 'list';

@@ -121,7 +121,8 @@ async function linkAdminToLearner() {
   const adminEmails = {
     suketu: 'Suketu.Batra@nbt.nhs.uk',
     ilgin: 'Ilgin.Kilic@nbt.nhs.uk',
-    nitin: 'Nitin.Arvind@nbt.nhs.uk'
+    nitin: 'Nitin.Arvind@nbt.nhs.uk',
+    adam: 'Adam.Chambers@nbt.nhs.uk'
   };
   const email = (adminEmails[currentUser.username] || (currentUser.username + '@nbt.nhs.uk')).toLowerCase();
   try {
@@ -167,7 +168,8 @@ async function linkAdminToTeacher() {
   const adminEmails = {
     suketu: 'Suketu.Batra@nbt.nhs.uk',
     ilgin: 'Ilgin.Kilic@nbt.nhs.uk',
-    nitin: 'Nitin.Arvind@nbt.nhs.uk'
+    nitin: 'Nitin.Arvind@nbt.nhs.uk',
+    adam: 'Adam.Chambers@nbt.nhs.uk'
   };
   const email = (adminEmails[currentUser.username] || '').toLowerCase();
   if (!email) return;

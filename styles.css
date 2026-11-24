@@ -1281,3 +1281,101 @@ body.is-learner .learner-only-block { display: block !important; }
   .event-card:active, .action-card:active, .qa-tile:active, .btn:active { transform: none !important; }
   .event-card::after, .action-card::after, .qa-tile::after { display: none; }
 }
+
+
+/* ============================================================================
+   CHRISTMAS THEME — html.xmas (set by the inline script in index.html,
+   1 Dec – 5 Jan, or ?xmas=1 to preview). Pattern taken from Suketu's wrapping
+   paper: dots, white/gold/white zigzag, snowflakes, reindeer. Everything is
+   scoped to html.xmas, so removing the class restores NHS blue untouched.
+   Certificates open in their own window with their own CSS and are not themed.
+   ========================================================================== */
+html.xmas {
+  --nhs-dark-blue: #8f1f24;
+  --nhs-blue: #1d5a3a;
+  --nhs-light-blue: #e5a534;
+  --nhs-aqua: #b8892b;
+  --nhs-bg: #f8f3ea;
+  --nhs-pale-grey: #ece4d6;
+}
+html.xmas .header { background: #a3262b; padding-bottom: 0; }
+html.xmas .header::after {
+  content: ''; display: block; height: 76px; margin: 6px -20px 0;
+  background: #a3262b url(xmas_band_base.png) repeat-x center top / 600px 76px;
+}
+html.xmas .header-logo-img { content: url(logo_xmas.png); }
+html.xmas .nav-bar { background: #8f1f24; }
+html.xmas .handbook-card {
+  background: linear-gradient(135deg, #1d5a3a 0%, #123c26 100%);
+  border-color: rgba(229,165,52,0.45);
+}
+html.xmas .handbook-eyebrow { color: #f5c45c; }
+html.xmas .handbook-cta { background: #a3262b; box-shadow: 0 4px 14px rgba(163,38,43,0.4); }
+@media (max-width: 768px) {
+  html.xmas .header::after { height: 50px; margin: 4px -20px 0; background-size: 395px 50px; }
+}
+
+/* ── Christmas magic: snowfall, fairy lights, a reindeer fly-by, snow on the next session.
+      All decorative, pointer-events:none, and switched off under prefers-reduced-motion. ── */
+html.xmas .welcome-banner {
+  position: relative; overflow: hidden;
+  background: radial-gradient(120% 150% at 50% -10%, #b02c31 0%, #8f1f24 48%, #6d151a 100%);
+}
+html.xmas .welcome-banner > * { position: relative; z-index: 1; }
+html.xmas .welcome-banner::before, html.xmas .welcome-banner::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+}
+html.xmas .welcome-banner::before {
+  background-image:
+    radial-gradient(circle, rgba(255,226,160,.95) 0 1.3px, rgba(255,226,160,.25) 2.4px, transparent 4px),
+    radial-gradient(circle, rgba(255,255,255,.9) 0 1px, transparent 2px);
+  background-size: 150px 96px, 210px 130px; background-position: 24px 18px, 110px 62px;
+  animation: xmasTwinkle 2.8s ease-in-out infinite alternate;
+}
+html.xmas .welcome-banner::after {
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.95) 0 1.2px, rgba(255,255,255,.2) 2.2px, transparent 3.6px),
+    radial-gradient(circle, rgba(245,196,92,.9) 0 1px, transparent 2px);
+  background-size: 180px 110px, 130px 84px; background-position: 96px 40px, 60px 8px;
+  animation: xmasTwinkle 3.7s ease-in-out -1.6s infinite alternate-reverse;
+}
+@keyframes xmasTwinkle { from { opacity: .18; } to { opacity: .95; } }
+
+.xmas-flyby {
+  position: absolute; z-index: 0; top: 16%; left: 100%; white-space: nowrap; pointer-events: none;
+  font-size: 26px; letter-spacing: -2px; filter: brightness(0) invert(1); opacity: .85;
+  animation: xmasFly 46s cubic-bezier(.3,.1,.5,1) 1.5s infinite;
+}
+@keyframes xmasFly {
+  0%   { transform: translate(0, 26px) rotate(-7deg); }
+  9%   { transform: translate(-58vw, -6px) rotate(-3deg); }
+  18%  { transform: translate(calc(-100vw - 200px), 18px) rotate(4deg); }
+  100% { transform: translate(calc(-100vw - 200px), 18px) rotate(4deg); }
+}
+
+.xmas-snow { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 98; }
+.xmas-snow i {
+  position: absolute; top: -6vh; left: var(--x); font-style: normal; color: #fff; line-height: 1;
+  font-size: var(--s); opacity: var(--o);
+  filter: drop-shadow(0 0 1.5px rgba(122,62,40,.55));
+  animation: xmasFall var(--d) linear var(--delay) infinite;
+}
+.xmas-snow i b { display: block; font-weight: 400; animation: xmasSway var(--w) ease-in-out infinite alternate; }
+@keyframes xmasFall { to { transform: translateY(112vh); } }
+@keyframes xmasSway { from { transform: translateX(-14px) rotate(-25deg); } to { transform: translateX(14px) rotate(25deg); } }
+
+/* A cap of snow on the next session's date tile. */
+html.xmas .event-card.is-next .card-when { position: relative; }
+html.xmas .event-card.is-next .card-when::before {
+  content: ''; position: absolute; left: -3px; right: -3px; top: -6px; height: 15px; pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 0, #fff 6.2px, transparent 6.8px) 0 5px / 13px 10px repeat-x,
+    linear-gradient(#fff, #fff) 0 0 / 100% 6px no-repeat;
+  border-radius: 7px 7px 0 0;
+  filter: drop-shadow(0 1px 1px rgba(60,30,20,.28));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xmas-snow, .xmas-flyby { display: none !important; }
+  html.xmas .welcome-banner::before, html.xmas .welcome-banner::after { animation: none; opacity: .6; }
+}

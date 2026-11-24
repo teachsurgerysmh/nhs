@@ -1397,7 +1397,7 @@ const CERT_STYLES = `
   .cert-date { text-align: center; font-size: 11px; color: #768692; margin-top: 10px; }
   .print-btn { display: block; margin: 10px auto; padding: 10px 24px; background: #005eb8; color: white; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; }
   .print-btn:hover { background: #003087; }`;
-const CERT_LOGO_URL = LOGO_URL;
+const CERT_LOGO_URL = LOGO_URL_STANDARD; // certificates are never seasonally themed
 
 async function generateCertificate() {
   if (!currentLearner) return;
