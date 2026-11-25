@@ -4,8 +4,8 @@
 // ── Config / Constants / State ──
 
 // ===================== VERSION =====================
-const APP_VERSION = 'v3.12.76';
-const APP_BUILD = '2026-11-24';
+const APP_VERSION = 'v3.12.77';
+const APP_BUILD = '2026-11-25';
 const SITE_URL = 'https://teachsurgerysmh.github.io/nhs/';
 
 // ===================== SAFE COLUMN LISTS (exclude pin_code) =====================
@@ -287,6 +287,9 @@ async function callAuth(body) {
 // ── Supabase REST Helpers ──
 
 // ===================== SUPABASE REST HELPERS =====================
+// Merged duplicate ("shadow") learner accounts are retired as dup-<id>.retired@invalid.local
+function isRetiredLearner(l) { return !!(l && l.email && /^dup-\d+\.retired@invalid\.local$/i.test(l.email)); }
+
 async function sbGet(table, query = '') {
   if (isDemoMode && typeof demoSbGet === 'function') return demoSbGet(table, query);
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers });

@@ -51,7 +51,7 @@ async function openAttendanceModal(sessionId) {
   body.innerHTML = '<div style="text-align:center;padding:20px;"><div class="loading-spinner"></div></div>';
   openModal('attendanceModal');
   try {
-    const [learners, contacts, existing] = await Promise.all([
+    const [allLearners, contacts, existing] = await Promise.all([
       sbGet('learners', `order=name.asc&select=${LEARNER_FIELDS}`),
       sbGet('contacts', `order=name.asc&select=${CONTACT_FIELDS}`),
       sbGet('attendance', `session_id=eq.${sessionId}&status=neq.removed&select=*`)
@@ -59,9 +59,12 @@ async function openAttendanceModal(sessionId) {
     const attendanceMap = {};
     existing.forEach(a => { attendanceMap[a.learner_id] = a; });
     const attendedIds = new Set(existing.map(a => a.learner_id));
+    // Retired duplicate accounts (merged shadows) stay out of the register unless already ticked for this session
+    const learners = allLearners.filter(l => !isRetiredLearner(l) || attendedIds.has(l.id));
 
-    // Build set of contact emails that already have learner records
-    const learnerEmails = new Set(learners.map(l => l.email.toLowerCase()));
+    // Build set of contact emails that already have learner records (either address counts)
+    const learnerEmails = new Set();
+    allLearners.forEach(l => { [l.email, l.personal_email].forEach(e => { if (e) learnerEmails.add(e.toLowerCase()); }); });
     // Contacts without learner records (regs/cons/fellows who haven't registered)
     const unlinkedContacts = contacts.filter(c => c.email && !learnerEmails.has(c.email.toLowerCase()));
 
@@ -142,7 +145,8 @@ async function saveAttendance() {
         if (contact.length === 0) continue;
         const c = contact[0];
         // Check if learner already exists for this contact email
-        const existingLearner = await sbGet('learners', `email=ilike.${encodeURIComponent(c.email)}&select=id`);
+        const cEmail = encodeURIComponent(c.email);
+        const existingLearner = await sbGet('learners', `or=(email.ilike.${cEmail},personal_email.ilike.${cEmail})&select=id`);
         let learnerId;
         if (existingLearner.length > 0) {
           learnerId = existingLearner[0].id;
@@ -1167,10 +1171,11 @@ async function loadAttendanceChart() {
   if (existingTo) _chartDateTo = existingTo.value;
   container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div>';
   try {
-    const [learners, attendance] = await Promise.all([
+    const [allChartLearners, attendance] = await Promise.all([
       sbGet('learners', `order=name.asc&select=${LEARNER_FIELDS}`),
       sbGet('attendance', 'status=eq.approved&select=*')
     ]);
+    const learners = allChartLearners.filter(l => !isRetiredLearner(l));
 
     // Build attendance set
     const attendanceSet = new Set(attendance.map(a => `${a.learner_id}_${a.session_id}`));
