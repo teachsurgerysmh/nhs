@@ -268,6 +268,9 @@ function renderQIDashboard() {
       ${kpi('Baseline survey respondents', k.baseline_survey_respondents, 'pre-platform comparator')}
     </div>`;
 
+  // ---- SMS feedback chasing ----
+  html += renderQISmsSection(d);
+
   // ---- Weekly time-series ----
   html += `<div class="qi-section-title">Weekly trend</div>
     <div class="qi-card"><canvas id="qiWeeklyChart" height="120"></canvas></div>`;
@@ -419,6 +422,94 @@ function renderQIDashboard() {
   c.innerHTML = html;
   renderQIWeeklyChart();
   renderQIInductionChart();
+}
+
+// ===================== SMS -> FEEDBACK =====================
+// One row per feedback text (views qi_sms_feedback / qi_sms_feedback_summary).
+// "Responded" = that learner's feedback for that session landed AFTER the text.
+// "Via link" = they tapped the texted link (feedback_submitted with source 'sms').
+// Texts sent to someone who had already given feedback are excluded from the rate.
+function renderQISmsSection(d) {
+  const s = d.sms_feedback;
+  const title = `<div class="qi-section-title">Feedback by text <span style="font-size:12px;color:var(--nhs-grey);font-weight:normal;">(does a text get the feedback in?)</span></div>`;
+  if (!s) {
+    return title + `<div class="qi-card" style="color:var(--nhs-grey);font-size:13px;">
+      The <code>qi-dashboard</code> Edge Function is on an older version and isn't returning text data yet.</div>`;
+  }
+  if (s.available === false) {
+    return title + `<div class="qi-card" style="color:var(--nhs-red);font-size:13px;">
+      Text views unavailable: ${esc(s.error || 'unknown error')}.</div>`;
+  }
+  const texts = s.texts || [];
+  if (!texts.length) {
+    return title + `<div class="qi-card" style="color:var(--nhs-grey);font-size:13px;">No feedback texts sent yet.</div>`;
+  }
+  const k = s.summary || {};
+  const fmt = v => (v === null || v === undefined ? '—' : v);
+  const mins = v => {
+    if (v === null || v === undefined) return '—';
+    const n = Math.round(Number(v));
+    if (n < 60) return n + ' min';
+    if (n < 1440) return (Math.round(n / 6) / 10) + ' h';
+    return (Math.round(n / 144) / 10) + ' d';
+  };
+  const kpi = (label, value, sub) => `
+    <div class="qi-kpi-card">
+      <div class="qi-kpi-num">${fmt(value)}</div>
+      <div class="qi-kpi-label">${label}</div>
+      ${sub ? `<div class="qi-kpi-sub">${sub}</div>` : ''}
+    </div>`;
+
+  // Timing split: does texting sooner work better?
+  const live = texts.filter(t => !t.already_done);
+  const bucket = (label, test) => {
+    const rows = live.filter(t => t.days_after_session !== null && t.days_after_session !== undefined && test(Number(t.days_after_session)));
+    const yes = rows.filter(t => t.responded).length;
+    return `<tr><td>${label}</td><td>${rows.length}</td><td>${yes}</td>
+      <td>${rows.length ? Math.round(100 * yes / rows.length) + '%' : '—'}</td></tr>`;
+  };
+
+  return title + `<div class="qi-kpi-grid">
+      ${kpi('Texts sent', k.texts_sent, (k.already_done || 0) + ' had already given feedback')}
+      ${kpi('Feedback after a text', k.responded, 'of ' + fmt(k.texts_that_could_convert) + ' that could convert')}
+      ${kpi('Response rate', k.response_pct === null || k.response_pct === undefined ? '—' : k.response_pct + '%', 'feedback after text ÷ texts that could convert')}
+      ${kpi('Within 1 hour', k.responded_within_1h, (k.responded_within_24h || 0) + ' within 24 hours')}
+      ${kpi('Used the texted link', k.via_text_link, 'tapped the link in the text')}
+      ${kpi('Median time to feedback', mins(k.median_minutes_to_feedback), 'text sent → feedback in')}
+    </div>
+    <div class="qi-card" style="overflow-x:auto;margin-bottom:12px;">
+      <table class="qi-table">
+        <thead><tr><th>When the text went</th><th>Texts</th><th>Feedback after</th><th>Rate</th></tr></thead>
+        <tbody>
+          ${bucket('Within 2 days of the session', n => n < 2)}
+          ${bucket('2 to 5 days after', n => n >= 2 && n < 5)}
+          ${bucket('5 or more days after', n => n >= 5)}
+        </tbody>
+      </table>
+    </div>
+    <div class="qi-card" style="overflow-x:auto;max-height:360px;overflow-y:auto;">
+      <table class="qi-table">
+        <thead><tr>
+          <th>Sent</th><th>Session</th><th>To</th><th>Days after</th>
+          <th>Outcome</th><th>Time to feedback</th><th>Via link</th>
+        </tr></thead>
+        <tbody>
+          ${texts.map(t => `<tr>
+            <td>${t.sent_at ? new Date(t.sent_at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+            <td>${esc(t.topic || '—')}</td>
+            <td>${esc(t.to_name || '—')}</td>
+            <td>${fmt(t.days_after_session)}</td>
+            <td>${t.already_done ? 'Already done' : (t.responded ? '<strong>Feedback in</strong>' : 'No feedback yet')}</td>
+            <td>${t.responded ? mins(t.minutes_to_feedback) : '—'}</td>
+            <td>${t.via_link ? '✓' : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="font-size:12px;color:var(--nhs-grey);margin-top:8px;">
+        "Sent" means accepted by the text provider; there are no delivery receipts.
+        Feedback given under a duplicate account shows here as no feedback.
+      </div>
+    </div>`;
 }
 
 // ===================== TRAFFIC QUALITY =====================
